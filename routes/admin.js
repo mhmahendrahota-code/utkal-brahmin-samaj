@@ -50,10 +50,11 @@ router.get('/login', async (req, res) => {
   }
 
   // Self-healing: if no admins exist, create a default Super Admin from .env
-  const admins = await AdminUser.find();
-  if (admins.length === 0) {
+  const adminCount = await AdminUser.countDocuments();
+  if (adminCount === 0) {
     const defaultAdmin = new AdminUser({
       username: process.env.ADMIN_USERNAME || 'admin',
+      // Plain-text value — the pre-save hook will hash it automatically
       password: process.env.ADMIN_PASSWORD || 'password123',
       role: 'Super Admin',
       name: 'Default Admin'
@@ -68,27 +69,33 @@ router.get('/login', async (req, res) => {
 // Admin Login Process
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  
-  const admins = await AdminUser.find();
-  const user = admins.find(a => a.username === username && a.password === password);
 
-  // Fallback to .env if db lookup fails (safety net for development)
-  const isEnvAdmin = (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD);
-
-  if (user) {
+  // Look up the user by username, then verify the password against its bcrypt hash
+  const user = await AdminUser.findOne({ username });
+  if (user && await user.comparePassword(password)) {
     req.session.isAdmin = true;
     req.session.adminRole = user.role;
     req.session.adminName = user.name;
     req.session.adminId = user._id;
-    res.redirect('/admin');
-  } else if (isEnvAdmin) {
+    return res.redirect('/admin');
+  }
+
+  // Fallback to .env credentials (safety net for development / recovery)
+  const envUser = await AdminUser.findOne({ username: process.env.ADMIN_USERNAME });
+  const isEnvAdmin =
+    username === process.env.ADMIN_USERNAME &&
+    (envUser
+      ? await envUser.comparePassword(password)
+      : password === process.env.ADMIN_PASSWORD);
+
+  if (isEnvAdmin) {
     req.session.isAdmin = true;
     req.session.adminRole = 'Super Admin';
     req.session.adminName = 'Root Admin';
-    res.redirect('/admin');
-  } else {
-    res.render('admin/login', { title: 'Admin Login', error: 'Invalid username or password' });
+    return res.redirect('/admin');
   }
+
+  res.render('admin/login', { title: 'Admin Login', error: 'Invalid username or password' });
 });
 
 router.get('/logout', (req, res) => {
