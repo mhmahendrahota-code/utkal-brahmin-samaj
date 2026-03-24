@@ -10,6 +10,9 @@ const session = require('express-session');
 
 const app = express();
 
+// Trust Railway/Render/Heroku reverse proxy for HTTPS session cookies
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
