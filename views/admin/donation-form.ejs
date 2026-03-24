@@ -1,0 +1,59 @@
+<%- include('partials/admin-header') %>
+
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-4xl">
+    
+    <div class="flex items-center mb-6">
+      <a href="/admin/donations" class="text-gray-400 hover:text-saffron-500 mr-4"><i class="fas fa-arrow-left text-xl"></i></a>
+      <h1 class="text-2xl font-bold text-gray-800">Log Offline Donation</h1>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 md:p-8">
+      <form action="/admin/donations/add" method="POST">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Donor Full Name *</label>
+            <input type="text" name="donorName" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
+            <input type="number" name="amount" min="1" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Purpose *</label>
+            <select name="purpose" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
+              <option value="Samaj Bhawan Construction">Samaj Bhawan Construction</option>
+              <option value="General corpus">General Corpus Fund</option>
+              <option value="Event Sponsorship">Event Sponsorship</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Payment Method *</label>
+            <select name="paymentMethod" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
+              <option value="Cash">Cash (Collected by Admin)</option>
+              <option value="Bank Transfer">Bank Transfer / NEFT</option>
+              <option value="UPI">UPI directly to Admin</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Ref / Cheque No. (Optional)</label>
+            <input type="text" name="transactionId" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-4 border-t pt-6">
+          <a href="/admin/donations" class="px-6 py-2 border border-gray-300 rounded text-gray-700 font-medium hover:bg-gray-50 transition-colors">Cancel</a>
+          <button type="submit" class="px-6 py-2 bg-saffron-600 hover:bg-saffron-700 text-white rounded font-medium shadow-sm transition-colors">
+            <i class="fas fa-save mr-2"></i> Save Record
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/admin-footer') %>

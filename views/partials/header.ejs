@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    <%= title %> | <%= locals.siteSettings ? siteSettings.siteTitle : 'Utkal Brahmin Samaj' %>
+  </title>
+
+  <!-- Tailwind CSS Configuration using Play CDN for rapid development -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            saffron: {
+              50:  '#fffbf0',
+              100: '#FFF0E6',
+              200: '#fde68a',
+              300: '#fcd34d',
+              400: '#fbbf24',
+              500: '#FF9933', // Deep saffron
+              600: '#E68A2E',
+              700: '#b45309',
+              800: '#92400e',
+              900: '#804C19'
+            },
+            maroon: {
+              700: '#7f1d1d',
+              800: '#6b1a1a',
+              900: '#4c0519',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Playfair Display', 'serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap"
+    rel="stylesheet">
+
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'en,hi,or', // English, Hindi, Odia
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false
+      }, 'google_translate_element');
+    }
+  </script>
+  <script type="text/javascript"
+    src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      top: 0 !important;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      font-family: 'Playfair Display', serif;
+    }
+
+    .bg-jagannath {
+      background-image:
+        linear-gradient(rgba(255, 240, 200, 0.50), rgba(255, 200, 100, 0.55)),
+        url('/images/jagannath_bg.png');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+
+    /* HIDE NATIVE GOOGLE TRANSLATE WIDGET - off-screen so it still initializes */
+    #google_translate_element {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .skiptranslate iframe,
+    .goog-te-banner-frame,
+    #goog-gt-tt {
+      display: none !important;
+    }
+
+    .goog-text-highlight {
+      background-color: transparent !important;
+      box-shadow: none !important;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 flex flex-col min-h-screen text-gray-800">
+
+  <!-- Top bar (Contact & Social & Language) -->
+  <div class="bg-saffron-900 text-white py-1">
+    <div class="container mx-auto px-4 flex justify-between items-center text-xs sm:text-sm">
+      <div class="flex space-x-4">
+        <span class="hidden md:inline"><i class="fas fa-phone mr-1"></i> +91 98765 43210</span>
+        <span><i class="fas fa-envelope mr-1"></i> contact@pusaursamaj.org</span>
+      </div>
+      <div class="flex space-x-4 items-center">
+        <a href="#" class="hover:text-saffron-500 transition-colors hidden sm:inline"><i
+            class="fab fa-facebook"></i></a>
+        <a href="#" class="hover:text-saffron-500 transition-colors hidden sm:inline"><i class="fab fa-youtube"></i></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Navigation -->
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+
+      <!-- Logo & Title -->
+      <a href="/" class="flex items-center space-x-3 group">
+        <!-- Jagannath Logo -->
+        <div
+          class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-[3px] border-saffron-500 overflow-hidden bg-saffron-50 group-hover:scale-105 transition-transform transform">
+          <span class="text-4xl leading-none font-bold text-saffron-600" title="Jai Jagannath">ଓ</span>
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold text-saffron-600 leading-tight">Utkal</h1>
+          <h2 class="text-sm font-semibold text-gray-600 tracking-wider">Brahmin Samaj -Pusaur</h2>
+        </div>
+      </a>
+
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex space-x-6 font-medium text-gray-700">
+        <a href="/"
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Home</a>
+        <a href="/members"
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Directory</a>
+        <a href="/surnames"
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Surnames</a>
+        <a href="/events"
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Events</a>
+        <a href="/members/matrimonial"
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Matrimonial</a>
+        <a href="/gallery"
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Gallery</a>
+        <a href="/documents"
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">ई-लाइब्रेरी</a>
+        <a href="/donate"
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Donate</a>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <!-- Hidden Original Translate Widget -->
+        <div id="google_translate_element"></div>
+
+        <!-- NEW Custom Language Dropdown -->
+        <div
+          class="relative flex items-center bg-white border border-saffron-300 rounded-full shadow-sm hover:border-saffron-500 transition-colors px-1 py-1 sm:mr-2 cursor-pointer">
+          <div
+            class="w-8 h-8 rounded-full bg-saffron-50 flex items-center justify-center text-saffron-600 shadow-inner">
+            <i class="fas fa-globe-asia text-lg"></i>
+          </div>
+          <select id="lang-select" onchange="changeGoogleLanguage(this.value)"
+            class="bg-transparent text-saffron-900 text-sm font-extrabold cursor-pointer outline-none appearance-none pr-8 pl-3 py-1 relative z-10 w-full hover:text-saffron-700">
+            <option value="en">English (En)</option>
+            <option value="hi">हिंदी (Hi)</option>
+            <option value="or">ଓଡ଼ିଆ (Or)</option>
+          </select>
+          <i class="fas fa-chevron-down text-saffron-400 text-xs absolute right-3 pointer-events-none"></i>
+        </div>
+        <!-- Admin Button -->
+        <div class="hidden md:block">
+          <% if (locals.isAdmin) { %>
+            <a href="/admin/logout"
+              class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-full font-medium transition-colors shadow-md">
+              <i class="fas fa-sign-out-alt mr-2"></i>Logout
+            </a>
+            <% } else { %>
+              <a href="/admin/login"
+                class="bg-saffron-500 hover:bg-saffron-600 text-white px-5 py-2 rounded-full font-medium transition-colors shadow-md">
+                <i class="fas fa-user-lock mr-2"></i>Admin
+              </a>
+              <% } %>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button class="md:hidden text-saffron-600 text-2xl focus:outline-none pl-2" onclick="toggleMobileMenu()">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Menu (Hidden by default) -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 px-4 py-2 shadow-inner">
+      <a href="/" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Home</a>
+      <a href="/members" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Directory</a>
+      <a href="/surnames" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Surnames</a>
+      <a href="/events" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Events</a>
+      <a href="/members/matrimonial"
+        class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Matrimonial</a>
+      <a href="/gallery" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Gallery</a>
+      <a href="/documents" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">ई-लाइब्रेरी (Docs)</a>
+      <a href="/donate" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Donate</a>
+      <% if (locals.isAdmin) { %>
+        <a href="/admin" class="block py-2 text-saffron-600 font-medium mt-2"><i
+            class="fas fa-cogs mr-2"></i>Dashboard</a>
+        <a href="/admin/logout" class="block py-2 text-red-600 font-medium mt-2"><i
+            class="fas fa-sign-out-alt mr-2"></i>Logout</a>
+        <% } else { %>
+          <a href="/admin/login" class="block py-2 text-saffron-600 font-medium mt-2"><i
+              class="fas fa-user-lock mr-2"></i>Admin Login</a>
+          <% } %>
+    </div>
+  </nav>
+
+  <script>
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    // Cookie-based Google Translate (most reliable method)
+    function changeGoogleLanguage(langValue) {
+      var hostname = window.location.hostname;
+      // Remove old googtrans cookies on both domain variants
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + hostname;
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + hostname;
+
+      if (langValue !== 'en') {
+        // Use /auto/ as source so Google detects Hindi/English/Odia automatically
+        var cookieVal = '/auto/' + langValue;
+        document.cookie = 'googtrans=' + cookieVal + '; path=/;';
+        document.cookie = 'googtrans=' + cookieVal + '; path=/; domain=' + hostname;
+        document.cookie = 'googtrans=' + cookieVal + '; path=/; domain=.' + hostname;
+      }
+      window.location.reload();
+    }
+
+    // On page load, sync the dropdown to match current cookie language
+    window.addEventListener('load', function () {
+      var cookieMatch = document.cookie.match(/googtrans=\/(?:auto|en)\/([^;]+)/);
+      if (cookieMatch) {
+        var sel = document.getElementById('lang-select');
+        if (sel) sel.value = cookieMatch[1];
+      }
+    });
+  </script>
+
+  <!-- News Ticker -->
+  <div class="bg-saffron-100 border-b border-saffron-500 text-saffron-900 py-2 overflow-hidden flex whitespace-nowrap">
+    <div class="px-4 font-bold bg-saffron-500 text-white z-10 hidden sm:block">Latest News</div>
+    <marquee behavior="scroll" direction="left" class="flex-1 px-4 font-medium text-sm pt-1" onmouseover="this.stop();"
+      onmouseout="this.start();">
+      <% if (typeof announcements !=='undefined' && announcements.length> 0) { %>
+        <% announcements.forEach((notice, idx)=> { %>
+          <i class="<%= notice.icon %> text-saffron-500 mr-2"></i>
+          <% if (notice.link) { %>
+            <a href="<%= notice.link %>" class="hover:underline text-saffron-800"><%= notice.message %></a>
+          <% } else { %>
+            <%= notice.message %>
+          <% } %>
+            <% if (idx < announcements.length - 1) { %>
+              <span class="mx-4 text-gray-400">|</span>
+              <% } %>
+                <% }) %>
+                  <% } else { %>
+                    <i class="fas fa-dharmachakra text-saffron-500 mr-2"></i>
+                    Welcome to the official website of Utkal Brahmin Samaj -Pusaur!
+                    <% } %>
+    </marquee>
+  </div>
+
+  <!-- Main Content Wrapper -->
+  <main class="flex-grow">

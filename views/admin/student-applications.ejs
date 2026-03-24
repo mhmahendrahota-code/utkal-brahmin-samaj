@@ -1,0 +1,45 @@
+<%- include('partials/admin-header') %>
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-6xl">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a> Student Applications</h1>
+      </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+              <th class="px-6 py-4 font-medium">Student / Guardian</th>
+              <th class="px-6 py-4 font-medium">Education Level</th>
+              <th class="px-6 py-4 font-medium">Score / Percentage</th>
+              <th class="px-6 py-4 font-medium">Contact</th>
+              <th class="px-6 py-4 font-medium">Submitted</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm">
+            <% if (applications && applications.length > 0) { %>
+              <% applications.forEach(app => { %>
+                <tr class="hover:bg-gray-50 text-gray-700">
+                  <td class="px-6 py-4 font-medium text-gray-900 border-l-4 border-l-blue-500">
+                    <%= app.studentName %> <br> <span class="text-xs text-gray-500">Guardian: <%= app.guardianName %></span>
+                  </td>
+                  <td class="px-6 py-4"><%= app.educationLevel %></td>
+                  <td class="px-6 py-4 font-bold text-blue-600"><%= app.score %></td>
+                  <td class="px-6 py-4"><%= app.contact %></td>
+                  <td class="px-6 py-4 text-gray-500"><%= app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A' %></td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr>
+                <td colspan="5" class="px-6 py-8 text-center text-gray-500">No applications found.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+<%- include('partials/admin-footer') %>

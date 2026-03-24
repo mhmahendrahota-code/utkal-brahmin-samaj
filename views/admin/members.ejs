@@ -1,0 +1,84 @@
+<%- include('partials/admin-header') %>
+
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-6xl">
+    
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a> Manage Members</h1>
+      </div>
+      <div>
+        <a href="/admin/members/export" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center mr-2">
+          <i class="fas fa-file-csv mr-2"></i> Export CSV
+        </a>
+        <a href="/admin/members/add" class="bg-saffron-600 hover:bg-saffron-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center">
+          <i class="fas fa-user-plus mr-2"></i> Add Member
+        </a>
+      </div>
+    </div>
+
+    <!-- Data Table Sandbox/Placeholder -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+        <div class="relative w-72">
+          <input type="text" placeholder="Search members..." class="w-full pl-10 pr-4 py-2 rounded border border-gray-300 text-sm focus:ring-saffron-500 focus:border-saffron-500">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i class="fas fa-search text-gray-400"></i>
+          </div>
+        </div>
+        <div class="text-sm text-gray-500">
+          Showing mock data structure
+        </div>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+              <th class="px-6 py-4 font-medium">Name</th>
+              <th class="px-6 py-4 font-medium">Gotra</th>
+              <th class="px-6 py-4 font-medium">Village</th>
+              <th class="px-6 py-4 font-medium">Contact</th>
+              <th class="px-6 py-4 font-medium">Status</th>
+              <th class="px-6 py-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm">
+            <% if (members && members.length > 0) { %>
+              <% members.forEach(member => { %>
+                <tr class="hover:bg-gray-50 text-gray-700">
+                  <td class="px-6 py-4 font-medium text-gray-900 flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-saffron-100 text-saffron-600 flex items-center justify-center mr-3 font-bold"><%= member.name.charAt(0) %></div>
+                    <%= member.name %>
+                  </td>
+                  <td class="px-6 py-4"><%= member.gotra %></td>
+                  <td class="px-6 py-4"><%= member.village %></td>
+                  <td class="px-6 py-4"><%= member.contactNumber %></td>
+                  <td class="px-6 py-4">
+                    <% if(member.isCommitteeMember) { %>
+                      <span class="bg-saffron-100 text-saffron-700 px-2 py-1 rounded text-xs font-medium">Committee</span>
+                    <% } else { %>
+                      <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">Active</span>
+                    <% } %>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <form action="/admin/members/<%= member._id %>/delete" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this member?');">
+                      <button type="submit" class="text-red-500 hover:text-red-700 mx-1" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr>
+                <td colspan="6" class="px-6 py-8 text-center text-gray-500">No members found. Add one to see it here.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<%- include('partials/admin-footer') %>

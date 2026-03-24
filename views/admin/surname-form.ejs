@@ -1,0 +1,66 @@
+<%- include('partials/admin-header') %>
+
+  <div class="flex-grow max-w-3xl mx-auto w-full px-4 py-8">
+    <div class="flex items-center mb-6">
+      <a href="/admin/surnames" class="text-gray-500 hover:text-saffron-600 mr-4 transition-colors"><i class="fas fa-arrow-left text-xl"></i></a>
+      <h1 class="text-3xl font-bold text-gray-800"><%= title %></h1>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6 sm:p-8">
+      <form action="<%= surname ? '/admin/surnames/' + surname._id + '/edit' : '/admin/surnames/add' %>" method="POST">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <!-- Surname -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Surname (English) *</label>
+            <input type="text" name="surname" value="<%= surname ? surname.surname : '' %>" required
+              placeholder="e.g. Acharya"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+
+          <!-- Hindi Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Hindi Name (हिंदी नाम) *</label>
+            <input type="text" name="hindiName" value="<%= surname ? surname.hindiName : '' %>" required
+              placeholder="e.g. आचार्य"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          
+          <!-- Gotra -->
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Associated Gotra *</label>
+            <input type="text" name="gotra" value="<%= surname ? surname.gotra : '' %>" required
+              placeholder="e.g. Vashistha"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+
+          <!-- Meaning -->
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Meaning (English) *</label>
+            <textarea name="meaning" required rows="3"
+              placeholder="Teacher or Guru — those who taught the Vedas..."
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-saffron-500 focus:border-saffron-500"><%= surname ? surname.meaning : '' %></textarea>
+          </div>
+
+          <!-- Meaning Hindi -->
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Meaning Hindi (हिंदी अर्थ) *</label>
+            <textarea name="meaningHindi" required rows="3"
+              placeholder="शिक्षक या गुरु: जो वेदों और शास्त्रों का अध्यापन करते थे..."
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-saffron-500 focus:border-saffron-500"><%= surname ? surname.meaningHindi : '' %></textarea>
+          </div>
+        </div>
+
+        <div class="border-t border-gray-200 pt-6 flex justify-end space-x-3">
+          <a href="/admin/surnames" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+            Cancel
+          </a>
+          <button type="submit" class="px-6 py-2 bg-saffron-600 rounded-lg text-white hover:bg-saffron-700 font-medium shadow transition-colors">
+            <i class="fas fa-save mr-2"></i> <%= surname ? 'Update Surname' : 'Save Surname' %>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<%- include('partials/admin-footer') %>

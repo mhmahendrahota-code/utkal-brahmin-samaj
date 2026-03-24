@@ -1,0 +1,41 @@
+<%- include('../partials/header') %>
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-2xl">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">Student Felicitation Application</h2>
+      <p class="text-gray-500 mb-6">Apply to be felicitated at the upcoming Utkal Brahmin Samaj -Pusaur Meritorious Students Ceremony.</p>
+      
+      <% if (typeof success !== 'undefined' && success) { %>
+        <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 mb-6">
+          <p class="font-bold"><i class="fas fa-check-circle mr-2"></i>Application Submitted!</p>
+          <p>We have successfully received your application. The committee will reach out to you.</p>
+        </div>
+      <% } else { %>
+        <form action="/events/student-apply" method="POST" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
+            <input type="text" name="studentName" required class="w-full px-4 py-2 border rounded-md focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Guardian Name</label>
+            <input type="text" name="guardianName" required class="w-full px-4 py-2 border rounded-md focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Class / Degree Completed</label>
+            <input type="text" name="educationLevel" required class="w-full px-4 py-2 border rounded-md focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Percentage / CGPA</label>
+            <input type="text" name="score" required class="w-full px-4 py-2 border rounded-md focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+            <input type="tel" name="contact" required class="w-full px-4 py-2 border rounded-md focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <button type="submit" class="w-full bg-saffron-600 hover:bg-saffron-700 text-white font-bold py-2.5 px-4 rounded transition-colors shadow-sm">Submit Application</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

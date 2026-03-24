@@ -1,0 +1,130 @@
+<%- include('./partials/header') %>
+
+<section class="bg-saffron-900 py-16 text-white text-center border-b-4 border-saffron-500">
+  <div class="container mx-auto px-4">
+    <i class="fas fa-images text-4xl text-saffron-300 mb-4"></i>
+    <h1 class="text-4xl md:text-5xl font-bold mb-4 font-serif">समाज फोटो गैलरी</h1>
+    <p class="text-lg md:text-xl text-saffron-100 max-w-2xl mx-auto">
+      Community Gallery — हमारे उत्सवों, समारोहों और बैठकों की यादें।
+    </p>
+  </div>
+</section>
+
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-6xl">
+    
+    <!-- Filter Buttons -->
+    <div class="flex flex-wrap justify-center gap-3 mb-12">
+      <button onclick="filterGallery('all')" data-filter="all"
+        class="filter-btn active-filter px-6 py-2 rounded-full font-bold shadow-sm transition-all">
+        <i class="fas fa-th mr-2"></i>All Photos
+      </button>
+      <button onclick="filterGallery('rathyatra')" data-filter="rathyatra"
+        class="filter-btn px-6 py-2 border border-gray-200 bg-white text-gray-600 hover:border-saffron-400 hover:text-saffron-700 rounded-full font-bold shadow-sm transition-all">
+        <i class="fas fa-gopuram mr-2"></i>Rath Yatra
+      </button>
+      <button onclick="filterGallery('upanayana')" data-filter="upanayana"
+        class="filter-btn px-6 py-2 border border-gray-200 bg-white text-gray-600 hover:border-saffron-400 hover:text-saffron-700 rounded-full font-bold shadow-sm transition-all">
+        <i class="fas fa-praying-hands mr-2"></i>Upanayana (Thread Ceremony)
+      </button>
+      <button onclick="filterGallery('meetings')" data-filter="meetings"
+        class="filter-btn px-6 py-2 border border-gray-200 bg-white text-gray-600 hover:border-saffron-400 hover:text-saffron-700 rounded-full font-bold shadow-sm transition-all">
+        <i class="fas fa-users mr-2"></i>Meetings
+      </button>
+      <button onclick="filterGallery('festivals')" data-filter="festivals"
+        class="filter-btn px-6 py-2 border border-gray-200 bg-white text-gray-600 hover:border-saffron-400 hover:text-saffron-700 rounded-full font-bold shadow-sm transition-all">
+        <i class="fas fa-star-and-crescent mr-2"></i>Festivals
+      </button>
+    </div>
+
+    <!-- Gallery Grid -->
+    <div id="gallery-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      
+      <% if (images && images.length > 0) { %>
+        <% images.forEach(img => { %>
+          <div class="gallery-item group relative rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer h-64" data-category="<%= img.category %>" onclick="openModal(this)">
+            <img src="<%= img.imageUrl %>" alt="<%= img.title %>" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+              <h3 class="text-white font-bold text-lg mb-1"><%= img.title %></h3>
+              <p class="text-saffron-200 text-sm"><i class="fas fa-calendar-alt mr-1"></i> 
+                <%= new Date(img.dateUploaded).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) %>
+              </p>
+              <span class="mt-2 inline-block text-xs bg-saffron-500 text-white px-2 py-1 rounded-full capitalize"><%= img.category %></span>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="col-span-full py-16 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
+          <i class="fas fa-images text-5xl mb-4 text-gray-300"></i>
+          <h3 class="text-xl font-medium text-gray-700">Photo Gallery is currently empty</h3>
+          <p class="mt-2">Photos will be added shortly.</p>
+        </div>
+      <% } %>
+
+    </div>
+
+    <!-- Empty state -->
+    <div id="no-results" class="hidden text-center py-16">
+      <i class="far fa-images text-5xl text-gray-300 mb-4"></i>
+      <p class="text-xl text-gray-500 font-medium">Is category mein abhi koi photo nahi hai.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- Lightbox Modal -->
+<div id="gallery-modal" class="hidden fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onclick="closeModal()">
+  <button class="absolute top-6 right-8 text-white text-4xl hover:text-saffron-500 transition-colors z-50">&times;</button>
+  <img src="" id="modal-image" class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl">
+</div>
+
+<style>
+  .active-filter { background-color: #E68A2E; color: white; border: none; }
+  .gallery-item.hidden { display: none; }
+</style>
+
+<script>
+  function filterGallery(category) {
+    // Update button styles
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.remove('active-filter', 'bg-saffron-600', 'text-white');
+      btn.classList.add('bg-white', 'text-gray-600', 'border', 'border-gray-200');
+    });
+    const activeBtn = document.querySelector('[data-filter="' + category + '"]');
+    if(activeBtn) {
+      activeBtn.classList.add('active-filter');
+      activeBtn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-gray-200');
+    }
+
+    // Filter items
+    const items = document.querySelectorAll('.gallery-item');
+    let visibleCount = 0;
+    items.forEach(item => {
+      if(category === 'all' || item.dataset.category === category) {
+        item.classList.remove('hidden');
+        visibleCount++;
+      } else {
+        item.classList.add('hidden');
+      }
+    });
+
+    // Show/hide empty state
+    document.getElementById('no-results').classList.toggle('hidden', visibleCount > 0);
+  }
+
+  function openModal(el) {
+    const img = el.querySelector('img');
+    document.getElementById('modal-image').src = img.src;
+    document.getElementById('gallery-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('gallery-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+</script>
+
+<%- include('./partials/footer') %>

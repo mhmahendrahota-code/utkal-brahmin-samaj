@@ -1,0 +1,200 @@
+<%- include('partials/admin-header') %>
+
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-6xl">
+    
+    <div class="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+        <p class="text-gray-500 mt-1">Welcome back, Committee Member</p>
+      </div>
+      <div>
+        <a href="/" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md font-medium transition-colors border border-gray-300 mr-2 shadow-sm text-sm">
+          <i class="fas fa-sign-out-alt mr-2"></i> Logout
+        </a>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-l-4 border-l-saffron-500 border-gray-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase">Total Members</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">128</p>
+          </div>
+          <div class="p-3 bg-saffron-50 text-saffron-500 rounded-full">
+            <i class="fas fa-users text-xl"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-l-4 border-l-blue-500 border-gray-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase">Matrimonial</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">14</p>
+          </div>
+          <div class="p-3 bg-blue-50 text-blue-500 rounded-full">
+            <i class="fas fa-rings text-xl"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-l-4 border-l-green-500 border-gray-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase">Active Events</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">3</p>
+          </div>
+          <div class="p-3 bg-green-50 text-green-500 rounded-full">
+            <i class="fas fa-calendar-check text-xl"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-l-4 border-l-purple-500 border-gray-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase">Donations</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">₹45k</p>
+          </div>
+          <div class="p-3 bg-purple-50 text-purple-500 rounded-full">
+            <i class="fas fa-rupee-sign text-xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Management Sections -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      
+      <!-- Member Management Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-address-book text-saffron-500 mr-2"></i> Members Directory</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6 text-sm">Add new members, edit existing profiles, and approve matrimonial requests.</p>
+          <div class="space-y-3">
+            <a href="/admin/members" class="block w-full text-center bg-saffron-600 hover:bg-saffron-700 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+              Manage Members
+            </a>
+            <a href="/admin/members/add" class="block w-full text-center bg-white hover:bg-gray-50 text-saffron-700 font-medium py-2 rounded border border-saffron-200 transition-colors text-sm">
+              <i class="fas fa-plus mr-1"></i> Add New Member
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Management Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-calendar-alt text-saffron-500 mr-2"></i> Event Calendar</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6 text-sm">Schedule new community events, meetings, festivals, and update past events.</p>
+          <div class="space-y-3">
+            <a href="/admin/events" class="block w-full text-center bg-saffron-600 hover:bg-saffron-700 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+              Manage Events
+            </a>
+            <a href="/admin/events/add" class="block w-full text-center bg-white hover:bg-gray-50 text-saffron-700 font-medium py-2 rounded border border-saffron-200 transition-colors text-sm">
+              <i class="fas fa-plus mr-1"></i> Create New Event
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Matrimonial Management Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-rings text-blue-500 mr-2"></i> Matrimonial</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6 text-sm">Review profile submissions and approve candidates to be shown publicly.</p>
+          <div class="space-y-3">
+            <a href="/admin/matrimonial" class="block w-full text-center bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+              Review Submissions
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Donations Management Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-hand-holding-heart text-purple-500 mr-2"></i> Donations</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6 text-sm">Track offline contributions and manage the Samaj Bhawan fund collections.</p>
+          <div class="space-y-3">
+            <a href="/admin/donations" class="block w-full text-center bg-purple-500 hover:bg-purple-600 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+              Manage Donations
+            </a>
+            <a href="/admin/donations/add" class="block w-full text-center bg-white hover:bg-gray-50 text-purple-700 font-medium py-2 rounded border border-purple-200 transition-colors text-sm">
+              <i class="fas fa-plus mr-1"></i> Log Offline Donation
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Announcements Management Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-bullhorn text-red-500 mr-2"></i> News Ticker</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6 text-sm">Post urgent notices and community announcements to the global website header.</p>
+          <div class="space-y-3">
+            <a href="/admin/announcements" class="block w-full text-center bg-red-500 hover:bg-red-600 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+              Manage Announcements
+            </a>
+            <a href="/admin/announcements/add" class="block w-full text-center bg-white hover:bg-gray-50 text-red-700 font-medium py-2 rounded border border-red-200 transition-colors text-sm">
+              <i class="fas fa-plus mr-1"></i> Post New Update
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Registrations Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-clipboard-list text-teal-500 mr-2"></i> Event Submissions</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6 text-sm">Review submitted applications for the Matrimonial Meet and Student Felicitation ceremonies.</p>
+          <div class="space-y-3">
+            <a href="/admin/meet-registrations" class="block w-full text-center bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+              Review Meet Registrations
+            </a>
+            <a href="/admin/student-applications" class="block w-full text-center bg-white hover:bg-gray-50 text-teal-700 font-medium py-2 rounded border border-teal-200 transition-colors text-sm">
+              Review Student Apps
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Surname Directory Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-book text-amber-500 mr-2"></i> Surname Directory</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6 text-sm">Manage the list of Surnames, their meanings, and associated Gotras.</p>
+          <div class="space-y-3">
+            <a href="/admin/surnames" class="block w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+              Manage Surnames
+            </a>
+            <a href="/admin/surnames/add" class="block w-full text-center bg-white hover:bg-gray-50 text-amber-700 font-medium py-2 rounded border border-amber-200 transition-colors text-sm">
+              <i class="fas fa-plus mr-1"></i> Add Surname
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<%- include('partials/admin-footer') %>

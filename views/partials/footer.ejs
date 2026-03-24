@@ -1,0 +1,80 @@
+</main>
+<!-- End Main Content Wrapper -->
+
+<footer class="bg-saffron-900 text-white pt-12 pb-6 mt-12 border-t-4 border-saffron-500">
+  <div class="container mx-auto px-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+
+      <!-- About -->
+      <div class="col-span-1 md:col-span-1">
+        <div class="flex items-center space-x-2 mb-4">
+          <i class="fas fa-om text-saffron-500 text-2xl"></i>
+          <h3 class="text-xl font-bold"><%= locals.siteSettings ? siteSettings.siteTitle : 'Utkal Brahmin Samaj' %></h3>
+        </div>
+        <p class="text-gray-300 text-sm leading-relaxed">
+          United by tradition, dedicated to progress. The Utkal Brahmin Samaj -Pusaur is a community organization
+          fostering spiritual growth, cultural preservation, and mutual support.
+        </p>
+      </div>
+
+      <!-- Quick Links -->
+      <div>
+        <h4 class="text-lg font-bold mb-4 text-saffron-500 border-b border-saffron-500/30 pb-2 inline-block">Quick Links
+        </h4>
+        <ul class="space-y-2 text-sm text-gray-300">
+          <li><a href="/" class="hover:text-white transition-colors"><i
+                class="fas fa-chevron-right text-xs mr-2 text-saffron-500"></i>Home</a></li>
+          <li><a href="/members" class="hover:text-white transition-colors"><i
+                class="fas fa-chevron-right text-xs mr-2 text-saffron-500"></i>Member Directory</a></li>
+          <li><a href="/events" class="hover:text-white transition-colors"><i
+                class="fas fa-chevron-right text-xs mr-2 text-saffron-500"></i>Events & Festivals</a></li>
+          <li><a href="/documents" class="hover:text-white transition-colors"><i
+                class="fas fa-chevron-right text-xs mr-2 text-saffron-500"></i>E-Library (Docs)</a></li>
+          <li><a href="/members/matrimonial" class="hover:text-white transition-colors"><i
+                class="fas fa-chevron-right text-xs mr-2 text-saffron-500"></i>Matrimonial</a></li>
+        </ul>
+      </div>
+
+      <!-- Contact Info -->
+      <div>
+        <h4 class="text-lg font-bold mb-4 text-saffron-500 border-b border-saffron-500/30 pb-2 inline-block">संपर्क
+          सूत्र (Contact Us)</h4>
+        <ul class="space-y-3 text-sm text-gray-300">
+          <li class="flex items-start">
+            <i class="fas fa-map-marker-alt mt-1 mr-3 text-saffron-500"></i>
+            <span>उत्कल ब्राह्मण समाज -पुसौर समिति<br>समाज भवन, पुसौर<br>जिला - रायगढ़, छत्तीसगढ़</span>
+          </li>
+          <li class="flex items-center">
+            <i class="fas fa-phone mr-3 text-saffron-500"></i>
+            <span><%= locals.siteSettings ? siteSettings.contactPhone : '+91-9630809081' %></span>
+          </li>
+          <li class="flex items-center">
+            <i class="fas fa-envelope mr-3 text-saffron-500"></i>
+            <span><%= locals.siteSettings ? siteSettings.contactEmail : 'info@pusoreutkalbrahmin.com' %></span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Jai Jagannath -->
+      <div class="flex flex-col items-center justify-center bg-white/5 rounded-lg p-4 border border-white/10">
+        <!-- Using a simple text for Jai Jagannath or an icon -->
+        <h4 class="text-2xl font-bold text-saffron-500 mb-2">जय जगन्नाथ</h4>
+        <p class="text-center text-xs text-gray-300">
+          May Lord Jagannath bless our community with peace, prosperity, and unity.
+        </p>
+      </div>
+    </div>
+
+    <div class="pt-6 border-t border-white/20 text-center text-sm text-gray-400">
+      <p>&copy; <%= new Date().getFullYear() %> Utkal Brahmin Samaj -Pusaur. All rights reserved.</p>
+      <p class="mt-1 text-xs text-gray-400">
+        Designed and Developed by <span class="font-bold text-saffron-500 tracking-wider">MAHENDRA KUMAR HOTA</span>
+        with <i class="fas fa-heart text-saffron-500 mx-1"></i> for the community.
+      </p>
+    </div>
+  </div>
+</footer>
+
+</body>
+
+</html>

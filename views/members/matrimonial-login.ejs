@@ -1,0 +1,47 @@
+<%- include('../partials/header') %>
+
+<section class="py-16 bg-gray-50 flex-grow flex items-center justify-center">
+  <div class="container mx-auto px-4 max-w-md">
+    
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
+      
+      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500 text-2xl">
+        <i class="fas fa-lock"></i>
+      </div>
+
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">Privacy Protected</h1>
+      <p class="text-gray-500 mb-8 text-sm">
+        To protect the privacy of our candidates, the Matrimonial section is restricted to verified community members only.
+      </p>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-6 text-sm text-left">
+          <i class="fas fa-exclamation-triangle mr-2"></i> <%= error %>
+        </div>
+      <% } %>
+
+      <form action="/members/matrimonial/login" method="POST">
+        <div class="mb-6 text-left">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Enter Community PIN</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+              <i class="fas fa-key"></i>
+            </span>
+            <input type="password" name="pin" required placeholder="Hint: OM108" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-saffron-500 focus:border-saffron-500 text-center tracking-widest font-mono text-lg font-bold">
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-saffron-600 hover:bg-saffron-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center justify-center">
+          Unlock Portal <i class="fas fa-arrow-right ml-2 text-sm"></i>
+        </button>
+      </form>
+
+      <div class="mt-6 pt-6 border-t border-gray-100">
+        <p class="text-xs text-gray-400">If you don't have the PIN, please contact the Utkal Brahmin Samaj core committee.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

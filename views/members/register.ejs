@@ -1,0 +1,154 @@
+<%- include('../partials/header') %>
+
+  <!-- Page Header -->
+  <section class="bg-saffron-900 py-12 text-white">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-3xl md:text-5xl font-bold mb-4 font-display">समाज के डिजिटल सदस्य बनें!</h1>
+      <p class="text-saffron-100 max-w-2xl mx-auto">क्या आप पुसौर तहसील या इसके आसपास के निवासी हैं? आज ही अपनी और अपने परिवार की जानकारी हमारी डिजिटल डायरेक्टरी में दर्ज करें। यह पूरी तरह निःशुल्क और सुरक्षित है।</p>
+    </div>
+  </section>
+
+  <section class="py-16 bg-gray-50 flex-grow">
+    <div class="container mx-auto px-4 max-w-2xl">
+
+      <% if (success) { %>
+        <!-- Success Message -->
+        <div class="bg-white rounded-lg shadow-sm border border-green-200 p-10 text-center">
+          <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-check-circle text-4xl text-green-500"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-800 mb-2">धन्यवाद! आपका पंजीकरण सफल रहा।</h2>
+          <p class="text-gray-600 mb-2">Thank you! Your registration was successful.</p>
+          <p class="text-sm text-gray-500 mb-8">आपकी जानकारी हमारी टीम समीक्षा के बाद डायरेक्टरी में जोड़ी जाएगी।<br>Your details will be added after review by our team.</p>
+          <a href="/" class="inline-block bg-saffron-600 hover:bg-saffron-700 text-white font-medium py-2 px-8 rounded transition-colors">
+            <i class="fas fa-home mr-2"></i>Go to Home
+          </a>
+        </div>
+
+      <% } else { %>
+
+        <% if (error) { %>
+          <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
+            <i class="fas fa-exclamation-circle mr-2"></i> <%= error %>
+          </div>
+        <% } %>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 md:p-8">
+          <h2 class="text-xl font-bold text-saffron-700 border-b pb-3 mb-6">सदस्यता पंजीकरण फॉर्म / Membership Registration Form</h2>
+
+          <form action="/members/add" method="POST" class="space-y-5">
+
+            <!-- Name -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">पूरा नाम / Full Name *</label>
+              <input type="text" name="name" required placeholder="जैसे: Ramesh Chandra Mishra"
+                class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <!-- Gotra -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">गोत्र / Gotra *</label>
+                <select id="gotraSelect" name="gotra" required onchange="toggleGotraInput(this)"
+                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
+                  <option value="">-- Select Gotra (गोत्र चुनें) --</option>
+                  <option value="Atri">Atri / Atreya (अत्रि / आत्रेय)</option>
+                  <option value="Upamanyu">Upamanyu (उपमन्यु)</option>
+                  <option value="Kapinjala">Kapinjala (कपिंजल)</option>
+                  <option value="Kashyapa">Kashyapa (कश्यप)</option>
+                  <option value="Kaundinya">Kaundinya (कौंडिन्य)</option>
+                  <option value="Kaushik">Kaushik (कौशिक)</option>
+                  <option value="Gargya">Gargya (गार्ग्य)</option>
+                  <option value="Gautama">Gautama (गौतम)</option>
+                  <option value="Jamadagnya">Jamadagnya (जामदग्न्य)</option>
+                  <option value="Parashara">Parashara (पराशर)</option>
+                  <option value="Bharadwaj">Bharadwaj (भरद्वाज)</option>
+                  <option value="Vatsa">Vatsa (वत्स)</option>
+                  <option value="Vashistha">Vashistha (वसिष्ठ)</option>
+                  <option value="Vishwamitra">Vishwamitra (विश्वामित्र)</option>
+                  <option value="Shandilya">Shandilya (शांडिल्य)</option>
+                  <option value="Harita">Harita (हरित)</option>
+                  <option value="Other">Other (अन्य)</option>
+                </select>
+                <div id="gotraCustomDiv" style="display:none;" class="mt-2">
+                  <input type="text" id="gotraCustomInput" placeholder="अपना गोत्र लिखें / Enter Gotra"
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                </div>
+              </div>
+
+              <!-- Village -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">मूल गाँव / Village (Mool) *</label>
+                <input type="text" name="village" required placeholder="जैसे: Pusaur, Khairmal..."
+                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <!-- Contact -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">मोबाइल नंबर / Contact Number *</label>
+                <input type="tel" name="contactNumber" required placeholder="+91 XXXXX XXXXX"
+                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+              </div>
+
+              <!-- Occupation -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">व्यवसाय / Occupation</label>
+                <input type="text" name="occupation" placeholder="जैसे: Teacher, Farmer, Business..."
+                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">ईमेल / Email Address</label>
+              <input type="email" name="email" placeholder="example@email.com"
+                class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            </div>
+
+            <!-- Address -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">वर्तमान पता / Current Address</label>
+              <textarea name="address" rows="3" placeholder="मकान नंबर, गली, शहर..."
+                class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500"></textarea>
+            </div>
+
+            <div class="bg-saffron-50 border border-saffron-200 rounded p-4 text-sm text-saffron-800">
+              <i class="fas fa-info-circle mr-1"></i>
+              आपकी जानकारी समाज की समिति द्वारा सत्यापित की जाएगी और फिर डायरेक्टरी में जोड़ी जाएगी।<br>
+              <span class="text-saffron-700">Your information will be verified by the committee before being added to the directory.</span>
+            </div>
+
+            <div class="flex justify-end gap-4 pt-2">
+              <a href="/" class="px-6 py-2 border border-gray-300 rounded text-gray-700 font-medium hover:bg-gray-50 transition-colors">रद्द करें / Cancel</a>
+              <button type="submit" class="px-8 py-2 bg-saffron-600 hover:bg-saffron-700 text-white rounded font-medium shadow-sm transition-colors">
+                <i class="fas fa-paper-plane mr-2"></i> पंजीकरण करें / Register
+              </button>
+            </div>
+          </form>
+        </div>
+
+      <% } %>
+    </div>
+  </section>
+
+  <script>
+    function toggleGotraInput(select) {
+      const customDiv = document.getElementById('gotraCustomDiv');
+      const customInput = document.getElementById('gotraCustomInput');
+      if (select.value === 'Other') {
+        customDiv.style.display = 'block';
+        customInput.required = true;
+        customInput.name = 'gotra';
+        select.name = '_gotraSelect';
+      } else {
+        customDiv.style.display = 'none';
+        customInput.required = false;
+        customInput.name = '';
+        select.name = 'gotra';
+      }
+    }
+  </script>
+
+<%- include('../partials/footer') %>

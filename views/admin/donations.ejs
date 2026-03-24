@@ -1,0 +1,71 @@
+<%- include('partials/admin-header') %>
+
+  <section class="py-12 bg-gray-50 flex-grow">
+    <div class="container mx-auto px-4 max-w-6xl">
+
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800"><a href="/admin"
+              class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a> Donation
+            Records</h1>
+        </div>
+        <div>
+          <a href="/admin/donations/export" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center mr-2">
+            <i class="fas fa-file-csv mr-2"></i> Export CSV
+          </a>
+          <a href="/admin/donations/add"
+            class="bg-saffron-600 hover:bg-saffron-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center">
+            <i class="fas fa-plus mr-2"></i> Log Offline Donation
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+                <th class="px-6 py-4 font-medium">Donor Name</th>
+                <th class="px-6 py-4 font-medium">Amount (₹)</th>
+                <th class="px-6 py-4 font-medium">Purpose</th>
+                <th class="px-6 py-4 font-medium">Method</th>
+                <th class="px-6 py-4 font-medium">Date</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-sm">
+              <% if (donations && donations.length> 0) { %>
+                <% donations.forEach(donation=> { %>
+                  <tr class="hover:bg-gray-50 text-gray-700">
+                    <td class="px-6 py-4 font-medium text-gray-900 border-l-4 border-l-green-500">
+                      <%= donation.donorName %>
+                    </td>
+                    <td class="px-6 py-4 font-bold text-green-600">₹<%= donation.amount %>
+                    </td>
+                    <td class="px-6 py-4">
+                      <%= donation.purpose %>
+                    </td>
+                    <td class="px-6 py-4">
+                      <%= donation.paymentMethod %>
+                        <% if(donation.transactionId) { %>
+                          <br><span class="text-xs text-gray-500">Ref: <%= donation.transactionId %></span>
+                          <% } %>
+                    </td>
+                    <td class="px-6 py-4 text-gray-500">
+                      <%= donation.date ? new Date(donation.date).toLocaleDateString() : 'N/A' %>
+                    </td>
+                  </tr>
+                  <% }) %>
+                    <% } else { %>
+                      <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">No donations logged yet.</td>
+                      </tr>
+                      <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <%- include('partials/admin-footer') %>

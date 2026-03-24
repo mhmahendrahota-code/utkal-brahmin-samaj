@@ -1,0 +1,73 @@
+<%- include('partials/admin-header') %>
+
+<div class="flex-grow max-w-7xl mx-auto w-full px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-file-pdf text-saffron-500 mr-2"></i> Document Library</h1>
+    <a href="/admin/documents/add" class="bg-saffron-600 hover:bg-saffron-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center">
+      <i class="fas fa-plus mr-2"></i> Upload Document
+    </a>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+    <% if (documents && documents.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 border-b border-gray-200">
+              <th class="p-4 font-semibold text-gray-600 w-1/3">Document Title</th>
+              <th class="p-4 font-semibold text-gray-600">Category</th>
+              <th class="p-4 font-semibold text-gray-600">Upload Date</th>
+              <th class="p-4 font-semibold text-gray-600 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <% documents.forEach(doc => { %>
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="p-4">
+                  <div class="flex items-start">
+                    <i class="fas fa-file-alt text-gray-400 text-2xl mr-3 mt-1"></i>
+                    <div>
+                      <p class="font-bold text-gray-900"><%= doc.title %></p>
+                      <p class="text-sm text-gray-500 line-clamp-1"><%= doc.description %></p>
+                    </div>
+                  </div>
+                </td>
+                <td class="p-4">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <%= doc.category %>
+                  </span>
+                </td>
+                <td class="p-4 text-sm text-gray-500">
+                  <%= new Date(doc.dateUploaded).toLocaleDateString() %>
+                </td>
+                <td class="p-4 text-right space-x-2">
+                  <a href="<%= doc.fileUrl %>" target="_blank" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-2 rounded transition-colors" title="View/Download">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                  <form action="/admin/documents/<%= doc._id %>/delete" method="POST" class="inline" onsubmit="return confirm('Delete this document?');">
+                    <button type="submit" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded transition-colors" title="Delete">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="text-center py-16">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+          <i class="fas fa-folder-open text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-1">No Documents Uploaded</h3>
+        <p class="text-gray-500 text-sm mb-6">Upload PDFs or links to Samaj rules, constitutions, and meeting minutes.</p>
+        <a href="/admin/documents/add" class="bg-saffron-600 hover:bg-saffron-700 text-white px-4 py-2 rounded text-sm font-medium shadow-md transition-colors inline-block">
+          Upload First File
+        </a>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/admin-footer') %>

@@ -1,0 +1,124 @@
+<%- include('partials/header') %>
+
+  <!-- Page Header -->
+  <section class="bg-saffron-900 py-12 text-white">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-3xl md:text-5xl font-bold mb-4 font-display">Contribute to the Samaj</h1>
+      <p class="text-saffron-100 max-w-2xl mx-auto">Your generous donations help us build the Samaj Bhawan and support
+        community welfare.</p>
+    </div>
+  </section>
+
+  <section class="py-16 bg-gray-50 flex-grow">
+    <div class="container mx-auto px-4 max-w-4xl">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <!-- Donation Info -->
+        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-100 h-full">
+          <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Support the Samaj Bhawan Initiative</h2>
+          <p class="text-gray-600 mb-8 leading-relaxed">
+            The Utkal Brahmin Samaj is actively constructing a community hall (Samaj Bhawan) in Pusaur. This building
+            will serve as a central hub for weddings, thread ceremonies (Upanayana), festivals, and community meetings.
+            We warmly appeal to all capable members to contribute generously to this noble cause.
+          </p>
+
+          <!-- Live Progress Bar -->
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
+            <div class="flex justify-between items-end mb-2">
+              <div>
+                <span class="text-sm font-bold text-gray-500 uppercase tracking-wider">Raised So Far</span>
+                <div class="text-2xl font-bold text-saffron-600">₹<%= totalRaised.toLocaleString('en-IN') %>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-bold text-gray-500 uppercase tracking-wider">Goal</span>
+                <div class="text-lg font-bold text-gray-800">₹<%= targetGoal.toLocaleString('en-IN') %>
+                </div>
+              </div>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden shadow-inner">
+              <div class="bg-saffron-500 h-4 rounded-full transition-all duration-1000"
+                <%- `style="width: ${Math.min(Math.round((totalRaised / targetGoal) * 100), 100)}%;"` %>></div>
+            </div>
+            <p class="text-right text-xs font-bold text-gray-500">
+              <%= Math.round((totalRaised / targetGoal) * 100) %>% Completed
+            </p>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">Bank Account Details</h2>
+
+          <div class="space-y-6">
+            <div class="flex items-start">
+              <div class="bg-saffron-100 p-3 rounded-full mr-4 text-saffron-600">
+                <i class="fas fa-university text-xl"></i>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Account Name</p>
+                <p class="text-lg font-bold text-gray-900">Pusaur Utkal Brahmin Samaj Trust</p>
+              </div>
+            </div>
+
+            <div class="flex items-start">
+              <div class="bg-saffron-100 p-3 rounded-full mr-4 text-saffron-600">
+                <i class="fas fa-money-check text-xl"></i>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Account Number</p>
+                <p class="text-lg font-bold text-gray-900 tracking-wider">3142 5678 9012 3456</p>
+                <p class="text-sm text-gray-600">State Bank of India</p>
+              </div>
+            </div>
+
+            <div class="flex items-start">
+              <div class="bg-saffron-100 p-3 rounded-full mr-4 text-saffron-600">
+                <i class="fas fa-code-branch text-xl"></i>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">IFSC Code</p>
+                <p class="text-lg font-bold text-gray-900 tracking-wider">SBIN0001234</p>
+                <p class="text-sm text-gray-600">Branch: Pusaur Main</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8 p-4 bg-saffron-50 rounded-lg border border-saffron-200">
+            <h3 class="font-bold text-saffron-900 mb-2">Notice:</h3>
+            <p class="text-sm text-saffron-800">After making a direct bank transfer, please inform the treasurer at <%= locals.siteSettings ? siteSettings.contactPhone : '+91 98765 43210' %> with your transaction reference number to receive your digital receipt.</p>
+          </div>
+        </div>
+
+        <!-- QR Code / UPI -->
+        <div
+          class="bg-white p-8 rounded-lg shadow-sm border border-gray-100 h-full flex flex-col items-center justify-center text-center">
+          <h2 class="text-2xl font-bold text-gray-800 mb-2">Scan & Pay via UPI</h2>
+          <p class="text-gray-500 mb-8 text-sm">Any UPI App (GPay, PhonePe, Paytm, BHIM)</p>
+
+          <div class="bg-white p-4 border border-gray-200 rounded-xl shadow-inner mb-6 flex justify-center items-center h-56 w-56 mx-auto">
+            <% if (locals.siteSettings && siteSettings.qrCodeUrl) { %>
+              <img src="<%= siteSettings.qrCodeUrl %>" alt="Scan to Donate" class="max-w-full max-h-full object-contain">
+            <% } else { %>
+              <!-- Placeholder for actual QR Code -->
+              <div class="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400">
+                <i class="fas fa-qrcode text-6xl mb-2 opacity-50"></i>
+                <span class="text-sm font-medium text-center px-2 text-xs">Setup QR in Admin Panel</span>
+              </div>
+            <% } %>
+          </div>
+
+          <div
+            class="w-full flex items-center justify-center space-x-2 bg-gray-50 py-3 px-4 rounded-lg border border-gray-200">
+            <span class="text-gray-600 font-medium">UPI ID:</span>
+            <span class="text-gray-900 font-bold tracking-wide"><%= locals.siteSettings && siteSettings.upiId ? siteSettings.upiId : 'Not Configured' %></span>
+            <button data-upi="<%= locals.siteSettings && siteSettings.upiId ? siteSettings.upiId : '' %>"
+              onclick="navigator.clipboard.writeText(this.getAttribute('data-upi')); alert('UPI ID copied!')"
+              class="text-saffron-600 hover:text-saffron-800 ml-2" title="Copy to clipboard">
+              <i class="far fa-copy"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <%- include('partials/footer') %>

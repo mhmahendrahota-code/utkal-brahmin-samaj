@@ -1,0 +1,113 @@
+<%- include('../partials/header') %>
+
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-4xl">
+    
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-800">Submit Matrimonial Profile</h1>
+      <p class="text-gray-500 mt-2">Create a profile for eligible candidates within the Utkal Brahmin Samaj.</p>
+      <div class="mt-4 inline-block bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-4 py-2 rounded-lg">
+        <i class="fas fa-info-circle mr-2"></i> Your profile will remain hidden until verified and approved by the Samaj Committee.
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8">
+      <form action="/members/matrimonial/submit" method="POST">
+        
+        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Candidate Details</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+            <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Gotra *</label>
+            <select id="gotraSelect" name="gotra" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white" onchange="toggleGotraInput(this)">
+              <option value="">-- Select Gotra (गोत्र चुनें) --</option>
+              <option value="Atri">Atri / Atreya (अत्रि / आत्रेय)</option>
+              <option value="Upamanyu">Upamanyu (उपमन्यु)</option>
+              <option value="Kapinjala">Kapinjala (कपिंजल)</option>
+              <option value="Kashyapa">Kashyapa (कश्यप)</option>
+              <option value="Kaundinya">Kaundinya (कौंडिन्य)</option>
+              <option value="Kaushik">Kaushik (कौशिक)</option>
+              <option value="Gargya">Gargya (गार्ग्य)</option>
+              <option value="Gautama">Gautama (गौतम)</option>
+              <option value="Jamadagnya">Jamadagnya (जामदग्न्य)</option>
+              <option value="Parashara">Parashara (पराशर)</option>
+              <option value="Bharadwaj">Bharadwaj (भरद्वाज)</option>
+              <option value="Vatsa">Vatsa (वत्स)</option>
+              <option value="Vashistha">Vashistha (वसिष्ठ)</option>
+              <option value="Vishwamitra">Vishwamitra (विश्वामित्र)</option>
+              <option value="Shandilya">Shandilya (शांडिल्य)</option>
+              <option value="Harita">Harita (हरित)</option>
+              <option value="Other">Other (अन्य)</option>
+            </select>
+            <div id="gotraCustomDiv" style="display:none;" class="mt-2">
+              <input type="text" id="gotraCustomInput" placeholder="अपना गोत्र लिखें / Enter your Gotra" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            </div>
+            <script>
+              function toggleGotraInput(select) {
+                const customDiv = document.getElementById('gotraCustomDiv');
+                const customInput = document.getElementById('gotraCustomInput');
+                if (select.value === 'Other') {
+                  customDiv.style.display = 'block';
+                  customInput.required = true;
+                  customInput.name = 'gotra';
+                  select.name = '_gotraSelect';
+                } else {
+                  customDiv.style.display = 'none';
+                  customInput.required = false;
+                  customInput.name = '';
+                  select.name = 'gotra';
+                }
+              }
+            </script>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
+            <input type="date" name="dateOfBirth" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 text-gray-700">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Height</label>
+            <input type="text" name="height" placeholder="e.g., 5' 8&quot;" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 text-gray-700">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Highest Education *</label>
+            <input type="text" name="education" required placeholder="e.g., B.Tech, MBA" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Occupation & Income</label>
+            <input type="text" name="occupation" placeholder="e.g., Software Engineer, ₹12LPA" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+        </div>
+
+        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Family & Contact Info</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Mool Village *</label>
+            <input type="text" name="village" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number (For Matches) *</label>
+            <input type="tel" name="contactNumber" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Current Residential Address</label>
+            <textarea name="address" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500"></textarea>
+          </div>
+        </div>
+
+        <div class="flex justify-center pt-6">
+          <button type="submit" class="px-10 py-3 bg-saffron-600 hover:bg-saffron-700 text-white rounded-full font-bold shadow-md transition-transform transform hover:-translate-y-1">
+            <i class="fas fa-paper-plane mr-2"></i> Submit Profile for Review
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

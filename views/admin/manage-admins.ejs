@@ -1,0 +1,68 @@
+<%- include('partials/admin-header') %>
+
+<div class="flex-grow max-w-7xl mx-auto w-full px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-users-cog text-saffron-500 mr-2"></i> Manage Administrators</h1>
+      <p class="text-sm text-gray-500 mt-1"><i class="fas fa-shield-alt text-green-500 mr-1"></i> Super Admin Area</p>
+    </div>
+    <a href="/admin/manage-admins/add" class="bg-saffron-600 hover:bg-saffron-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center">
+      <i class="fas fa-plus mr-2"></i> Add Admin
+    </a>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+    <% if (admins && admins.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 border-b border-gray-200">
+              <th class="p-4 font-semibold text-gray-600">Name</th>
+              <th class="p-4 font-semibold text-gray-600">Username</th>
+              <th class="p-4 font-semibold text-gray-600">Role</th>
+              <th class="p-4 font-semibold text-gray-600">Created On</th>
+              <th class="p-4 font-semibold text-gray-600 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <% admins.forEach(admin => { %>
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="p-4 font-bold text-gray-900"><%= admin.name %></td>
+                <td class="p-4 font-mono text-sm text-gray-600">@<%= admin.username %></td>
+                <td class="p-4">
+                  <% if (admin.role === 'Super Admin') { %>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 shadow-sm"><i class="fas fa-crown text-[10px] mr-1"></i> Super Admin</span>
+                  <% } else if (admin.role === 'Editor') { %>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Editor</span>
+                  <% } else { %>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">Viewer</span>
+                  <% } %>
+                </td>
+                <td class="p-4 text-sm text-gray-500">
+                  <%= new Date(admin.dateCreated).toLocaleDateString() %>
+                </td>
+                <td class="p-4 text-right">
+                  <% if (admin._id === locals.currentAdminId) { %>
+                    <span class="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded">You</span>
+                  <% } else { %>
+                    <form action="/admin/manage-admins/<%= admin._id %>/delete" method="POST" class="inline" onsubmit="return confirm('Revoke access for this administrator?');">
+                      <button type="submit" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded transition-colors" title="Revoke Access">
+                        <i class="fas fa-user-minus"></i>
+                      </button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="text-center py-16">
+        <p class="text-gray-500 text-sm">No secondary administrators found.</p>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/admin-footer') %>

@@ -1,0 +1,20 @@
+# Node.js dependencies - never push to GitHub
+node_modules/
+
+# !! CRITICAL: Live database - NEVER overwrite with local version !!
+data/db.json
+
+# Environment secrets
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime
+*.pid
+*.seed

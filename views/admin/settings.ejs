@@ -1,0 +1,89 @@
+<%- include('partials/admin-header') %>
+
+<div class="flex-grow max-w-5xl mx-auto w-full px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-800">Global Settings</h1>
+    <% if (siteSettings && siteSettings.lastUpdated) { %>
+      <div class="text-sm text-gray-500 bg-white px-4 py-2 rounded shadow-sm">
+        Last Updated: <%= new Date(siteSettings.lastUpdated).toLocaleString() %>
+      </div>
+    <% } %>
+  </div>
+
+  <form action="/admin/settings" method="POST" class="space-y-8">
+    
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-bold text-gray-800 flex items-center">
+          <i class="fas fa-globe text-saffron-500 mr-2"></i> General Settings
+        </h2>
+      </div>
+      <div class="p-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div class="col-span-1 md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Website Title</label>
+          <input type="text" name="siteTitle" value="<%= siteSettings ? siteSettings.siteTitle : 'Pusaur Utkal Brahmin Samaj' %>" required class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Donation Goal Target (₹)</label>
+          <input type="number" name="donationTarget" value="<%= siteSettings ? siteSettings.donationTarget : 500000 %>" required min="10000" class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-bold text-gray-800 flex items-center">
+          <i class="fas fa-money-check-alt text-saffron-500 mr-2"></i> Donation Payment Integration
+        </h2>
+      </div>
+      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Trust UPI ID</label>
+          <input type="text" name="upiId" value="<%= siteSettings ? siteSettings.upiId : '' %>" required class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">QR Code Image URL</label>
+          <p class="text-xs text-gray-500 mb-1">Path like `/images/qr-code.jpg` or a full external URL.</p>
+          <input type="text" name="qrCodeUrl" value="<%= siteSettings ? siteSettings.qrCodeUrl : '' %>" class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-bold text-gray-800 flex items-center">
+          <i class="fas fa-address-card text-saffron-500 mr-2"></i> Contact & Social Settings
+        </h2>
+      </div>
+      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+          <input type="email" name="contactEmail" value="<%= siteSettings ? siteSettings.contactEmail : '' %>" required class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+          <input type="text" name="contactPhone" value="<%= siteSettings ? siteSettings.contactPhone : '' %>" required class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Facebook Page URL</label>
+          <input type="text" name="facebookUrl" value="<%= siteSettings ? siteSettings.facebookUrl : '' %>" class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Group URL</label>
+          <input type="text" name="whatsappGroupUrl" value="<%= siteSettings ? siteSettings.whatsappGroupUrl : '' %>" class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end border-t pt-6">
+      <a href="/admin" class="bg-gray-50 text-gray-700 border border-gray-300 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold shadow-sm transition-colors mr-4">
+        Cancel
+      </a>
+      <button type="submit" class="bg-saffron-600 hover:bg-saffron-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition-colors flex items-center transform hover:-translate-y-0.5">
+        <i class="fas fa-save mr-2"></i> Save Settings
+      </button>
+    </div>
+  </form>
+</div>
+
+<%- include('partials/admin-footer') %>

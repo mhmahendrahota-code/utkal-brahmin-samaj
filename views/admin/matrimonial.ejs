@@ -1,0 +1,176 @@
+<%- include('partials/admin-header') %>
+
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-6xl">
+    
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a> Manage Matrimonial Profiles</h1>
+      </div>
+      <div>
+        <a href="/admin/matrimonial/export" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded shadow-sm text-sm font-medium inline-flex items-center transition-colors">
+          <i class="fas fa-file-download mr-2 text-saffron-600"></i> Export CSV
+        </a>
+      </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
+      <form action="/admin/matrimonial" method="GET" class="flex flex-col md:flex-row gap-4">
+        <div class="flex-grow relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i class="fas fa-search text-gray-400"></i>
+          </div>
+          <input type="text" name="search" value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>" placeholder="Search by name, gotra, or village..." class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-saffron-500 focus:border-saffron-500 text-sm">
+        </div>
+        <div class="md:w-48">
+          <select name="status" class="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 rounded-md focus:ring-saffron-500 focus:border-saffron-500 bg-white">
+            <option value="">All Statuses</option>
+            <option value="pending" <%= typeof statusQuery !== 'undefined' && statusQuery === 'pending' ? 'selected' : '' %>>Pending Review</option>
+            <option value="approved" <%= typeof statusQuery !== 'undefined' && statusQuery === 'approved' ? 'selected' : '' %>>Approved</option>
+          </select>
+        </div>
+        <div>
+          <button type="submit" class="w-full md:w-auto bg-saffron-600 hover:bg-saffron-700 text-white font-medium py-2 px-6 rounded-md transition-colors shadow-sm text-sm">Filter</button>
+          <% if ((typeof searchQuery !== 'undefined' && searchQuery) || (typeof statusQuery !== 'undefined' && statusQuery)) { %>
+            <a href="/admin/matrimonial" class="w-full md:w-auto text-gray-500 hover:text-gray-700 font-medium py-2 px-4 rounded-md text-sm text-center inline-block mt-2 md:mt-0">Clear</a>
+          <% } %>
+        </div>
+      </form>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+              <th class="px-6 py-4 font-medium">Candidate Name</th>
+              <th class="px-6 py-4 font-medium">Gotra & Village</th>
+              <th class="px-6 py-4 font-medium">Education/Job</th>
+              <th class="px-6 py-4 font-medium">Status</th>
+              <th class="px-6 py-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm">
+            <% if (profiles && profiles.length > 0) { %>
+              <% profiles.forEach(profile => { %>
+                <tr class="hover:bg-gray-50 text-gray-700">
+                  <td class="px-6 py-4 font-medium text-gray-900 border-l-4 <%= profile.matrimonialProfile.isApproved ? 'border-l-green-500' : 'border-l-yellow-500' %>">
+                    <div class="flex items-center">
+                      <div class="h-8 w-8 rounded-full bg-saffron-100 text-saffron-600 flex items-center justify-center mr-3">
+                        <i class="fas fa-user text-sm"></i>
+                      </div>
+                      <%= profile.name %>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4"><%= profile.gotra %><br><span class="text-xs text-gray-500"><%= profile.village %></span></td>
+                  <td class="px-6 py-4"><%= profile.matrimonialProfile.education || 'N/A' %><br><span class="text-xs text-gray-500"><%= profile.occupation || 'N/A' %></span></td>
+                  <td class="px-6 py-4">
+                    <% if(profile.matrimonialProfile.isApproved) { %>
+                      <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">Approved & Visible</span>
+                    <% } else { %>
+                      <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-medium">Pending Review</span>
+                    <% } %>
+                  </td>
+                  <td class="px-6 py-4 text-right space-x-2">
+                    <button onclick="openViewModal('<%= encodeURIComponent(JSON.stringify(profile)) %>')" class="text-blue-600 hover:text-blue-800 font-medium inline-block mx-1" title="View Details"><i class="fas fa-eye"></i> View</button>
+                    <a href="/admin/matrimonial/<%= profile._id %>/edit" class="text-gray-600 hover:text-saffron-600 font-medium inline-block mx-1" title="Edit Profile"><i class="fas fa-edit"></i> Edit</a>
+                    <% if(!profile.matrimonialProfile.isApproved) { %>
+                      <form action="/admin/matrimonial/<%= profile._id %>/approve" method="POST" class="inline">
+                        <button type="submit" class="text-green-600 hover:text-green-800 font-medium mx-1" title="Approve"><i class="fas fa-check"></i> Approve</button>
+                      </form>
+                    <% } else { %>
+                      <form action="/admin/matrimonial/<%= profile._id %>/revoke" method="POST" class="inline">
+                        <button type="submit" class="text-yellow-600 hover:text-yellow-800 font-medium mx-1" title="Hide (Revoke Approval)"><i class="fas fa-eye-slash"></i> Hide</button>
+                      </form>
+                    <% } %>
+                    <form action="/admin/matrimonial/<%= profile._id %>/reject" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to reject and remove this profile from matrimonial listings?');">
+                      <button type="submit" class="text-red-500 hover:text-red-700 font-medium mx-1" title="Reject / Remove"><i class="fas fa-trash-alt"></i> Reject</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr>
+                <td colspan="5" class="px-6 py-8 text-center text-gray-500">No matrimonial profiles submitted yet.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- View Profile Modal -->
+<div id="viewModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <!-- Background overlay -->
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeViewModal()"></div>
+    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+    <!-- Modal panel -->
+    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl w-full">
+      <div class="bg-gradient-to-r from-saffron-600 to-saffron-500 px-6 py-4 flex justify-between items-center">
+        <h3 class="text-xl font-bold text-white" id="modal-title">Matrimonial Profile Details</h3>
+        <button onclick="closeViewModal()" class="text-white hover:text-gray-200 focus:outline-none">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="bg-white px-6 py-6" id="modal-content">
+        <!-- Content injected via JS -->
+      </div>
+      <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+        <button type="button" class="bg-white border text-gray-700 font-medium py-2 px-6 rounded-md shadow-sm hover:bg-gray-50" onclick="closeViewModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function calculateAge(dobString) {
+    if(!dobString) return 'N/A';
+    const dob = new Date(dobString);
+    const ageDifMs = Date.now() - dob.getTime();
+    if(isNaN(ageDifMs)) return dobString; // Return string directly if invalid date
+    const ageDate = new Date(ageDifMs);
+    return Math.abs(ageDate.getUTCFullYear() - 1970) + ' years';
+  }
+
+  function openViewModal(encodedProfile) {
+    const p = JSON.parse(decodeURIComponent(encodedProfile));
+    
+    const content = `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h4 class="text-lg font-bold text-gray-800 border-b pb-2 mb-3">Personal Information</h4>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Full Name:</span> <span class="text-gray-900 font-medium">${p.name || 'N/A'}</span></p>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Gotra:</span> <span class="text-gray-900">${p.gotra || 'N/A'}</span></p>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Age / DOB:</span> <span class="text-gray-900">${calculateAge(p.matrimonialProfile.dateOfBirth)} (${p.matrimonialProfile.dateOfBirth ? new Date(p.matrimonialProfile.dateOfBirth).toLocaleDateString() : 'N/A'})</span></p>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Height:</span> <span class="text-gray-900">${p.matrimonialProfile.height || 'N/A'}</span></p>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Village:</span> <span class="text-gray-900">${p.village || 'N/A'}</span></p>
+        </div>
+        <div>
+          <h4 class="text-lg font-bold text-gray-800 border-b pb-2 mb-3">Career & Contact</h4>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Education:</span> <span class="text-gray-900">${p.matrimonialProfile.education || 'N/A'}</span></p>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Occupation:</span> <span class="text-gray-900">${p.occupation || 'N/A'}</span></p>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Phone:</span> <span class="font-bold text-blue-600">${p.contactNumber || 'N/A'}</span></p>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Email:</span> <span class="text-gray-900">${p.email || 'N/A'}</span></p>
+          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Address:</span> <span class="text-gray-900">${p.address || 'N/A'}</span></p>
+        </div>
+      </div>
+      <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <h4 class="text-sm font-bold text-yellow-800 mb-1">Approval Context</h4>
+        <p class="text-sm text-yellow-700">This profile was submitted on <strong>${new Date(p.createdAt || new Date()).toLocaleString()}</strong>. Ensure all contact details and information look genuine before making it visible to community members.</p>
+      </div>
+    `;
+    
+    document.getElementById('modal-content').innerHTML = content;
+    document.getElementById('viewModal').classList.remove('hidden');
+  }
+
+  function closeViewModal() {
+    document.getElementById('viewModal').classList.add('hidden');
+  }
+</script>
+
+<%- include('partials/admin-footer') %>

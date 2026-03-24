@@ -1,0 +1,60 @@
+<%- include('partials/admin-header') %>
+
+<div class="flex-grow max-w-7xl mx-auto w-full px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-inbox text-saffron-500 mr-2"></i> Enquiry Inbox</h1>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+    <% if (messages && messages.length > 0) { %>
+      <div class="divide-y divide-gray-100">
+        <% messages.forEach(msg => { %>
+          <div class="p-6 hover:bg-gray-50 transition-colors <%= msg.isRead ? 'opacity-70' : 'bg-saffron-50/30 border-l-4 border-saffron-500' %>">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <h3 class="font-bold text-lg <%= msg.isRead ? 'text-gray-700' : 'text-gray-900' %>">
+                  <%= msg.subject %>
+                </h3>
+                <div class="text-sm text-gray-500 mt-1 flex items-center space-x-4">
+                  <span><i class="fas fa-user text-gray-400 mr-1"></i> <%= msg.name %></span>
+                  <span><i class="fas fa-phone text-gray-400 mr-1"></i> <a href="tel:<%= msg.phone %>" class="hover:text-saffron-600"><%= msg.phone %></a></span>
+                  <% if (msg.email) { %>
+                    <span><i class="fas fa-envelope text-gray-400 mr-1"></i> <a href="mailto:<%= msg.email %>" class="hover:text-saffron-600"><%= msg.email %></a></span>
+                  <% } %>
+                  <span><i class="fas fa-clock text-gray-400 mr-1"></i> <%= new Date(msg.dateReceived).toLocaleString() %></span>
+                </div>
+              </div>
+              <div class="flex space-x-2">
+                <% if (!msg.isRead) { %>
+                  <form action="/admin/inbox/<%= msg._id %>/read" method="POST">
+                    <button type="submit" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-3 py-1 rounded text-xs font-medium transition-colors">
+                      Mark Read
+                    </button>
+                  </form>
+                <% } %>
+                <form action="/admin/inbox/<%= msg._id %>/delete" method="POST" onsubmit="return confirm('Delete this message permanently?');">
+                  <button type="submit" class="bg-red-100 text-red-600 hover:bg-red-200 px-3 py-1 rounded text-xs font-medium transition-colors">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+            <div class="mt-4 text-gray-700 whitespace-pre-line bg-gray-50 p-4 rounded-md border border-gray-100 text-sm">
+              <%= msg.message %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="text-center py-16">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+          <i class="fas fa-envelope-open-text text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-1">Inbox is empty</h3>
+        <p class="text-gray-500 text-sm">You have no new enquiries or messages.</p>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/admin-footer') %>

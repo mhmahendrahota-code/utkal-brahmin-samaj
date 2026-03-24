@@ -1,0 +1,65 @@
+<%- include('partials/admin-header') %>
+
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-6xl">
+    
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a> Manage Announcements</h1>
+      </div>
+      <a href="/admin/announcements/add" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors">
+        <i class="fas fa-plus mr-2"></i> Post New Update
+      </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+              <th class="px-6 py-4 font-medium w-1/2">Message Content</th>
+              <th class="px-6 py-4 font-medium">Status</th>
+              <th class="px-6 py-4 font-medium">Auto-Expires</th>
+              <th class="px-6 py-4 font-medium">Posted On</th>
+              <th class="px-6 py-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm">
+            <% if (announcements && announcements.length > 0) { %>
+              <% announcements.forEach(notice => { %>
+                <tr class="hover:bg-gray-50 text-gray-700">
+                  <td class="px-6 py-4 font-medium text-gray-900">
+                    <i class="<%= notice.icon %> text-gray-400 mr-2 text-xs"></i> 
+                    <%= notice.message %>
+                  </td>
+                  <td class="px-6 py-4">
+                    <% if(notice.isActive) { %>
+                      <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">Active</span>
+                    <% } else { %>
+                      <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">Inactive</span>
+                    <% } %>
+                  </td>
+                  <td class="px-6 py-4 text-gray-500"><%= notice.expiryDate ? notice.expiryDate.toLocaleDateString() : 'Never' %></td>
+                  <td class="px-6 py-4 text-gray-500"><%= notice.createdAt.toLocaleDateString() %></td>
+                  <td class="px-6 py-4 text-right">
+                    <a href="/admin/announcements/<%= notice._id %>/edit" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit"><i class="fas fa-edit"></i></a>
+                    <form action="/admin/announcements/<%= notice._id %>/delete" method="POST" class="inline" onsubmit="return confirm('Delete this announcement?');">
+                      <button type="submit" class="text-red-500 hover:text-red-700 mx-1" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr>
+                <td colspan="5" class="px-6 py-8 text-center text-gray-500">No announcements found.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<%- include('partials/admin-footer') %>

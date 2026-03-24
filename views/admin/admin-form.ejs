@@ -1,0 +1,64 @@
+<%- include('partials/admin-header') %>
+
+<div class="flex-grow max-w-4xl mx-auto w-full px-4 py-8">
+  <div class="flex items-center mb-6">
+    <a href="/admin/manage-admins" class="text-gray-400 hover:text-saffron-500 mr-3 transition-colors">
+      <i class="fas fa-arrow-left text-xl"></i>
+    </a>
+    <h1 class="text-3xl font-bold text-gray-800">Add Administrator</h1>
+  </div>
+
+  <% if (locals.error) { %>
+    <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded shadow-sm">
+      <p class="font-bold"><i class="fas fa-exclamation-circle mr-2"></i> Error</p>
+      <p><%= error %></p>
+    </div>
+  <% } %>
+
+  <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+    <div class="p-8">
+      <form action="/admin/manage-admins/add" method="POST" class="space-y-6">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Display Name *</label>
+            <input type="text" name="name" required placeholder="Full Name" class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+            <select name="role" required class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm bg-white">
+              <option value="Editor">Editor (Can manage everything except Admins/Settings)</option>
+              <option value="Super Admin">Super Admin (Full Access)</option>
+              <option value="Viewer">Viewer (Read Only - Optional)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Login Username *</label>
+            <input type="text" name="username" required placeholder="username" class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm font-mono text-sm">
+            <p class="text-xs text-gray-500 mt-1">Must be unique, no spaces.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+            <input type="password" name="password" required placeholder="••••••••" class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
+            <p class="text-xs text-gray-500 mt-1">Keep it secure.</p>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-6 border-t mt-8">
+          <a href="/admin/manage-admins" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2 px-6 rounded mr-3 shadow-sm transition-colors">
+            Cancel
+          </a>
+          <button type="submit" class="bg-saffron-600 hover:bg-saffron-700 text-white font-bold py-2 px-6 rounded shadow-sm transition-colors flex items-center">
+            <i class="fas fa-lock mr-2"></i> Create Account
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/admin-footer') %>

@@ -1,0 +1,66 @@
+<%- include('partials/admin-header') %>
+
+  <div class="flex-grow max-w-7xl mx-auto w-full px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-gray-800">Manage Surnames</h1>
+      <a href="/admin/surnames/add" class="bg-saffron-600 hover:bg-saffron-700 text-white px-4 py-2 rounded shadow transition-colors">
+        <i class="fas fa-plus mr-2"></i>Add Surname
+      </a>
+    </div>
+
+    <!-- Surnames Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Surname (English)</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hindi Name</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gotra</th>
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% if (surnames.length === 0) { %>
+              <tr>
+                <td colspan="4" class="px-6 py-10 text-center text-gray-500">
+                  <i class="fas fa-folder-open text-4xl mb-3 text-gray-300"></i>
+                  <p>No surnames found in the database. When users visit the public directory, the default 27 surnames will be seeded automatically.</p>
+                </td>
+              </tr>
+            <% } else { %>
+              <% surnames.forEach(item => { %>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="font-medium text-gray-900 border-l-4 border-saffron-500 pl-2"><%= item.surname %></div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-gray-700"><%= item.hindiName %></div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                      <%= item.gotra %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex justify-end space-x-2">
+                      <a href="/admin/surnames/<%= item._id %>/edit" class="text-blue-600 hover:text-blue-900 px-3 py-1 bg-blue-50 rounded hover:bg-blue-100 transition-colors">
+                        <i class="fas fa-edit"></i> Edit
+                      </a>
+                      <form action="/admin/surnames/<%= item._id %>/delete" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete <%= item.surname %>?');">
+                        <button type="submit" class="text-red-600 hover:text-red-900 px-3 py-1 bg-red-50 rounded hover:bg-red-100 transition-colors">
+                          <i class="fas fa-trash-alt"></i> Delete
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<%- include('partials/admin-footer') %>

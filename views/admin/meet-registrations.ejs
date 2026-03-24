@@ -1,0 +1,45 @@
+<%- include('partials/admin-header') %>
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-6xl">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a> Matrimonial Meet Registrations</h1>
+      </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+              <th class="px-6 py-4 font-medium">Candidate Name</th>
+              <th class="px-6 py-4 font-medium">Age</th>
+              <th class="px-6 py-4 font-medium">Gotra</th>
+              <th class="px-6 py-4 font-medium">Location</th>
+              <th class="px-6 py-4 font-medium">Contact</th>
+              <th class="px-6 py-4 font-medium">Reg Date</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm">
+            <% if (registrations && registrations.length > 0) { %>
+              <% registrations.forEach(reg => { %>
+                <tr class="hover:bg-gray-50 text-gray-700">
+                  <td class="px-6 py-4 font-medium text-gray-900 border-l-4 border-l-saffron-500"><%= reg.name %></td>
+                  <td class="px-6 py-4"><%= reg.age %></td>
+                  <td class="px-6 py-4 font-bold text-saffron-600"><%= reg.gotra %></td>
+                  <td class="px-6 py-4"><%= reg.location %></td>
+                  <td class="px-6 py-4"><%= reg.contact %></td>
+                  <td class="px-6 py-4 text-gray-500"><%= reg.createdAt ? new Date(reg.createdAt).toLocaleDateString() : 'N/A' %></td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr>
+                <td colspan="6" class="px-6 py-8 text-center text-gray-500">No registrations found.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+<%- include('partials/admin-footer') %>
