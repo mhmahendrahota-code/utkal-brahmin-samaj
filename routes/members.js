@@ -6,7 +6,7 @@ const Member = require('../models/Member');
 router.get('/', async (req, res) => {
   try {
     const { search, village } = req.query;
-    let query = {};
+    let query = { isDeceased: { $ne: true }, isFamilyTreeOnly: { $ne: true } }; // ONLY active members in directory
     
     if (search) {
       query.name = new RegExp(search, 'i');
@@ -135,16 +135,261 @@ router.post('/add', async (req, res) => {
   }
 });
 
+
+
+// Community Full Family Tree
+router.get('/community-tree', async (req, res) => {
+  try {
+    // Fetch EVERYTHING in one query - avoids a second round-trip from the browser
+    const allMembers = await Member.find({}).lean();
+    
+    const availableGotras = [...new Set(allMembers.map(m => m.gotra).filter(Boolean))].sort();
+
+    // Pre-build the node JSON server-side so the browser can render immediately
+    const treeNodes = allMembers.map(m => {
+      const node = {
+        id: m._id.toString(),
+        name: m.name,
+        title: (m.honorific ? m.honorific + ' ' : '') + (m.occupation || 'Member'),
+        village: m.village || '',
+        image: m.profileImage || '/images/default-avatar.png',
+        tags: []
+      };
+      if (m.isDeceased) node.tags.push('deceased');
+      if (m.father) { node.fatherId = m.father.toString(); node.pid = m.father.toString(); }
+      if (m.mother) { node.motherId = m.mother.toString(); if (!node.pid) node.pid = m.mother.toString(); }
+      if (m.spouse) node.stpid = m.spouse.toString();
+      return node;
+    });
+
+    res.render('members/family-tree', { 
+      title: 'सम्पूर्ण समाज वंशावली (Community Family Tree)', 
+      memberId: 'all',
+      availableGotras,
+      // Embed tree data directly — browser uses this instead of fetching API
+      inlineTreeData: JSON.stringify(treeNodes)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+
+// Family Tree Page
+router.get('/family-tree/:id', async (req, res) => {
+  if (req.params.id === 'all') {
+    return res.redirect('/members/community-tree');
+  }
+  try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).send('Invalid Member ID');
+    }
+    const member = await Member.findById(req.params.id);
+    if (!member) return res.status(404).send('Member not found');
+    
+    // Fetch gotras for the filter dropdown
+    const availableGotras = await Member.distinct('gotra', { gotra: { $ne: null, $ne: '' } });
+    
+    res.render('members/family-tree', { 
+      title: `Family Tree - ${member.name}`, 
+      memberId: req.params.id,
+      availableGotras: availableGotras.sort()
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Family Tree Data API
+router.get('/api/family-tree/:id', async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    const isFullTree = req.query.mode === 'full';
+    const nodes = [];
+    const processedIds = new Set();
+
+    // Helper to add a member to the nodes list
+    async function addMemberNode(id) {
+      if (!id || processedIds.has(id.toString())) return null;
+      processedIds.add(id.toString());
+
+      const member = await Member.findById(id)
+        .populate('father')
+        .populate('mother')
+        .populate('spouse')
+        .populate('children');
+
+      if (!member) return null;
+
+      const node = {
+        id: member._id.toString(),
+        name: member.name,
+        title: (member.honorific ? member.honorific + ' ' : '') + (member.occupation || 'Member'),
+        village: member.village || '',
+        image: member.profileImage || '/images/default-avatar.png',
+        tags: []
+      };
+
+      if (member.isDeceased) node.tags.push('deceased');
+      if (id.toString() === targetId) node.tags.push('current');
+      
+      // Hierarchy
+      if (member.father) {
+        node.pid = member.father._id.toString();
+        node.fatherId = member.father._id.toString();
+      } else if (member.mother) {
+        node.pid = member.mother._id.toString();
+      }
+      
+      if (member.mother) {
+        node.motherId = member.mother._id.toString();
+      }
+
+      // Partner/Spouse
+      if (member.spouse) {
+        node.stpid = member.spouse._id.toString();
+      }
+
+      nodes.push(node);
+      return member;
+    }
+
+    if (isFullTree) {
+      // FULL TREE MODE: Fetch members matching criteria
+      const gotraFilter = req.query.gotra;
+      let allMembers = [];
+      
+      if (gotraFilter && gotraFilter.trim() !== '') {
+        // Fetch specific Lineage
+        allMembers = await Member.find({ gotra: gotraFilter });
+        // Include spouses who might belong to different gotras
+        const spouseIds = allMembers.filter(m => m.spouse).map(m => m.spouse);
+        if (spouseIds.length > 0) {
+          const spouses = await Member.find({ _id: { $in: spouseIds }, gotra: { $ne: gotraFilter } });
+          allMembers = allMembers.concat(spouses);
+        }
+      } else {
+        // Fetch entire Community
+        allMembers = await Member.find({});
+      }
+
+      // Deduplicate members to prevent duplicate nodes (D3 stratify requirement)
+      const uniqueMembersMap = new Map();
+      allMembers.forEach(m => {
+        if (m && m._id) uniqueMembersMap.set(m._id.toString(), m);
+      });
+
+      for (const m of uniqueMembersMap.values()) {
+        const node = {
+          id: m._id.toString(),
+          name: m.name,
+          title: (m.honorific ? m.honorific + ' ' : '') + (m.occupation || 'Member'),
+          village: m.village || '',
+          image: m.profileImage || '/images/default-avatar.png',
+          tags: []
+        };
+        if (m.isDeceased) node.tags.push('deceased');
+        if (m._id.toString() === targetId) node.tags.push('current');
+        
+        if (m.father) {
+          node.pid = m.father.toString();
+          node.fatherId = m.father.toString();
+        } else if (m.mother) {
+          node.pid = m.mother.toString();
+        }
+        
+        if (m.mother) {
+          node.motherId = m.mother.toString();
+        }
+
+        if (m.spouse) node.stpid = m.spouse.toString();
+        
+        nodes.push(node);
+      }
+    } else {
+      // 1. Fetch Target
+      const target = await addMemberNode(targetId);
+      if (!target) return res.status(404).json({ error: 'Member not found' });
+
+      // 2. Fetch Immediate Family
+      const immediatePromises = [];
+      if (target.father) immediatePromises.push(addMemberNode(target.father._id));
+      if (target.mother) immediatePromises.push(addMemberNode(target.mother._id));
+      if (target.spouse) immediatePromises.push(addMemberNode(target.spouse._id));
+      
+      if (target.children && target.children.length > 0) {
+        target.children.forEach(childId => immediatePromises.push(addMemberNode(childId)));
+      }
+
+      const relatives = await Promise.all(immediatePromises);
+
+      // 3. Fetch Siblings (Same father or mother)
+      if (target.father || target.mother) {
+        const siblingQuery = { _id: { $ne: targetId } };
+        if (target.father && target.mother) {
+          siblingQuery.$or = [{ father: target.father._id }, { mother: target.mother._id }];
+        } else if (target.father) {
+          siblingQuery.father = target.father._id;
+        } else {
+          siblingQuery.mother = target.mother._id;
+        }
+        
+        const siblings = await Member.find(siblingQuery);
+        for (const sib of siblings) {
+          await addMemberNode(sib._id);
+        }
+      }
+
+      // 4. Fetch Grandparents
+      for (const rel of relatives) {
+        if (rel && (rel._id.toString() === (target.father && target.father._id.toString()) || 
+                    rel._id.toString() === (target.mother && target.mother._id.toString()))) {
+          if (rel.father) await addMemberNode(rel.father._id);
+          if (rel.mother) await addMemberNode(rel.mother._id);
+        }
+      }
+    }
+
+    // Deduplicate any final duplicates from nodes (just in case)
+    const finalNodes = Array.from(new Map(nodes.map(n => [n.id, n])).values());
+    res.json(finalNodes);
+  } catch (err) {
+    if (err.name === 'CastError') {
+      return res.status(400).json({ error: 'Invalid Member ID' });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
 // Individual Member Profile Page
 router.get('/:id', async (req, res, next) => {
   // Prevent catching hardcoded routes
-  if(['matrimonial', 'matrimonial/login', 'matrimonial/submit', 'add'].includes(req.params.id)) {
+  if(['matrimonial', 'matrimonial/login', 'matrimonial/submit', 'add', 'community-tree'].includes(req.params.id)) {
     return next();
   }
   try {
-    const member = await Member.findById(req.params.id);
+    const member = await Member.findById(req.params.id)
+      .populate('father')
+      .populate('mother')
+      .populate('spouse');
+      
     if (!member) return res.status(404).send('Member not found');
-    res.render('members/profile', { title: `${member.name}'s Profile`, member });
+
+    // If admin is logged in, fetch all members for the 'Quick Connect' dropdown
+    let allMembers = [];
+    if (req.session && req.session.isAdmin) {
+      allMembers = await Member.find({ _id: { $ne: req.params.id } }).sort({ name: 1 });
+    }
+
+    res.render('members/profile', { 
+      title: `${member.name}'s Profile`, 
+      member,
+      allMembers 
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server Error');

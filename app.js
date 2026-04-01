@@ -31,8 +31,26 @@ app.set('view engine', 'ejs');
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/samaj_db';
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ MongoDB connected successfully'))
+mongoose.connect(MONGODB_URI, {
+  serverSelectionTimeoutMS: 30000, // Wait 30s before timeout
+  socketTimeoutMS: 45000,
+})
+  .then(async () => {
+    console.log('✅ MongoDB connected successfully');
+    
+    // Site Settings Singleton (Move inside connection success)
+    const Settings = require('./models/Settings');
+    try {
+      let settings = await Settings.findById('site_settings');
+      if (!settings) {
+        settings = await Settings.create({ _id: 'site_settings' });
+      }
+      app.locals.siteSettings = settings;
+      console.log('✅ Site settings loaded');
+    } catch (err) {
+      console.error('❌ Error loading site settings:', err);
+    }
+  })
   .catch(err => {
     console.error('❌ MongoDB connection error:', err.message);
     process.exit(1);
@@ -53,15 +71,6 @@ app.use(async (req, res, next) => {
   }
   next();
 });
-
-// Site Settings Singleton
-const Settings = require('./models/Settings');
-Settings.findById('site_settings').then(async settings => {
-  if (!settings) {
-    settings = await Settings.create({ _id: 'site_settings' });
-  }
-  app.locals.siteSettings = settings;
-}).catch(console.error);
 
 // Import Routes
 const indexRoutes = require('./routes/index');

@@ -8,39 +8,8 @@
     <%= title %> | <%= locals.siteSettings ? siteSettings.siteTitle : 'Utkal Brahmin Samaj' %>
   </title>
 
-  <!-- Tailwind CSS Configuration using Play CDN for rapid development -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            saffron: {
-              50:  '#fffbf0',
-              100: '#FFF0E6',
-              200: '#fde68a',
-              300: '#fcd34d',
-              400: '#fbbf24',
-              500: '#FF9933', // Deep saffron
-              600: '#E68A2E',
-              700: '#b45309',
-              800: '#92400e',
-              900: '#804C19'
-            },
-            maroon: {
-              700: '#7f1d1d',
-              800: '#6b1a1a',
-              900: '#4c0519',
-            }
-          },
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            display: ['Playfair Display', 'serif']
-          }
-        }
-      }
-    }
-  </script>
+  <!-- Local Compiled Tailwind CSS -->
+  <link href="/css/style.css" rel="stylesheet">
 
   <!-- Google Fonts -->
   <link

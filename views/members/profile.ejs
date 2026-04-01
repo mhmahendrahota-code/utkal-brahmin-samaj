@@ -12,11 +12,16 @@
       <!-- Top Banner / Header -->
       <div class="bg-saffron-600 h-32 relative">
         <div class="absolute -bottom-12 left-8">
-          <div class="h-24 w-24 bg-white rounded-full flex items-center justify-center shadow-md border-4 border-white text-3xl font-bold text-saffron-600">
-            <%= member.name.charAt(0).toUpperCase() %>
+          <div class="h-24 w-24 bg-white rounded-full flex items-center justify-center shadow-md border-4 border-white text-3xl font-bold <%= member.isDeceased ? 'text-gray-400 grayscale' : 'text-saffron-600' %>">
+            <%= (member.honorific ? member.honorific + ' ' : '') + member.name.charAt(0).toUpperCase() %>
           </div>
         </div>
-        <div class="absolute top-4 right-4">
+        <div class="absolute top-4 right-4 flex gap-2">
+          <% if(member.isDeceased) { %>
+            <span class="bg-gray-800 text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm inline-flex items-center">
+              <i class="fas fa-monument mr-2"></i> स्वर्गीय (Ancestor)
+            </span>
+          <% } %>
           <% if(member.isCommitteeMember) { %>
             <span class="bg-white text-saffron-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm inline-flex items-center">
               <i class="fas fa-star text-yellow-500 mr-2"></i> Committee Member
@@ -28,11 +33,54 @@
       <!-- Profile Content -->
       <div class="p-8 pt-16">
         <div class="mb-8">
-          <h1 class="text-3xl font-bold text-gray-900 mb-1"><%= member.name %></h1>
+          <h1 class="text-3xl font-bold text-gray-900 mb-1">
+            <% if(member.isDeceased) { %> <span class="text-gray-500">Late.</span> <% } %>
+            <%= member.name %>
+          </h1>
           <p class="text-gray-500 font-medium text-lg flex items-center">
             <i class="fas fa-map-marker-alt text-saffron-500 mr-2"></i> Original Village (Mool): <%= member.village %>
           </p>
+          <div class="mt-4">
+            <a href="/members/family-tree/<%= member._id %>" class="inline-flex items-center px-4 py-2 bg-saffron-100 text-saffron-700 rounded-lg font-bold text-sm hover:bg-saffron-200 transition-colors">
+              <i class="fas fa-tree mr-2"></i> पारिवारिक वंशावली देखें (View Family Tree)
+            </a>
+          </div>
         </div>
+
+        <% if (isAdmin && typeof allMembers !== 'undefined' && allMembers.length > 0) { %>
+          <!-- Admin Quick Connect Section -->
+          <div class="mb-10 bg-saffron-50 border-2 border-dashed border-saffron-200 rounded-xl p-6 shadow-sm">
+            <h3 class="text-lg font-bold text-saffron-800 mb-4 flex items-center">
+              <i class="fas fa-link mr-2"></i> Quick Connect Relative (Admin Only)
+            </h3>
+            <form action="/admin/members/<%= member._id %>/connect" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-saffron-600 uppercase mb-1">Relation Type</label>
+                <select name="type" required class="w-full px-3 py-2 border border-saffron-300 rounded bg-white text-sm focus:ring-saffron-500">
+                  <option value="father">Set as Father</option>
+                  <option value="mother">Set as Mother</option>
+                  <option value="spouse">Set as Spouse</option>
+                  <option value="child">Add as Child</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-saffron-600 uppercase mb-1">Select Member</label>
+                <input list="membersList" name="targetId" required placeholder="Search name..." class="w-full px-3 py-2 border border-saffron-300 rounded text-sm focus:ring-saffron-500">
+                <datalist id="membersList">
+                  <% allMembers.forEach(m => { %>
+                    <option value="<%= m._id %>"><%= m.name %> (<%= m.village %>)</option>
+                  <% }) %>
+                </datalist>
+                <p class="text-[10px] text-gray-400 mt-1">Copy the ID from the suggestions</p>
+              </div>
+              <div class="flex items-end">
+                <button type="submit" class="w-full bg-saffron-600 hover:bg-saffron-700 text-white font-bold py-2 rounded shadow-sm transition-colors text-sm">
+                  <i class="fas fa-plus-circle mr-1"></i> Connect Now
+                </button>
+              </div>
+            </form>
+          </div>
+        <% } %>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           

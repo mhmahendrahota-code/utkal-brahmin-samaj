@@ -5,98 +5,187 @@
     
     <div class="flex items-center mb-6">
       <a href="/admin/members" class="text-gray-400 hover:text-saffron-500 mr-4"><i class="fas fa-arrow-left text-xl"></i></a>
-      <h1 class="text-2xl font-bold text-gray-800">Add New Member</h1>
+      <h1 class="text-2xl font-bold text-gray-800"><%= typeof member !== 'undefined' ? 'Edit Member' : 'Add New Member' %></h1>
     </div>
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 md:p-8">
-      <form action="/admin/members/add" method="POST">
+      <form action="/admin/members/<%= typeof member !== 'undefined' ? member._id + '/edit' : 'add' %>" method="POST">
         
-        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Personal Details</h3>
+        <!-- Basic Information Section -->
+        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-user mr-2 text-saffron-500"></i> बुनियादी जानकारी (Basic Information)</h3>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-            <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Gotra (गोत्र) *</label>
-            <select id="gotraSelect" name="gotra" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white" onchange="toggleGotraInput(this)">
-              <option value="">-- Select Gotra (गोत्र चुनें) --</option>
-              <option value="Atri">Atri / Atreya (अत्रि / आत्रेय)</option>
-              <option value="Upamanyu">Upamanyu (उपमन्यु)</option>
-              <option value="Kapinjala">Kapinjala (कपिंजल)</option>
-              <option value="Kashyapa">Kashyapa (कश्यप)</option>
-              <option value="Kaundinya">Kaundinya (कौंडिन्य)</option>
-              <option value="Kaushik">Kaushik (कौशिक)</option>
-              <option value="Gargya">Gargya (गार्ग्य)</option>
-              <option value="Gautama">Gautama (गौतम)</option>
-              <option value="Jamadagnya">Jamadagnya (जामदग्न्य)</option>
-              <option value="Parashara">Parashara (पराशर)</option>
-              <option value="Bharadwaj">Bharadwaj (भरद्वाज)</option>
-              <option value="Vatsa">Vatsa (वत्स)</option>
-              <option value="Vashistha">Vashistha (वसिष्ठ)</option>
-              <option value="Vishwamitra">Vishwamitra (विश्वामित्र)</option>
-              <option value="Shandilya">Shandilya (शांडिल्य)</option>
-              <option value="Harita">Harita (हरित)</option>
-              <option value="Other">Other (अन्य)</option>
-            </select>
-            <div id="gotraCustomDiv" style="display:none;" class="mt-2">
-              <input type="text" id="gotraCustomInput" placeholder="अपना गोत्र लिखें / Enter your Gotra" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            <label class="block text-sm font-bold text-gray-700 mb-2">पूर्ण नाम * (Full Name)</label>
+            <div class="flex gap-2">
+              <select name="honorific" class="w-24 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500">
+                <option value="" <%= typeof member !== 'undefined' && member.honorific === '' ? 'selected' : '' %>>--</option>
+                <option value="Late" <%= typeof member !== 'undefined' && member.honorific === 'Late' ? 'selected' : '' %>>Late (स्व.)</option>
+                <option value="Shri" <%= typeof member !== 'undefined' && member.honorific === 'Shri' ? 'selected' : '' %>>Shri (श्री)</option>
+                <option value="Smt" <%= typeof member !== 'undefined' && member.honorific === 'Smt' ? 'selected' : '' %>>Smt (श्रीमती)</option>
+              </select>
+              <input type="text" name="name" class="flex-grow px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500" value="<%= typeof member !== 'undefined' ? member.name : '' %>" required>
             </div>
           </div>
+
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-2">गोत्र * (Gotra)</label>
+            <% 
+              const standardGotras = ['Kashyap', 'Bhardwaj', 'Gautam', 'Vashishtha', 'Angiras', 'Atri', 'Vishwamitra', 'Agastya'];
+              const currentGotra = typeof member !== 'undefined' ? member.gotra : '';
+              const isOtherGotra = currentGotra && !standardGotras.includes(currentGotra);
+            %>
+            <select name="gotra_select" id="gotra_select" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500" onchange="toggleOtherGotra(this)" required>
+              <option value="">-- Choose Gotra --</option>
+              <% standardGotras.forEach(g => { %>
+                <option value="<%= g %>" <%= currentGotra === g ? 'selected' : '' %>><%= g %></option>
+              <% }) %>
+              <option value="Others" <%= isOtherGotra ? 'selected' : '' %>>Others (अन्य)</option>
+            </select>
+            
+            <div id="otherGotraDiv" class="mt-3 <%= isOtherGotra ? '' : 'hidden' %>">
+              <label class="block text-xs font-bold text-saffron-600 mb-1 uppercase">कृपया गोत्र लिखें (Please type Gotra)</label>
+              <input type="text" name="gotra_other" id="gotra_other" class="w-full px-4 py-2 rounded-lg border border-saffron-300 focus:ring-2 focus:ring-saffron-500 bg-saffron-50" value="<%= isOtherGotra ? currentGotra : '' %>" placeholder="Enter custom gotra...">
+            </div>
+          </div>
+
           <script>
-            function toggleGotraInput(select) {
-              const customDiv = document.getElementById('gotraCustomDiv');
-              const customInput = document.getElementById('gotraCustomInput');
-              if (select.value === 'Other') {
-                customDiv.style.display = 'block';
-                customInput.required = true;
-                customInput.name = 'gotra';
-                select.name = '_gotraSelect';
+            function toggleOtherGotra(select) {
+              const otherDiv = document.getElementById('otherGotraDiv');
+              const otherInput = document.getElementById('gotra_other');
+              if (select.value === 'Others') {
+                otherDiv.classList.remove('hidden');
+                otherInput.required = true;
+                otherInput.focus();
               } else {
-                customDiv.style.display = 'none';
-                customInput.required = false;
-                customInput.name = '';
-                select.name = 'gotra';
+                otherDiv.classList.add('hidden');
+                otherInput.required = false;
+              }
+            }
+            
+            function toggleDeathDate() {
+              const isDeceased = document.getElementById('isDeceased').checked;
+              const section = document.getElementById('deathDateSection');
+              if (isDeceased) {
+                section.classList.remove('hidden');
+              } else {
+                section.classList.add('hidden');
               }
             }
           </script>
+
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Village (Mool) *</label>
-            <input type="text" name="village" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            <label class="block text-sm font-bold text-gray-700 mb-2">मूल गांव * (Original Village/Mool)</label>
+            <input type="text" name="village" list="villages" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500" value="<%= typeof member !== 'undefined' ? member.village : '' %>" required>
+            <datalist id="villages">
+              <option value="Pusaur">
+              <option value="Raigarh">
+              <option value="Ambikapur">
+              <option value="Sambalpur">
+            </datalist>
           </div>
+          
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Occupation</label>
-            <input type="text" name="occupation" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            <label class="block text-sm font-bold text-gray-700 mb-2">व्यवसाय (Occupation)</label>
+            <input type="text" name="occupation" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500" value="<%= typeof member !== 'undefined' ? member.occupation : '' %>">
           </div>
         </div>
 
-        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Contact Information</h3>
+        <!-- Ancestor / Deceased Section -->
+        <div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+           <div class="flex items-center">
+             <input type="checkbox" name="isDeceased" id="isDeceased" class="w-5 h-5 text-saffron-600 rounded focus:ring-saffron-500" <%= typeof member !== 'undefined' && member.isDeceased ? 'checked' : '' %> onchange="toggleDeathDate()">
+             <label for="isDeceased" class="ml-3 text-sm font-bold text-gray-700">क्या यह पूर्वज / स्वर्गीय हैं? (Is Ancestor / Deceased?)</label>
+           </div>
+           <div id="deathDateSection" class="mt-4 <%= typeof member !== 'undefined' && member.isDeceased ? '' : 'hidden' %>">
+              <label class="block text-xs font-bold text-gray-500 mb-1 caps">स्वर्गवास तिथि (Death Date - Optional)</label>
+              <input type="date" name="deathDate" class="w-full md:w-1/3 px-4 py-2 border rounded" value="<%= typeof member !== 'undefined' && member.deathDate ? member.deathDate.toISOString().split('T')[0] : '' %>">
+           </div>
+        </div>
+
+        <!-- Family & Relationships Section -->
+        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-users mr-2 text-saffron-500"></i> पारिवारिक संबंध (Family & Relationships)</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-2">पिता (Father)</label>
+            <select name="father" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500 bg-white">
+              <option value="">-- अज्ञात / कोई नहीं (None) --</option>
+              <% if (typeof allMembers !== 'undefined') { %>
+                <% allMembers.forEach(m => { %>
+                  <option value="<%= m._id %>" <%= typeof member !== 'undefined' && member.father && member.father.toString() === m._id.toString() ? 'selected' : '' %>>
+                    <%= m.name %> (<%= m.village %>) <%= m.isDeceased ? '[स्वर्गीय]' : '' %>
+                  </option>
+                <% }) %>
+              <% } %>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-2">माता (Mother)</label>
+            <select name="mother" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500 bg-white">
+              <option value="">-- अज्ञात / कोई नहीं (None) --</option>
+              <% if (typeof allMembers !== 'undefined') { %>
+                <% allMembers.forEach(m => { %>
+                  <option value="<%= m._id %>" <%= typeof member !== 'undefined' && member.mother && member.mother.toString() === m._id.toString() ? 'selected' : '' %>>
+                    <%= m.name %> (<%= m.village %>) <%= m.isDeceased ? '[स्वर्गीय]' : '' %>
+                  </option>
+                <% }) %>
+              <% } %>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-2">जीवनसाथी (Spouse)</label>
+            <select name="spouse" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500 bg-white">
+              <option value="">-- लागू नहीं (N/A) --</option>
+              <% if (typeof allMembers !== 'undefined') { %>
+                <% allMembers.forEach(m => { %>
+                  <option value="<%= m._id %>" <%= typeof member !== 'undefined' && member.spouse && member.spouse.toString() === m._id.toString() ? 'selected' : '' %>>
+                    <%= m.name %> (<%= m.village %>) <%= m.isDeceased ? '[स्वर्गीय]' : '' %>
+                  </option>
+                <% }) %>
+              <% } %>
+            </select>
+          </div>
+        </div>
+
+        <!-- Contact Information Section -->
+        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-address-card mr-2 text-saffron-500"></i> संपर्क जानकारी (Contact Information)</h3>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number *</label>
-            <input type="tel" name="contactNumber" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            <label class="block text-sm font-bold text-gray-700 mb-2">संपर्क नंबर * (Contact Number)</label>
+            <input type="text" name="contactNumber" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500" value="<%= typeof member !== 'undefined' ? member.contactNumber : '' %>" required>
           </div>
+
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <input type="email" name="email" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            <label class="block text-sm font-bold text-gray-700 mb-2">ईमेल पता (Email Address)</label>
+            <input type="email" name="email" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500" value="<%= typeof member !== 'undefined' ? member.email : '' %>">
           </div>
+
           <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Current Address</label>
-            <textarea name="address" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500"></textarea>
+            <label class="block text-sm font-bold text-gray-700 mb-2">वर्तमान पता (Current Address)</label>
+            <textarea name="address" rows="3" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500"><%= typeof member !== 'undefined' ? member.address : '' %></textarea>
           </div>
         </div>
 
-        <div class="flex items-center mb-8 bg-gray-50 p-4 rounded border border-gray-200">
-          <input id="isCommitteeMember" name="isCommitteeMember" type="checkbox" class="h-5 w-5 text-saffron-600 focus:ring-saffron-500 border-gray-300 rounded">
-          <label for="isCommitteeMember" class="ml-3 block text-gray-800 font-medium">Assign Committee Member Role (Admin/Special Tag)</label>
+        <div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div class="flex flex-col gap-4">
+            <div class="flex items-center">
+              <input type="checkbox" name="isCommitteeMember" id="isCommitteeMember" class="w-5 h-5 text-saffron-600 rounded focus:ring-saffron-500" <%= typeof member !== 'undefined' && member.isCommitteeMember ? 'checked' : '' %>>
+              <label for="isCommitteeMember" class="ml-3 text-sm font-bold text-gray-700">समिति के सदस्य (Committee Member Role)</label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" name="isFamilyTreeOnly" id="isFamilyTreeOnly" class="w-5 h-5 text-saffron-600 rounded focus:ring-saffron-500" <%= typeof member !== 'undefined' && member.isFamilyTreeOnly ? 'checked' : '' %>>
+              <label for="isFamilyTreeOnly" class="ml-3 text-sm font-bold text-gray-700">केवल पारिवारिक वृक्ष के लिए (Is Family Tree Only? - Hide from main directory)</label>
+            </div>
+          </div>
         </div>
 
-        <div class="flex justify-end gap-4 border-t pt-6">
-          <a href="/admin/members" class="px-6 py-2 border border-gray-300 rounded text-gray-700 font-medium hover:bg-gray-50 transition-colors">Cancel</a>
-          <button type="submit" class="px-6 py-2 bg-saffron-600 hover:bg-saffron-700 text-white rounded font-medium shadow-sm transition-colors">
-            <i class="fas fa-save mr-2"></i> Save Member
+        <div class="flex flex-col sm:flex-row gap-4 mt-8">
+          <button type="submit" class="flex-grow bg-saffron-600 hover:bg-saffron-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-transform transform active:scale-95">
+            <i class="fas fa-save mr-2"></i> सदस्य सहेजें (Save Member)
           </button>
         </div>
 
@@ -104,5 +193,46 @@
     </div>
   </div>
 </section>
+
+<script>
+  // Searchable Dropdowns Helper
+  document.querySelectorAll('select[list]').forEach(select => {
+    // This was for datalist, now we have proper selects
+  });
+
+  function addSearchToSelect(selectId) {
+    const select = document.getElementsByName(selectId)[0];
+    if (!select) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'relative flex flex-col gap-1';
+    select.parentNode.insertBefore(wrap, select);
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = `खोजें (Search ${selectId})...`;
+    input.className = 'w-full px-4 py-2 text-xs border border-gray-200 rounded-md focus:ring-1 focus:ring-saffron-300 mb-1';
+    
+    wrap.appendChild(input);
+    wrap.appendChild(select);
+
+    const originalOptions = Array.from(select.options);
+
+    input.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase().trim();
+      select.innerHTML = '';
+      originalOptions.forEach(opt => {
+        if (opt.text.toLowerCase().includes(term) || opt.value === "") {
+          select.add(opt);
+        }
+      });
+      if (select.options.length > 0 && term) {
+        // select.selectedIndex = 0;
+      }
+    });
+  }
+
+  ['father', 'mother', 'spouse'].forEach(addSearchToSelect);
+</script>
 
 <%- include('partials/admin-footer') %>

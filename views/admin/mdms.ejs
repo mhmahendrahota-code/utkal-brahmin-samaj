@@ -1,0 +1,212 @@
+<%- include('partials/admin-header') %>
+
+<style>
+  .tab-active  { background:#c45c11; color:#fff; border-color:#c45c11; }
+  .tab-inactive{ background:#fff; color:#4b5563; border-color:#e5e7eb; }
+  .tab-inactive:hover { border-color:#c45c11; color:#c45c11; }
+  .badge-active   { background:#dcfce7; color:#16a34a; }
+  .badge-inactive { background:#f3f4f6; color:#9ca3af; }
+</style>
+
+<section class="py-10 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-6xl">
+
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">
+          <a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left"></i></a>
+          Master Data Management
+        </h1>
+        <p class="text-sm text-gray-500 mt-1">Manage all reference/lookup data used across the portal</p>
+      </div>
+    </div>
+
+    <% if (flash) { %>
+      <div class="mb-4 px-4 py-3 rounded-lg text-sm font-medium
+        <%= flash === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200' %>">
+        <i class="fas fa-<%= flash === 'error' ? 'exclamation-circle' : 'check-circle' %> mr-2"></i>
+        <%= flash === 'added' ? 'Entry added successfully.' :
+            flash === 'updated' ? 'Entry updated successfully.' :
+            flash === 'deleted' ? 'Entry deleted.' :
+            'An error occurred. Please try again.' %>
+      </div>
+    <% } %>
+
+    <!-- Tabs -->
+    <div class="flex flex-wrap gap-2 mb-6">
+      <% [
+        { key: 'gotra',       icon: 'fa-om',             label: 'Gotras',        count: gotras.length },
+        { key: 'village',     icon: 'fa-map-marker-alt', label: 'Villages',      count: villages.length },
+        { key: 'honorific',   icon: 'fa-id-badge',       label: 'Honorifics',    count: honorifics.length },
+        { key: 'occupation',  icon: 'fa-briefcase',      label: 'Occupations',   count: occupations.length },
+        { key: 'surname',     icon: 'fa-book',           label: 'Surnames',      count: surnames.length },
+      ].forEach(tab => { %>
+        <a href="/admin/mdms?tab=<%= tab.key %>"
+           class="px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-1.5
+                  <%= activeTab === tab.key ? 'tab-active' : 'tab-inactive' %>">
+          <i class="fas <%= tab.icon %> text-xs opacity-70"></i>
+          <%= tab.label %>
+          <span class="ml-1 px-1.5 py-0.5 rounded-full text-xs <%= activeTab === tab.key ? 'bg-white/30 text-white' : 'bg-gray-100 text-gray-500' %>"><%= tab.count %></span>
+        </a>
+      <% }) %>
+    </div>
+
+    <!-- ─── GOTRA TAB ─── -->
+    <% if (activeTab === 'gotra') { %>
+      <%- include('partials/mdms-table', {
+        type: 'gotra',
+        label: 'Gotra',
+        icon: 'fa-om',
+        items: gotras,
+        fields: [
+          { key: 'name',        label: 'Name (English)', required: true },
+          { key: 'hindiName',   label: 'Name (Hindi)',   required: false },
+          { key: 'description', label: 'Description',    required: false },
+        ],
+        displayFn: (item) => item.name,
+        subFn: (item) => item.hindiName || ''
+      }) %>
+    <% } %>
+
+    <!-- ─── VILLAGE TAB ─── -->
+    <% if (activeTab === 'village') { %>
+      <%- include('partials/mdms-table', {
+        type: 'village',
+        label: 'Village',
+        icon: 'fa-map-marker-alt',
+        items: villages,
+        fields: [
+          { key: 'name',      label: 'Name (English)', required: true },
+          { key: 'hindiName', label: 'Name (Hindi)',   required: false },
+          { key: 'district',  label: 'District',       required: false },
+          { key: 'state',     label: 'State',          required: false },
+        ],
+        displayFn: (item) => item.name,
+        subFn: (item) => [item.hindiName, item.district, item.state].filter(Boolean).join(' · ')
+      }) %>
+    <% } %>
+
+    <!-- ─── HONORIFIC TAB ─── -->
+    <% if (activeTab === 'honorific') { %>
+      <%- include('partials/mdms-table', {
+        type: 'honorific',
+        label: 'Honorific',
+        icon: 'fa-id-badge',
+        items: honorifics,
+        fields: [
+          { key: 'code',       label: 'Code (e.g. Shri)', required: true },
+          { key: 'label',      label: 'Full Label',        required: true },
+          { key: 'hindiLabel', label: 'Hindi Label',       required: false },
+          { key: 'gender',     label: 'Gender (M/F/Both)', required: false },
+        ],
+        displayFn: (item) => `${item.code} — ${item.label}`,
+        subFn: (item) => item.hindiLabel || ''
+      }) %>
+    <% } %>
+
+    <!-- ─── OCCUPATION TAB ─── -->
+    <% if (activeTab === 'occupation') { %>
+      <%- include('partials/mdms-table', {
+        type: 'occupation',
+        label: 'Occupation',
+        icon: 'fa-briefcase',
+        items: occupations,
+        fields: [
+          { key: 'name',      label: 'Occupation Name', required: true },
+          { key: 'hindiName', label: 'Hindi Name',       required: false },
+          { key: 'category',  label: 'Category',         required: false },
+        ],
+        displayFn: (item) => item.name,
+        subFn: (item) => item.category || ''
+      }) %>
+    <% } %>
+
+    <!-- ─── SURNAME TAB ─── -->
+    <% if (activeTab === 'surname') { %>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="flex justify-between items-center px-5 py-3 bg-gray-50 border-b border-gray-200">
+          <h2 class="font-bold text-gray-700"><i class="fas fa-book text-amber-500 mr-2"></i> Surnames (<%= surnames.length %>)</h2>
+          <a href="/admin/surnames/add" class="text-sm px-4 py-1.5 bg-saffron-600 hover:bg-saffron-700 text-white rounded-lg font-medium">
+            <i class="fas fa-plus mr-1"></i> Add Surname
+          </a>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-500 text-xs uppercase border-b border-gray-200">
+              <tr>
+                <th class="px-5 py-3">Surname</th>
+                <th class="px-5 py-3">Hindi</th>
+                <th class="px-5 py-3">Gotra</th>
+                <th class="px-5 py-3">Meaning</th>
+                <th class="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <% if (surnames.length === 0) { %>
+                <tr><td colspan="5" class="px-5 py-6 text-center text-gray-400">No surnames yet. <a href="/admin/surnames/add" class="text-saffron-600">Add one →</a></td></tr>
+              <% } %>
+              <% surnames.forEach(s => { %>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-5 py-3 font-semibold text-gray-800"><%= s.surname %></td>
+                  <td class="px-5 py-3 text-gray-600"><%= s.hindiName || '—' %></td>
+                  <td class="px-5 py-3"><%= s.gotra || '—' %></td>
+                  <td class="px-5 py-3 text-gray-500 text-xs max-w-xs truncate"><%= s.meaning || '—' %></td>
+                  <td class="px-5 py-3 text-right">
+                    <a href="/admin/surnames/<%= s._id %>/edit" class="text-blue-500 hover:text-blue-700 mr-2"><i class="fas fa-edit"></i></a>
+                    <form action="/admin/surnames/<%= s._id %>/delete" method="POST" class="inline" onsubmit="return confirm('Delete this surname?')">
+                      <button type="submit" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% } %>
+
+  </div>
+</section>
+
+<!-- Edit Modal -->
+<div id="edit-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+    <div class="bg-saffron-50 border-b border-saffron-100 px-6 py-4 flex justify-between items-center">
+      <h3 class="font-bold text-gray-900"><i class="fas fa-edit text-saffron-500 mr-2"></i>Edit Entry</h3>
+      <button onclick="document.getElementById('edit-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="edit-form" method="POST">
+      <div class="px-6 py-5 space-y-4" id="edit-fields"></div>
+      <div class="px-6 pb-5 flex gap-3 justify-end border-t border-gray-100 pt-4">
+        <button type="button" onclick="document.getElementById('edit-modal').classList.add('hidden')" class="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-saffron-600 hover:bg-saffron-700 text-white rounded-lg font-medium"><i class="fas fa-save mr-1"></i>Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openEdit(type, id, data) {
+    const form  = document.getElementById('edit-form');
+    const fields = document.getElementById('edit-fields');
+    form.action = `/admin/mdms/${type}/${id}/edit`;
+    fields.innerHTML = '';
+    Object.entries(data).forEach(([key, val]) => {
+      if (key.startsWith('_') || key === '__v' || key === 'updatedAt' || key === 'createdAt') return;
+      const isRequired = val.required;
+      fields.innerHTML += `
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">${key.charAt(0).toUpperCase()+key.slice(1)}</label>
+          <input type="text" name="${key}" value="${val.value || ''}"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-saffron-400 focus:outline-none"
+                 ${val.required ? 'required' : ''}>
+        </div>`;
+    });
+    document.getElementById('edit-modal').classList.remove('hidden');
+  }
+  document.getElementById('edit-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+  });
+</script>
+
+<%- include('partials/admin-footer') %>

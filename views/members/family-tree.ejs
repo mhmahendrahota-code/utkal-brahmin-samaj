@@ -1,0 +1,542 @@
+<%- include('../partials/header') %>
+
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4">
+    
+    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <a href="<%= memberId === 'all' ? '/' : '/members/' + memberId %>" class="text-gray-500 hover:text-saffron-600 font-medium transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i> <%= memberId === 'all' ? 'वापस होम पेज पर (Back to Home)' : 'वापस प्रोफाइल पर (Back to Profile)' %>
+      </a>
+      <div class="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+        <h1 class="text-2xl font-bold text-gray-800 flex-grow md:flex-grow-0">पारिवारिक वंशावली (Family Tree)</h1>
+        
+        <% if (memberId === 'all') { %>
+        <div class="relative min-w-[200px]">
+          <select id="gotra-filter" class="appearance-none w-full bg-white border border-gray-200 text-gray-700 py-2 pl-4 pr-10 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-saffron-500 focus:border-saffron-500 text-sm tracking-wide font-medium transition-colors cursor-pointer">
+            <option value="">सभी परिवार (All Community)</option>
+            <% if (typeof availableGotras !== 'undefined' && availableGotras) { %>
+              <% availableGotras.forEach(function(g) { %>
+                <option value="<%= g %>"><%= g %> परिवार (Lineage)</option>
+              <% }); %>
+            <% } %>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+            <i class="fas fa-filter text-xs"></i>
+          </div>
+        </div>
+        <% } %>
+
+        <div class="relative min-w-[220px]">
+          <input type="text" id="tree-search" placeholder="सदस्य खोजें (Search member...)" class="w-full bg-white border border-gray-200 text-gray-700 py-2 pl-9 pr-4 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-saffron-500 focus:border-saffron-500 text-sm">
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+            <i class="fas fa-search text-xs"></i>
+          </div>
+        </div>
+
+        <% if (memberId !== 'all') { %>
+        <div class="flex bg-gray-100 p-1 rounded-lg">
+          <button id="view-immediate" class="px-3 py-1.5 rounded-md text-sm font-medium transition-all bg-white shadow-sm text-gray-800">नजदीकी (Immediate)</button>
+          <button id="view-full" class="px-3 py-1.5 rounded-md text-sm font-medium transition-all text-gray-500 hover:text-gray-700">पूर्ण (Full)</button>
+        </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden relative" style="height: 750px;">
+      <div id="tree" style="width: 100%; height: 100%;"></div>
+      
+      <!-- Floating Legend -->
+      <div class="absolute bottom-6 right-6 bg-white/95 backdrop-blur-md p-5 rounded-xl shadow-xl border border-gray-200 flex flex-col gap-3 z-10 hidden sm:flex pointer-events-none">
+        <h4 class="font-bold text-sm text-gray-800 border-b pb-2 mb-1 uppercase tracking-wider">संकेत (Legend)</h4>
+        <div class="flex items-center gap-3 text-sm text-gray-600 font-medium">
+          <div class="w-5 h-5 rounded bg-white border border-gray-300 shadow-sm flex overflow-hidden">
+             <div class="w-1.5 h-full bg-saffron-500"></div>
+          </div> सामान्य सदस्य (Member)
+        </div>
+        <div class="flex items-center gap-3 text-sm text-gray-600 font-medium">
+          <div class="w-5 h-5 rounded bg-orange-50 border border-orange-200 shadow-sm flex overflow-hidden">
+            <div class="w-1.5 h-full bg-orange-500"></div>
+          </div> स्वयं (Current Viewer)
+        </div>
+        <div class="flex items-center gap-3 text-sm text-gray-600 font-medium">
+          <div class="w-5 h-5 rounded bg-slate-50 border border-slate-200 shadow-sm flex overflow-hidden">
+             <div class="w-1.5 h-full bg-slate-400"></div>
+          </div> स्वर्गीय (Late/Deceased)
+        </div>
+        <div class="flex items-center gap-3 text-sm text-gray-600 font-medium mt-1">
+          <div class="w-6 border-t-[2.5px] border-slate-400 rounded"></div> वंशावली संबंध (Lineage)
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="loading" class="absolute inset-0 bg-white/80 flex items-center justify-center z-50">
+        <div class="text-center">
+          <div class="inline-block w-8 h-8 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+          <p class="text-gray-600 font-medium tracking-wide">लोड हो रहा है... (Building Tree Layout)</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-saffron-50 border border-saffron-100 rounded-lg p-4 text-sm text-saffron-800">
+        <p><i class="fas fa-info-circle mr-2"></i> <strong>Note:</strong> यह ट्री आपके द्वारा एडमिन पैनल में सेट किए गए रिश्तों के आधार पर दिखाया जा रहा है।</p>
+      </div>
+      <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800">
+        <p><i class="fas fa-mouse mr-2"></i> <strong>Tip:</strong> ज़ूम करने के लिए माउस व्हील का उपयोग करें और घूमने के लिए ड्रैग करें।</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Local D3.js for reliable offline use -->
+<script src="/js/d3.v7.min.js"></script>
+
+<style>
+  #tree {
+    background-color: #f8fafc;
+    background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+    background-size: 24px 24px;
+    cursor: grab;
+  }
+  #tree:active {
+    cursor: grabbing;
+  }
+  .node-bg {
+    fill: #ffffff;
+    stroke: #e2e8f0;
+    stroke-width: 1px;
+    filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.05)) drop-shadow(0 10px 15px rgb(0 0 0 / 0.1));
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .node:hover .node-bg {
+    stroke: #FF9933;
+    stroke-width: 2px;
+    filter: drop-shadow(0 10px 15px rgb(255 153 51 / 0.2)) drop-shadow(0 20px 25px rgb(255 153 51 / 0.1));
+  }
+  .node:hover {
+    cursor: pointer;
+  }
+  .link {
+    fill: none;
+    stroke: #94a3b8;
+    stroke-width: 2.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.7;
+    stroke-dasharray: 2000;
+    stroke-dashoffset: 2000;
+    animation: draw 1.5s ease forwards;
+  }
+  @keyframes draw {
+    to { stroke-dashoffset: 0; }
+  }
+  .node text {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    pointer-events: none;
+  }
+  .node-name { font-weight: 700; fill: #1e293b; font-size: 15px; }
+  .node-title { fill: #475569; font-size: 12px; font-weight: 500; }
+  .node-village { fill: #64748b; font-size: 11px; font-weight: 500; }
+  
+  .badge-deceased { fill: #f1f5f9; stroke: #e2e8f0; rx: 4px; }
+  .badge-deceased-text { fill: #64748b; font-size: 10px; font-weight: 700; text-anchor: middle;}
+  
+  .badge-current { fill: #fff7ed; stroke: #fdba74; rx: 4px; }
+  .badge-current-text { fill: #ea580c; font-size: 10px; font-weight: 800; text-anchor: middle;}
+  
+  .spouse-line { fill: none; stroke: #f97316; stroke-width: 2.5px; stroke-dasharray: 6,4; opacity: 0.8; }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const memberId = '<%= memberId %>';
+    const loading = document.getElementById('loading');
+    const btnImmediate = document.getElementById('view-immediate');
+    const btnFull = document.getElementById('view-full');
+    const treeContainer = document.getElementById('tree');
+    let currentMode = 'full';
+    let rawData = [];
+
+    // Configuration
+    const nodeWidth = 280;
+    const nodeHeight = 100;
+    const verticalGap = 120;
+    const horizontalGap = 80;
+
+    const svg = d3.select("#tree")
+      .append("svg")
+      .attr("width", "100%")
+      .attr("height", "100%");
+
+    const g = svg.append("g");
+
+    // Zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 3])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+
+    svg.call(zoom);
+
+    // Server-embedded tree data for instant first load (community tree only)
+    const INLINE_TREE_DATA = <%- typeof inlineTreeData !== 'undefined' ? inlineTreeData : 'null' %>;
+
+    async function loadTree(targetMode, forceApi) {
+      loading.style.display = 'flex';
+      currentMode = targetMode || currentMode;
+
+      // Update UI buttons if they exist
+      if (btnImmediate && btnFull) {
+        [btnImmediate, btnFull].forEach(btn => {
+          btn.classList.remove('bg-white', 'shadow-sm', 'text-gray-800');
+          btn.classList.add('text-gray-500');
+        });
+        const activeBtn = currentMode === 'full' ? btnFull : btnImmediate;
+        activeBtn.classList.add('bg-white', 'shadow-sm', 'text-gray-800');
+        activeBtn.classList.remove('text-gray-500');
+      }
+
+      try {
+        const gotraFilter = document.getElementById('gotra-filter');
+        const gotraValue = gotraFilter ? gotraFilter.value : '';
+
+        // Use inline data for the community tree initial load (no Gotra filter active)
+        // This avoids a second round-trip to MongoDB Atlas
+        if (!forceApi && INLINE_TREE_DATA && memberId === 'all' && !gotraValue) {
+          rawData = INLINE_TREE_DATA;
+          renderTree(rawData);
+          loading.style.display = 'none';
+          return;
+        }
+
+        // Otherwise fetch from API (filtered view or individual tree)
+        let url = `/members/api/family-tree/${memberId}${currentMode === 'full' ? '?mode=full' : ''}`;
+        if (gotraValue) {
+          url += `${url.includes('?') ? '&' : '?'}gotra=${encodeURIComponent(gotraValue)}`;
+        }
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch tree data');
+        rawData = await response.json();
+        
+        renderTree(rawData);
+        loading.style.display = 'none';
+      } catch (err) {
+        console.error(err);
+        loading.innerHTML = `<div class="text-center p-8">
+          <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+          <p class="text-red-600 font-bold">Error loading family tree.</p>
+          <p class="text-gray-500 text-sm mt-2">${err.message}</p>
+          <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-saffron-500 text-white rounded-lg hover:bg-saffron-600">Retry</button>
+        </div>`;
+      }
+    }
+
+
+    function renderTree(data) {
+      g.selectAll("*").remove();
+
+      if (!data || data.length === 0) return;
+
+      const validIds = new Set(data.map(d => d.id));
+      const treeData = data.map(d => {
+        let finalPid = null;
+        if (d.fatherId && validIds.has(d.fatherId)) {
+           finalPid = d.fatherId;
+        } else if (d.motherId && validIds.has(d.motherId)) {
+           finalPid = d.motherId;
+        } else if (d.pid && validIds.has(d.pid)) {
+           finalPid = d.pid;
+        }
+        return {
+          ...d,
+          parentId: finalPid
+        };
+      });
+
+      // Adjust parents for spouses who don't have blood parents in the tree
+      // IMPORTANT: Only mark as isSpouseAdopted if the member truly has NO blood parent
+      // (i.e., neither fatherId nor motherId is in the validIds set)
+      treeData.forEach(d => {
+        // Only adopt if: no parentId AND has a spouse AND that spouse has a parent
+        // AND the member truly has no blood parent in the current dataset
+        const hasBloodParent = (d.fatherId && validIds.has(d.fatherId)) || 
+                               (d.motherId && validIds.has(d.motherId)) ||
+                               (d.pid && validIds.has(d.pid));
+        
+        if (!d.parentId && !hasBloodParent && d.stpid && validIds.has(d.stpid)) {
+          const spouse = treeData.find(s => s.id === d.stpid);
+          if (spouse && spouse.parentId) {
+            d.parentId = spouse.parentId;
+            d.isSpouseAdopted = true; // Mark so we hide bloodline link for this non-blood member
+          }
+        }
+      });
+
+      // Find all 'roots' (nodes with no parent in the current set)
+      const roots = treeData.filter(d => !d.parentId);
+      
+      let processedData = treeData;
+      let rootId = null;
+
+      if (roots.length > 1) {
+        // MULTIPLE ROOTS: Add a virtual "Community" node to connect them
+        rootId = "virtual-root";
+        processedData.push({
+          id: rootId,
+          name: "समाज (Community)",
+          title: "Root",
+          village: "",
+          image: "/images/logo.png",
+          tags: ["virtual"],
+          parentId: null
+        });
+        // Point all real roots to this virtual root
+        roots.forEach(r => r.parentId = rootId);
+      } else if (roots.length === 1) {
+        rootId = roots[0].id;
+      } else {
+        console.error("No roots found in data");
+        return;
+      }
+
+      let root;
+      try {
+        root = d3.stratify()
+          .id(d => d.id)
+          .parentId(d => d.parentId)(processedData);
+      } catch (e) {
+        console.error("Hierarchy error:", e);
+        return; 
+      }
+
+      const treeLayout = d3.tree()
+        .nodeSize([nodeWidth + horizontalGap, nodeHeight + verticalGap]);
+
+      treeLayout(root);
+
+      // Links (Orthogonal Paths - Bloodlines)
+      // Draw link if:
+      //   1. source is not the virtual-root ghost node, AND
+      //   2. the target is NOT a spouse-borrowed-parent (isSpouseAdopted),
+      //      OR the target actually HAS a real blood parentId (i.e. a genuine child)
+      g.selectAll(".link")
+        .data(root.links())
+        .enter()
+        .filter(d => {
+          if (d.source.id === "virtual-root") return false;
+          // Always draw if not spouse-adopted (normal blood child)
+          if (!d.target.data.isSpouseAdopted) return true;
+          // If spouse-adopted, only draw if they have a genuine fatherId/motherId matching source
+          const td = d.target.data;
+          const sd = d.source.data;
+          return (td.fatherId && td.fatherId === sd.id) || (td.motherId && td.motherId === sd.id);
+        })
+        .append("path")
+        .attr("class", "link")
+        .attr("d", d => {
+          const source = { x: d.source.x, y: d.source.y + nodeHeight/2 };
+          const target = { x: d.target.x, y: d.target.y - nodeHeight/2 };
+          const midY = (source.y + target.y) / 2;
+          return `M${source.x},${source.y} L${source.x},${midY} L${target.x},${midY} L${target.x},${target.y}`;
+        });
+
+      // Spouse Connections
+      const spouseLinks = [];
+      const nodeMap = new Map();
+      root.descendants().forEach(d => nodeMap.set(d.id, d));
+
+      root.descendants().forEach(d => {
+        if (d.data.stpid && nodeMap.has(d.data.stpid)) {
+          const targetNode = nodeMap.get(d.data.stpid);
+          // ensure we only draw line once between pair
+          if (d.id < targetNode.id) {
+            spouseLinks.push({ source: d, target: targetNode });
+          }
+        }
+      });
+
+      g.selectAll(".spouse-line")
+        .data(spouseLinks)
+        .enter()
+        .append("path")
+        .attr("class", "spouse-line")
+        .attr("d", d => {
+          // Draw a distinct curved or horizontal dotted line between spouses
+          const s = d.source;
+          const t = d.target;
+          
+          if (Math.abs(s.y - t.y) < nodeHeight) {
+            // Same horizontal level
+            const left = s.x < t.x ? s : t;
+            const right = s.x < t.x ? t : s;
+            return `M${left.x + nodeWidth/2},${left.y} L${right.x - nodeWidth/2},${right.y}`;
+          } else {
+            // Different levels (rare, but possible if they are in different subtrees)
+            return `M${s.x},${s.y} Q${(s.x+t.x)/2},${Math.min(s.y, t.y) - 50} ${t.x},${t.y}`;
+          }
+        });
+
+      // Node Groups
+      const nodes = g.selectAll(".node")
+        .data(root.descendants())
+        .enter()
+        .filter(d => d.id !== "virtual-root") // Hide ghost root node
+        .append("g")
+        .attr("class", d => `node ${d.data.tags ? d.data.tags.join(' ') : ''}`)
+        .attr("transform", d => `translate(${d.x - nodeWidth/2},${d.y - nodeHeight/2})`)
+        .on("click", (event, d) => {
+          if (confirm(`View profile for ${d.data.name}?`)) {
+            window.location.href = `/members/${d.data.id}`;
+          }
+        });
+
+      // Node Box
+      nodes.append("rect")
+        .attr("class", "node-bg")
+        .attr("width", nodeWidth)
+        .attr("height", nodeHeight)
+        .attr("rx", 16);
+
+      // Node Left Accent
+      nodes.append("clipPath")
+        .attr("id", d => `node-clip-${d.data.id}`)
+        .append("rect")
+        .attr("width", nodeWidth)
+        .attr("height", nodeHeight)
+        .attr("rx", 16);
+
+      nodes.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 6)
+        .attr("height", nodeHeight)
+        .attr("fill", d => d.data.tags && d.data.tags.includes('deceased') ? "#94a3b8" : (d.data.id === memberId ? "#f97316" : "#E68A2E"))
+        .attr("clip-path", d => `url(#node-clip-${d.data.id})`);
+
+      // Profile Image Border
+      nodes.append("circle")
+        .attr("cx", 55)
+        .attr("cy", nodeHeight / 2)
+        .attr("r", 32)
+        .attr("fill", "white")
+        .attr("stroke", d => d.data.tags && d.data.tags.includes('deceased') ? "#cbd5e1" : "#FF9933")
+        .attr("stroke-width", "3px");
+
+      // Profile Image
+      nodes.append("clipPath")
+        .attr("id", d => `clip-${d.data.id}`)
+        .append("circle")
+        .attr("cx", 55)
+        .attr("cy", nodeHeight / 2)
+        .attr("r", 29);
+
+      nodes.append("image")
+        .attr("xlink:href", d => d.data.image)
+        .attr("x", 26)
+        .attr("y", (nodeHeight / 2) - 29)
+        .attr("width", 58)
+        .attr("height", 58)
+        .attr("clip-path", d => `url(#clip-${d.data.id})`)
+        .attr("preserveAspectRatio", "xMidYMid slice");
+
+      // Texts
+      const textX = 100;
+      nodes.append("text")
+        .attr("class", "node-name")
+        .attr("x", textX)
+        .attr("y", 36)
+        .text(d => d.data.name.length > 17 ? d.data.name.substring(0,15)+'...' : d.data.name);
+
+      nodes.append("text")
+        .attr("class", "node-title")
+        .attr("x", textX)
+        .attr("y", 58)
+        .text(d => d.data.title.length > 25 ? d.data.title.substring(0,23)+'...' : d.data.title);
+
+      nodes.append("text")
+        .attr("class", "node-village")
+        .attr("x", textX)
+        .attr("y", 78)
+        .text(d => d.data.village);
+
+      // Deceased Badge
+      const deceasedNodes = nodes.filter(d => d.data.tags && d.data.tags.includes('deceased'));
+      deceasedNodes.append("rect")
+        .attr("class", "badge-deceased")
+        .attr("x", nodeWidth - 65)
+        .attr("y", 14)
+        .attr("width", 50)
+        .attr("height", 20);
+      deceasedNodes.append("text")
+        .attr("class", "badge-deceased-text")
+        .attr("x", nodeWidth - 65 + 25)
+        .attr("y", 28)
+        .text("स्वर्गीय");
+
+      // Current/You Badge
+      const currentNodes = nodes.filter(d => d.data.id === memberId);
+      currentNodes.append("rect")
+        .attr("class", "badge-current")
+        .attr("x", nodeWidth - 50)
+        .attr("y", 14)
+        .attr("width", 35)
+        .attr("height", 20);
+      currentNodes.append("text")
+        .attr("class", "badge-current-text")
+        .attr("x", nodeWidth - 50 + 17.5)
+        .attr("y", 28)
+        .text("स्वयं");
+
+      // Center the tree
+      const bounds = g.node().getBBox();
+      const parent = svg.node().parentElement;
+      const fullWidth = parent.clientWidth;
+      const fullHeight = parent.clientHeight;
+      
+      const initialScale = currentMode === 'full' ? 0.3 : 0.8;
+      const initialX = fullWidth / 2 - (bounds.x + bounds.width / 2) * initialScale;
+      const initialY = 100;
+
+      svg.transition().duration(750).call(
+        zoom.transform, 
+        d3.zoomIdentity.translate(initialX, initialY).scale(initialScale)
+      );
+    }
+
+    if (btnImmediate) btnImmediate.addEventListener('click', () => loadTree('immediate'));
+    if (btnFull) btnFull.addEventListener('click', () => loadTree('full'));
+    
+    const gotraFilter = document.getElementById('gotra-filter');
+    if (gotraFilter) gotraFilter.addEventListener('change', () => loadTree('full', true));
+
+    const treeSearch = document.getElementById('tree-search');
+    if (treeSearch) {
+      treeSearch.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
+        d3.selectAll(".node").each(function(d) {
+          const node = d3.select(this);
+          const match = term && d.data.name.toLowerCase().includes(term);
+          node.select(".node-bg")
+            .style("stroke", match ? "#FF9933" : "#e2e8f0")
+            .style("stroke-width", match ? "4px" : "1px")
+            .style("filter", match ? "drop-shadow(0 0 15px rgba(255, 153, 51, 0.8))" : "drop-shadow(0 4px 6px rgb(0 0 0 / 0.05))");
+          
+          if (match) {
+             node.selectAll("text").style("font-weight", "900").style("fill", "#000");
+          } else {
+             node.select(".node-name").style("font-weight", "700").style("fill", "#1e293b");
+             node.select(".node-title").style("font-weight", "500").style("fill", "#475569");
+             node.select(".node-village").style("font-weight", "500").style("fill", "#64748b");
+          }
+        });
+      });
+    }
+
+    loadTree('full');
+  });
+</script>
+
+<%- include('../partials/footer') %>

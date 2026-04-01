@@ -1,0 +1,387 @@
+<%- include('partials/admin-header') %>
+
+<style>
+  pre.doc-json { font-size: 11px; max-height: 240px; overflow-y: auto; background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+  textarea.json-editor { font-family: 'Fira Mono', 'Cascadia Code', monospace; font-size: 12px; line-height: 1.7; border-radius: 8px; }
+  .doc-row.selected { background: #eff6ff; border-left: 3px solid #3b82f6; }
+  .bulk-bar { transition: transform .25s, opacity .25s; }
+  .bulk-bar.hidden { transform: translateY(120px); opacity: 0; pointer-events: none; }
+</style>
+
+<section class="py-10 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-7xl">
+    
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">
+          <a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a>
+          Database Explorer
+        </h1>
+        <p class="text-sm text-gray-500 mt-1">Browse, edit, bulk-edit/delete documents across all collections</p>
+      </div>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block"></span> Connected
+      </span>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-5 right-5 z-[100] hidden">
+      <div class="px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2" id="toast-inner">
+        <i class="fas fa-check-circle"></i> <span id="toast-msg"></span>
+      </div>
+    </div>
+
+    <!-- Collection Tabs -->
+    <div class="flex flex-wrap gap-2 mb-4">
+      <% collections.forEach((col, idx) => { %>
+        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all border
+                       <%= idx === 0 ? 'bg-saffron-600 text-white border-saffron-600 shadow' : 'bg-white text-gray-600 border-gray-200 hover:border-saffron-400 hover:text-saffron-600' %>"
+                data-target="col-<%= col.name %>" onclick="switchTab(this, 'col-<%= col.name %>')">
+          <i class="fas fa-table mr-1.5 opacity-60"></i> <%= col.label %>
+          <span class="ml-1.5 px-1.5 py-0.5 rounded-full text-xs <%= idx === 0 ? 'bg-white/30 text-white' : 'bg-gray-100 text-gray-500' %>"><%= col.count %></span>
+        </button>
+      <% }) %>
+    </div>
+
+    <!-- Collection Panels -->
+    <% collections.forEach((col, idx) => { %>
+    <div id="col-<%= col.name %>" class="collection-panel <%= idx !== 0 ? 'hidden' : '' %>">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- Panel header with Select All -->
+        <div class="flex justify-between items-center px-5 py-3 bg-gray-50 border-b border-gray-200 gap-3">
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" class="select-all-cb w-4 h-4 rounded accent-saffron-600" data-col="<%= col.name %>" onchange="toggleSelectAll(this)">
+              <span class="text-xs text-gray-500 font-medium">Select All</span>
+            </label>
+            <span class="text-xs text-gray-400 font-mono"><%= col.name %> · <%= col.count %> docs</span>
+          </div>
+          <input type="text" placeholder="Search in collection..." 
+                 class="w-64 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron-400 focus:outline-none"
+                 oninput="filterDocs(this, 'col-<%= col.name %>')">
+        </div>
+
+        <!-- Docs -->
+        <div class="divide-y divide-gray-100" id="docs-col-<%= col.name %>">
+          <% if (col.docs.length === 0) { %>
+            <div class="px-6 py-8 text-center text-gray-400 text-sm">No documents in this collection.</div>
+          <% } else { %>
+            <% col.docs.forEach(doc => { %>
+              <div class="doc-row px-5 py-3 group flex items-start gap-3"
+                   id="row-<%= doc._id %>"
+                   data-json='<%= JSON.stringify(doc).replace(/'/g, "&#39;") %>'
+                   data-collection="<%= col.name %>">
+                <!-- Checkbox -->
+                <input type="checkbox" class="row-cb w-4 h-4 rounded accent-blue-600 mt-1 flex-shrink-0"
+                       data-id="<%= doc._id %>" data-col="<%= col.name %>"
+                       onchange="updateBulkBar()">
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex justify-between items-start">
+                    <div class="flex-1 cursor-pointer" onclick="toggleDoc(this.closest('.doc-row'))">
+                      <div class="flex flex-wrap gap-2 items-center">
+                        <% if (doc.name) { %><span class="font-semibold text-gray-800 text-sm"><%= doc.name %></span><% } %>
+                        <% if (doc.title && !doc.name) { %><span class="font-semibold text-gray-800 text-sm"><%= doc.title %></span><% } %>
+                        <% if (!doc.name && !doc.title) { %><span class="font-mono text-xs text-gray-400"><%= doc._id %></span><% } %>
+                        <% if (doc.email) { %><span class="text-xs text-gray-500"><%= doc.email %></span><% } %>
+                        <% if (doc.gotra) { %><span class="text-xs bg-saffron-50 text-saffron-600 px-2 py-0.5 rounded"><%= doc.gotra %></span><% } %>
+                        <% if (doc.amount) { %><span class="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded">₹<%= doc.amount %></span><% } %>
+                        <% if (doc.village) { %><span class="text-xs text-gray-400"><%= doc.village %></span><% } %>
+                      </div>
+                      <div class="text-xs text-gray-400 mt-0.5 font-mono"><%= doc._id %></div>
+                    </div>
+                    <!-- Row actions (shown on hover) -->
+                    <div class="flex gap-1.5 ml-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onclick="openEdit(this.closest('.doc-row'))"
+                              class="text-xs px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">
+                        <i class="fas fa-edit mr-1"></i>Edit
+                      </button>
+                      <button onclick="openDelete(this.closest('.doc-row'))"
+                              class="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-medium">
+                        <i class="fas fa-trash mr-1"></i>Del
+                      </button>
+                    </div>
+                  </div>
+                  <pre class="doc-json mt-3 hidden"><%= JSON.stringify(doc, null, 2) %></pre>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <% }) %>
+
+  </div>
+</section>
+
+<!-- ── Floating Bulk Action Bar ── -->
+<div id="bulk-bar" class="bulk-bar hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-2xl shadow-2xl px-6 py-3 flex items-center gap-4 min-w-[420px]">
+  <span class="text-sm font-semibold"><span id="bulk-count">0</span> selected</span>
+  <div class="flex-1"></div>
+  <button onclick="openBulkEdit()" class="px-4 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-sm font-medium transition-colors">
+    <i class="fas fa-pen mr-1"></i> Bulk Edit Field
+  </button>
+  <button onclick="openBulkDelete()" class="px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-400 text-sm font-medium transition-colors">
+    <i class="fas fa-trash mr-1"></i> Bulk Delete
+  </button>
+  <button onclick="clearSelection()" class="text-gray-400 hover:text-white text-lg ml-1"><i class="fas fa-times"></i></button>
+</div>
+
+<!-- ── Edit Single Doc Modal ── -->
+<div id="edit-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
+    <div class="bg-blue-50 border-b border-blue-100 px-6 py-4 flex items-center justify-between">
+      <div>
+        <h3 class="font-bold text-gray-900 text-lg"><i class="fas fa-edit text-blue-500 mr-2"></i>Edit Document</h3>
+        <p class="text-xs text-gray-500 mt-0.5" id="edit-modal-id"></p>
+      </div>
+      <button onclick="closeModal('edit-modal')" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="px-6 py-4 flex-1 overflow-y-auto">
+      <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+        <i class="fas fa-info-circle mr-1"></i> <code>_id</code>, <code>__v</code>, <code>password</code> are protected and will be ignored.
+      </p>
+      <textarea id="edit-json" class="json-editor w-full h-80 border border-gray-300 p-3 focus:ring-2 focus:ring-blue-400 focus:outline-none text-gray-800 bg-gray-50 resize-y"></textarea>
+      <p id="edit-json-error" class="text-xs text-red-500 mt-1 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
+    </div>
+    <div class="px-6 pb-5 flex gap-3 justify-between items-center border-t border-gray-100 pt-4">
+      <button onclick="formatJson()" class="text-xs px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"><i class="fas fa-magic mr-1"></i>Format</button>
+      <div class="flex gap-3">
+        <button onclick="closeModal('edit-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium">Cancel</button>
+        <button onclick="saveEdit()" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"><i class="fas fa-save mr-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bulk Edit Modal ── -->
+<div id="bulk-edit-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+    <div class="bg-blue-50 border-b border-blue-100 px-6 py-4">
+      <h3 class="font-bold text-gray-900 text-lg"><i class="fas fa-layer-group text-blue-500 mr-2"></i>Bulk Edit Field</h3>
+      <p class="text-sm text-gray-500 mt-0.5">Set one field to a value on <strong id="bulk-edit-count"></strong> selected documents.</p>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        <i class="fas fa-exclamation-triangle mr-1"></i> This will <strong>overwrite</strong> the field value on all selected documents. Use with care.
+      </p>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Field Name</label>
+        <input id="bulk-field" type="text" placeholder="e.g. isApproved or gotra"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">New Value <span class="text-gray-400 font-normal">(JSON — strings need quotes)</span></label>
+        <input id="bulk-value" type="text" placeholder='e.g. true or "Kashyap" or 0'
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-400 focus:outline-none">
+      </div>
+      <p id="bulk-edit-error" class="text-xs text-red-500 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
+    </div>
+    <div class="px-6 pb-5 flex gap-3 justify-end border-t border-gray-100 pt-4">
+      <button onclick="closeModal('bulk-edit-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium">Cancel</button>
+      <button onclick="saveBulkEdit()" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"><i class="fas fa-bolt mr-1"></i>Apply to All Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Single Delete Confirm ── -->
+<div id="del-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+    <div class="bg-red-50 border-b border-red-100 px-6 py-4">
+      <h3 class="font-bold text-gray-900 text-lg"><i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>Delete Document?</h3>
+      <p class="text-sm text-gray-500 mt-1" id="del-modal-desc"></p>
+    </div>
+    <div class="px-6 py-4 pb-5 flex gap-3 justify-end">
+      <button onclick="closeModal('del-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium">Cancel</button>
+      <button onclick="confirmDelete()" class="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"><i class="fas fa-trash mr-1"></i>Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bulk Delete Confirm ── -->
+<div id="bulk-del-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+    <div class="bg-red-50 border-b border-red-100 px-6 py-4">
+      <h3 class="font-bold text-gray-900 text-lg"><i class="fas fa-trash text-red-500 mr-2"></i>Bulk Delete?</h3>
+      <p class="text-sm text-gray-500 mt-1" id="bulk-del-desc"></p>
+    </div>
+    <div class="px-6 py-4 pb-5 flex gap-3 justify-end">
+      <button onclick="closeModal('bulk-del-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium">Cancel</button>
+      <button onclick="confirmBulkDelete()" class="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"><i class="fas fa-trash mr-1"></i>Delete All Selected</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── State ── */
+  let _editId = null, _editCol = null;
+  let _delId  = null, _delCol  = null, _delRow = null;
+
+  /* ── Helpers ── */
+  function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+  function showToast(msg, color) {
+    const inner = document.getElementById('toast-inner');
+    document.getElementById('toast-msg').textContent = msg;
+    inner.className = `px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2 bg-${color}-600`;
+    const toast = document.getElementById('toast');
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 3000);
+  }
+
+  /* ── Tab Switching ── */
+  function switchTab(btn, target) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.className = b.className.replace('bg-saffron-600 text-white border-saffron-600 shadow', 'bg-white text-gray-600 border-gray-200 hover:border-saffron-400 hover:text-saffron-600');
+      const badge = b.querySelector('span:last-child');
+      if (badge) badge.className = badge.className.replace('bg-white/30 text-white', 'bg-gray-100 text-gray-500');
+    });
+    btn.className = btn.className.replace('bg-white text-gray-600 border-gray-200 hover:border-saffron-400 hover:text-saffron-600', 'bg-saffron-600 text-white border-saffron-600 shadow');
+    const badge = btn.querySelector('span:last-child');
+    if (badge) badge.className = badge.className.replace('bg-gray-100 text-gray-500', 'bg-white/30 text-white');
+    document.querySelectorAll('.collection-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById(target).classList.remove('hidden');
+    clearSelection();
+  }
+
+  /* ── Toggle JSON ── */
+  function toggleDoc(row) { row.querySelector('.doc-json').classList.toggle('hidden'); }
+
+  /* ── Search ── */
+  function filterDocs(input, panelId) {
+    const term = input.value.toLowerCase().trim();
+    document.querySelectorAll(`#docs-${panelId} .doc-row`).forEach(row => {
+      row.style.display = !term || (row.dataset.json || '').toLowerCase().includes(term) ? '' : 'none';
+    });
+  }
+
+  /* ── Selection / Bulk Bar ── */
+  function getSelectedCbs() {
+    return [...document.querySelectorAll('.row-cb:checked')];
+  }
+  function updateBulkBar() {
+    const cbs = getSelectedCbs();
+    const bar = document.getElementById('bulk-bar');
+    document.getElementById('bulk-count').textContent = cbs.length;
+    // Highlight selected rows
+    document.querySelectorAll('.row-cb').forEach(cb => {
+      cb.closest('.doc-row').classList.toggle('selected', cb.checked);
+    });
+    if (cbs.length > 0) { bar.classList.remove('hidden'); }
+    else { bar.classList.add('hidden'); }
+  }
+  function toggleSelectAll(masterCb) {
+    const col = masterCb.dataset.col;
+    document.querySelectorAll(`.row-cb[data-col="${col}"]`).forEach(cb => { cb.checked = masterCb.checked; });
+    updateBulkBar();
+  }
+  function clearSelection() {
+    document.querySelectorAll('.row-cb').forEach(cb => { cb.checked = false; });
+    document.querySelectorAll('.select-all-cb').forEach(cb => { cb.checked = false; });
+    document.querySelectorAll('.doc-row').forEach(r => r.classList.remove('selected'));
+    document.getElementById('bulk-bar').classList.add('hidden');
+  }
+
+  /* ── Single Edit ── */
+  function openEdit(row) {
+    _editId  = JSON.parse(row.dataset.json)._id;
+    _editCol = row.dataset.collection;
+    document.getElementById('edit-modal-id').textContent = `Collection: ${_editCol}  ·  ID: ${_editId}`;
+    document.getElementById('edit-json').value = JSON.stringify(JSON.parse(row.dataset.json), null, 2);
+    document.getElementById('edit-json-error').classList.add('hidden');
+    document.getElementById('edit-modal').classList.remove('hidden');
+  }
+  function formatJson() {
+    try {
+      document.getElementById('edit-json').value = JSON.stringify(JSON.parse(document.getElementById('edit-json').value), null, 2);
+      document.getElementById('edit-json-error').classList.add('hidden');
+    } catch(e) { showEditError(e.message); }
+  }
+  function showEditError(msg) {
+    const el = document.getElementById('edit-json-error');
+    el.querySelector('span').textContent = msg; el.classList.remove('hidden');
+  }
+  async function saveEdit() {
+    let parsed;
+    try { parsed = JSON.parse(document.getElementById('edit-json').value); } catch(e) { showEditError('Invalid JSON: '+e.message); return; }
+    const res = await fetch('/admin/db/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: _editCol, id: _editId, data: JSON.stringify(parsed) }) });
+    const result = await res.json();
+    if (result.ok) {
+      closeModal('edit-modal');
+      const row = document.getElementById('row-'+_editId);
+      if (row) { row.dataset.json = JSON.stringify(parsed); const pre = row.querySelector('.doc-json'); if(pre) pre.textContent = JSON.stringify(parsed, null, 2); }
+      showToast('Document updated!', 'blue');
+    } else { showEditError('Server: ' + result.error); }
+  }
+
+  /* ── Single Delete ── */
+  function openDelete(row) {
+    const doc = JSON.parse(row.dataset.json);
+    _delId = doc._id; _delCol = row.dataset.collection; _delRow = row;
+    document.getElementById('del-modal-desc').textContent = `"${doc.name||doc.title||_delId}" from ${_delCol}. Cannot be undone.`;
+    document.getElementById('del-modal').classList.remove('hidden');
+  }
+  async function confirmDelete() {
+    const res = await fetch('/admin/db/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: _delCol, id: _delId }) });
+    const result = await res.json();
+    if (result.ok) { closeModal('del-modal'); if(_delRow) _delRow.remove(); showToast('Deleted!', 'red'); updateBulkBar(); }
+    else alert('Error: '+result.error);
+  }
+
+  /* ── Bulk Edit ── */
+  function openBulkEdit() {
+    const cbs = getSelectedCbs();
+    if (!cbs.length) return;
+    document.getElementById('bulk-edit-count').textContent = cbs.length + ' document' + (cbs.length>1?'s':'');
+    document.getElementById('bulk-field').value = '';
+    document.getElementById('bulk-value').value = '';
+    document.getElementById('bulk-edit-error').classList.add('hidden');
+    document.getElementById('bulk-edit-modal').classList.remove('hidden');
+  }
+  async function saveBulkEdit() {
+    const cbs   = getSelectedCbs();
+    const ids   = cbs.map(cb => cb.dataset.id);
+    const col   = cbs[0]?.dataset.col;
+    const field = document.getElementById('bulk-field').value.trim();
+    const value = document.getElementById('bulk-value').value.trim();
+    if (!field) { const el=document.getElementById('bulk-edit-error'); el.querySelector('span').textContent='Field name is required'; el.classList.remove('hidden'); return; }
+    const res = await fetch('/admin/db/bulk-update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: col, ids, field, value }) });
+    const result = await res.json();
+    if (result.ok) {
+      closeModal('bulk-edit-modal');
+      showToast(`Updated ${result.modified} document(s)!`, 'blue');
+      clearSelection();
+    } else {
+      const el=document.getElementById('bulk-edit-error'); el.querySelector('span').textContent='Server: '+result.error; el.classList.remove('hidden');
+    }
+  }
+
+  /* ── Bulk Delete ── */
+  function openBulkDelete() {
+    const cbs = getSelectedCbs();
+    if (!cbs.length) return;
+    document.getElementById('bulk-del-desc').textContent = `${cbs.length} document${cbs.length>1?'s':''} will be permanently deleted. This cannot be undone.`;
+    document.getElementById('bulk-del-modal').classList.remove('hidden');
+  }
+  async function confirmBulkDelete() {
+    const cbs  = getSelectedCbs();
+    const ids  = cbs.map(cb => cb.dataset.id);
+    const col  = cbs[0]?.dataset.col;
+    const rows = cbs.map(cb => cb.closest('.doc-row'));
+    const res  = await fetch('/admin/db/bulk-delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: col, ids }) });
+    const result = await res.json();
+    if (result.ok) {
+      closeModal('bulk-del-modal');
+      rows.forEach(r => r && r.remove());
+      showToast(`Deleted ${result.deleted} document(s)!`, 'red');
+      clearSelection();
+    } else { alert('Error: '+result.error); }
+  }
+
+  /* Close modals on backdrop click */
+  ['edit-modal','bulk-edit-modal','del-modal','bulk-del-modal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(id); });
+  });
+</script>
+
+<%- include('partials/admin-footer') %>

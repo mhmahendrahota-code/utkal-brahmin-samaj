@@ -1,0 +1,118 @@
+<%
+  // Partial: mdms-table
+  // Expects: type, label, icon, items[], fields[], displayFn(item), subFn(item)
+%>
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  <!-- Header + Add Form -->
+  <div class="px-5 py-4 bg-gray-50 border-b border-gray-200">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="font-bold text-gray-700">
+        <i class="fas <%= icon %> text-saffron-500 mr-2"></i>
+        <%= label %> (<%= items.length %>)
+      </h2>
+    </div>
+    <!-- Quick Add Form -->
+    <form action="/admin/mdms/<%= type %>/add" method="POST"
+          class="flex flex-wrap gap-2 items-end bg-white border border-gray-200 rounded-xl p-4">
+      <% fields.forEach(f => { %>
+        <div class="flex-1 min-w-[160px]">
+          <label class="block text-xs font-medium text-gray-500 mb-1"><%= f.label %><% if(f.required){ %> *<% } %></label>
+          <input type="text" name="<%= f.key %>" placeholder="<%= f.label %>"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-saffron-400 focus:outline-none"
+                 <%= f.required ? 'required' : '' %>>
+        </div>
+      <% }) %>
+      <button type="submit"
+              class="px-4 py-1.5 bg-saffron-600 hover:bg-saffron-700 text-white rounded-lg text-sm font-medium transition-colors flex-shrink-0">
+        <i class="fas fa-plus mr-1"></i> Add
+      </button>
+    </form>
+  </div>
+
+  <!-- Search -->
+  <div class="px-5 py-2 border-b border-gray-100">
+    <input type="text" placeholder="Search <%= label.toLowerCase() %>..."
+           class="w-full max-w-sm px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron-400 focus:outline-none"
+           oninput="filterMdms(this, '<%= type %>')">
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left" id="tbl-<%= type %>">
+      <thead class="bg-gray-50 text-gray-500 text-xs uppercase border-b border-gray-200">
+        <tr>
+          <th class="px-5 py-3 w-8">#</th>
+          <th class="px-5 py-3"><%= label %></th>
+          <% if (fields.length > 1) { %><th class="px-5 py-3">Details</th><% } %>
+          <th class="px-5 py-3">Status</th>
+          <th class="px-5 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <% if (items.length === 0) { %>
+          <tr><td colspan="5" class="px-5 py-8 text-center text-gray-400 text-sm">No <%= label.toLowerCase() %> added yet. Use the form above to add one.</td></tr>
+        <% } %>
+        <% items.forEach((item, i) => { %>
+          <tr class="hover:bg-gray-50 mdms-row" data-search="<%= JSON.stringify(item).toLowerCase() %>">
+            <td class="px-5 py-3 text-gray-400 text-xs"><%= i + 1 %></td>
+            <td class="px-5 py-3">
+              <span class="font-semibold text-gray-800"><%= displayFn(item) %></span>
+            </td>
+            <% if (fields.length > 1) { %>
+            <td class="px-5 py-3 text-gray-500 text-xs"><%= subFn(item) || '—' %></td>
+            <% } %>
+            <td class="px-5 py-3">
+              <form action="/admin/mdms/<%= type %>/<%= item._id %>/toggle" method="POST" class="inline">
+                <button type="submit"
+                        class="text-xs px-2 py-0.5 rounded-full font-medium border transition-colors
+                               <%= item.isActive ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200' %>">
+                  <%= item.isActive ? '✓ Active' : '✗ Inactive' %>
+                </button>
+              </form>
+            </td>
+            <td class="px-5 py-3 text-right whitespace-nowrap">
+              <!-- Edit: inline expansion -->
+              <button onclick="openMdmsEdit('<%= type %>', '<%= item._id %>', <%= JSON.stringify(item).replace(/</g,'&lt;') %>)"
+                      class="text-blue-500 hover:text-blue-700 mr-2 text-sm" title="Edit">
+                <i class="fas fa-edit"></i>
+              </button>
+              <!-- Delete -->
+              <form action="/admin/mdms/<%= type %>/<%= item._id %>/delete" method="POST" class="inline"
+                    onsubmit="return confirm('Delete this entry? This cannot be undone.')">
+                <button type="submit" class="text-red-400 hover:text-red-600 text-sm" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  function filterMdms(input, type) {
+    const term = input.value.toLowerCase().trim();
+    document.querySelectorAll(`#tbl-${type} .mdms-row`).forEach(row => {
+      row.style.display = !term || row.dataset.search.includes(term) ? '' : 'none';
+    });
+  }
+  function openMdmsEdit(type, id, data) {
+    const form   = document.getElementById('edit-form');
+    const fields = document.getElementById('edit-fields');
+    form.action  = `/admin/mdms/${type}/${id}/edit`;
+    // Build input fields dynamically from the data object (skip internal fields)
+    const skip = new Set(['_id', '__v', 'createdAt', 'updatedAt', 'isActive']);
+    fields.innerHTML = Object.entries(data)
+      .filter(([k]) => !skip.has(k))
+      .map(([k, v]) => `
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">${k.charAt(0).toUpperCase()+k.slice(1).replace(/([A-Z])/g,' $1')}</label>
+          <input type="text" name="${k}" value="${String(v||'').replace(/"/g,'&quot;')}"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-saffron-400 focus:outline-none">
+        </div>`)
+      .join('');
+    document.getElementById('edit-modal').classList.remove('hidden');
+  }
+</script>

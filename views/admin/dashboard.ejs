@@ -192,7 +192,44 @@
         </div>
       </div>
 
+      <!-- Master Data Management Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-orange-50 px-6 py-4 border-b border-orange-100 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-layer-group text-orange-500 mr-2"></i> Master Data (MDMS)</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6 text-sm">Manage reference data: Gotras, Villages, Honorifics, Occupations, and Surnames used across the portal.</p>
+          <div class="space-y-3">
+            <a href="/admin/mdms" class="block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+              <i class="fas fa-layer-group mr-1"></i> Open MDMS
+            </a>
+            <a href="/admin/mdms?tab=gotra" class="block w-full text-center bg-white hover:bg-orange-50 text-orange-700 font-medium py-2 rounded border border-orange-200 transition-colors text-sm">
+              <i class="fas fa-om mr-1"></i> Manage Gotras
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Database Explorer Card -->
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-slate-800 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-white"><i class="fas fa-database text-emerald-400 mr-2"></i> Database Explorer</h2>
+          <span class="text-xs bg-emerald-400/20 text-emerald-300 px-2 py-0.5 rounded-full font-medium border border-emerald-400/30">Super Admin</span>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6 text-sm">Directly browse, edit, bulk-update and delete documents across all MongoDB collections.</p>
+          <div class="space-y-3">
+            <a href="/admin/db" class="block w-full text-center bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+              <i class="fas fa-database mr-1"></i> Open DB Explorer
+            </a>
+          </div>
+        </div>
+      </div>
+
     </div>
+
+
 
   </div>
 </section>

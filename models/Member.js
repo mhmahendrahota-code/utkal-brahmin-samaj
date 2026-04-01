@@ -17,8 +17,20 @@ const memberSchema = new mongoose.Schema({
   email: { type: String },
   address: { type: String },
   profileImage: { type: String, default: '/images/default-avatar.png' },
-  isCommitteeMember: { type: Boolean, default: false },
   isApproved: { type: Boolean, default: false },
+  isCommitteeMember: { type: Boolean, default: false },
+  isFamilyTreeOnly: { type: Boolean, default: false }, // Hide from main directory
+  
+  // Family Tree Fields
+  father: { type: mongoose.Schema.Types.ObjectId, ref: 'Member' },
+  mother: { type: mongoose.Schema.Types.ObjectId, ref: 'Member' },
+  spouse: { type: mongoose.Schema.Types.ObjectId, ref: 'Member' },
+  children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
+
+  // Ancestor / Deceased Support
+  isDeceased: { type: Boolean, default: false },
+  honorific: { type: String, default: '' }, // e.g., 'Late' / 'स्व.'
+  deathDate: Date,
   matrimonialProfile: { type: matrimonialProfileSchema, default: () => ({}) }
 }, { timestamps: true });
 
