@@ -56,7 +56,10 @@
                 <i class="fas fa-user"></i>
               </div>
               <div class="ml-4">
-                <h3 class="text-xl font-bold text-gray-900"><%= profile.name %></h3>
+                <h3 class="text-xl font-bold text-gray-900 flex items-center gap-1">
+                  <span><%= profile.name %></span>
+                  <% if (profile.surname) { %><span class="text-saffron-600"><%= profile.surname %></span><% } %>
+                </h3>
                 <p class="text-gray-500 text-sm"><%= profile.gotra %> Gotra</p>
               </div>
             </div>

@@ -13,7 +13,7 @@
       <div class="bg-saffron-600 h-32 relative">
         <div class="absolute -bottom-12 left-8">
           <div class="h-24 w-24 bg-white rounded-full flex items-center justify-center shadow-md border-4 border-white text-3xl font-bold <%= member.isDeceased ? 'text-gray-400 grayscale' : 'text-saffron-600' %>">
-            <%= (member.honorific ? member.honorific + ' ' : '') + member.name.charAt(0).toUpperCase() %>
+            <%= (member.honorific ? member.honorific + ' ' : '') + (member.name ? member.name.charAt(0).toUpperCase() : '') + (member.surname ? member.surname.charAt(0).toUpperCase() : '') %>
           </div>
         </div>
         <div class="absolute top-4 right-4 flex gap-2">
@@ -35,7 +35,7 @@
         <div class="mb-8">
           <h1 class="text-3xl font-bold text-gray-900 mb-1">
             <% if(member.isDeceased) { %> <span class="text-gray-500">Late.</span> <% } %>
-            <%= member.name %>
+            <%= member.name %> <span class="text-saffron-600"><%= member.surname || '' %></span>
           </h1>
           <p class="text-gray-500 font-medium text-lg flex items-center">
             <i class="fas fa-map-marker-alt text-saffron-500 mr-2"></i> Original Village (Mool): <%= member.village %>
@@ -68,7 +68,7 @@
                 <input list="membersList" name="targetId" required placeholder="Search name..." class="w-full px-3 py-2 border border-saffron-300 rounded text-sm focus:ring-saffron-500">
                 <datalist id="membersList">
                   <% allMembers.forEach(m => { %>
-                    <option value="<%= m._id %>"><%= m.name %> (<%= m.village %>)</option>
+                    <option value="<%= m._id %>"><%= m.name %> <%= m.surname || '' %> (<%= m.village %>)</option>
                   <% }) %>
                 </datalist>
                 <p class="text-[10px] text-gray-400 mt-1">Copy the ID from the suggestions</p>

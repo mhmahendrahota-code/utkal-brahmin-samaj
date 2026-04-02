@@ -18,8 +18,25 @@
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-            <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+            <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500" placeholder="e.g., Ramesh">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Surname *</label>
+            <select name="surname_select" required onchange="toggleSurnameInput(this)"
+              class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
+              <option value="">-- Choose (चुनें) --</option>
+              <% if (typeof surnames !== 'undefined') { %>
+                <% surnames.forEach(s => { %>
+                  <option value="<%= s.surname %>"><%= s.surname %></option>
+                <% }) %>
+              <% } %>
+              <option value="Others">Others (अन्य)</option>
+            </select>
+            <div id="surnameCustomDiv" style="display:none;" class="mt-2 text-sm">
+              <input type="text" id="surnameCustomInput" placeholder="अपना उपनाम लिखें / Enter Surname"
+                class="w-full px-4 py-2 border border-blue-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-blue-50">
+            </div>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Gotra *</label>
@@ -55,11 +72,29 @@
                   customInput.required = true;
                   customInput.name = 'gotra';
                   select.name = '_gotraSelect';
+                  customInput.focus();
                 } else {
                   customDiv.style.display = 'none';
                   customInput.required = false;
                   customInput.name = '';
                   select.name = 'gotra';
+                }
+              }
+
+              function toggleSurnameInput(select) {
+                const customDiv = document.getElementById('surnameCustomDiv');
+                const customInput = document.getElementById('surnameCustomInput');
+                if (select.value === 'Others') {
+                  customDiv.style.display = 'block';
+                  customInput.required = true;
+                  customInput.name = 'surname_other';
+                  select.name = 'surname_select';
+                  customInput.focus();
+                } else {
+                  customDiv.style.display = 'none';
+                  customInput.required = false;
+                  customInput.name = '';
+                  select.name = 'surname_select';
                 }
               }
             </script>

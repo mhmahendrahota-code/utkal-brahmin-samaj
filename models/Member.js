@@ -10,6 +10,7 @@ const matrimonialProfileSchema = new mongoose.Schema({
 
 const memberSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  surname: { type: String },
   gotra: { type: String },
   village: { type: String },
   occupation: { type: String },

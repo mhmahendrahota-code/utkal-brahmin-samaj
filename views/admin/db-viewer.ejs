@@ -4,6 +4,14 @@
   pre.doc-json { font-size: 11px; max-height: 240px; overflow-y: auto; background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
   textarea.json-editor { font-family: 'Fira Mono', 'Cascadia Code', monospace; font-size: 12px; line-height: 1.7; border-radius: 8px; }
   .doc-row.selected { background: #eff6ff; border-left: 3px solid #3b82f6; }
+  .doc-row.dirty { background: #fffcf0; }
+  .inline-input { 
+    width: 100%; height: 100%; background: transparent; border: 1px solid transparent; 
+    padding: 4px 8px; border-radius: 4px; transition: all 0.2s; font-size: 12px; outline: none;
+  }
+  .inline-input:hover { border-color: #e2e8f0; background: rgba(255,255,255,0.5); }
+  .inline-input:focus { background: white; border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
+  .inline-input.changed { border-color: #f59e0b; background: #fffbeb; }
   .bulk-bar { transition: transform .25s, opacity .25s; }
   .bulk-bar.hidden { transform: translateY(120px); opacity: 0; pointer-events: none; }
 </style>
@@ -47,22 +55,36 @@
     <% collections.forEach((col, idx) => { %>
     <div id="col-<%= col.name %>" class="collection-panel <%= idx !== 0 ? 'hidden' : '' %>">
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <!-- Panel header with Select All -->
-        <div class="flex justify-between items-center px-5 py-3 bg-gray-50 border-b border-gray-200 gap-3">
-          <div class="flex items-center gap-3">
+        <!-- Panel header with Select All & View Toggle -->
+        <div class="flex flex-wrap justify-between items-center px-5 py-3 bg-gray-50 border-b border-gray-200 gap-4">
+          <div class="flex items-center gap-4">
             <label class="flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" class="select-all-cb w-4 h-4 rounded accent-saffron-600" data-col="<%= col.name %>" onchange="toggleSelectAll(this)">
               <span class="text-xs text-gray-500 font-medium">Select All</span>
             </label>
-            <span class="text-xs text-gray-400 font-mono"><%= col.name %> · <%= col.count %> docs</span>
+            <div class="h-4 w-px bg-gray-300"></div>
+            <!-- View Mode Toggle -->
+            <div class="flex bg-gray-200/50 p-1 rounded-lg">
+              <button onclick="setViewMode('<%= col.name %>', 'list')" id="btn-list-<%= col.name %>"
+                      class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all bg-white shadow-sm text-gray-800">
+                <i class="fas fa-list mr-1"></i> List
+              </button>
+              <button onclick="setViewMode('<%= col.name %>', 'table')" id="btn-table-<%= col.name %>"
+                      class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all text-gray-500 hover:text-gray-700">
+                <i class="fas fa-table mr-1"></i> Table
+              </button>
+            </div>
+            <span class="text-xs text-gray-400 font-mono hidden md:inline"><%= col.name %> · <%= col.count %> docs</span>
           </div>
-          <input type="text" placeholder="Search in collection..." 
-                 class="w-64 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron-400 focus:outline-none"
-                 oninput="filterDocs(this, 'col-<%= col.name %>')">
+          <div class="flex items-center gap-3">
+            <input type="text" placeholder="Search in collection..." 
+                   class="w-48 md:w-64 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron-400 focus:outline-none"
+                   oninput="filterDocs(this, '<%= col.name %>')">
+          </div>
         </div>
 
-        <!-- Docs -->
-        <div class="divide-y divide-gray-100" id="docs-col-<%= col.name %>">
+        <!-- List View -->
+        <div class="divide-y divide-gray-100" id="list-view-<%= col.name %>">
           <% if (col.docs.length === 0) { %>
             <div class="px-6 py-8 text-center text-gray-400 text-sm">No documents in this collection.</div>
           <% } else { %>
@@ -108,6 +130,18 @@
             <% }) %>
           <% } %>
         </div>
+
+        <!-- Table View -->
+        <div id="table-view-<%= col.name %>" class="hidden overflow-x-auto">
+          <table class="w-full text-left border-collapse min-w-[800px]">
+            <thead class="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500 font-bold border-b border-gray-200" id="thead-<%= col.name %>">
+              <!-- Dynamic headers -->
+            </thead>
+            <tbody id="tbody-<%= col.name %>" class="divide-y divide-gray-100 text-xs">
+              <!-- Dynamic rows -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
     <% }) %>
@@ -136,13 +170,27 @@
         <h3 class="font-bold text-gray-900 text-lg"><i class="fas fa-edit text-blue-500 mr-2"></i>Edit Document</h3>
         <p class="text-xs text-gray-500 mt-0.5" id="edit-modal-id"></p>
       </div>
+      <!-- Mode Switcher -->
+      <div class="flex bg-gray-100 p-1 rounded-lg">
+        <button id="btn-json-mode" onclick="setEditMode('json')" 
+                class="px-3 py-1.5 rounded-md text-xs font-medium transition-all bg-white shadow-sm text-gray-800">JSON Mode</button>
+        <button id="btn-form-mode" onclick="setEditMode('form')" 
+                class="px-3 py-1.5 rounded-md text-xs font-medium transition-all text-gray-500 hover:text-gray-700">Simplified View</button>
+      </div>
       <button onclick="closeModal('edit-modal')" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
     </div>
     <div class="px-6 py-4 flex-1 overflow-y-auto">
       <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
         <i class="fas fa-info-circle mr-1"></i> <code>_id</code>, <code>__v</code>, <code>password</code> are protected and will be ignored.
       </p>
-      <textarea id="edit-json" class="json-editor w-full h-80 border border-gray-300 p-3 focus:ring-2 focus:ring-blue-400 focus:outline-none text-gray-800 bg-gray-50 resize-y"></textarea>
+      <!-- JSON Editor -->
+      <div id="json-editor-container">
+        <textarea id="edit-json" class="json-editor w-full h-80 border border-gray-300 p-3 focus:ring-2 focus:ring-blue-400 focus:outline-none text-gray-800 bg-gray-50 resize-y"></textarea>
+      </div>
+      <!-- Form Editor -->
+      <div id="form-editor-container" class="hidden space-y-4 py-2">
+        <!-- Dynamic fields go here -->
+      </div>
       <p id="edit-json-error" class="text-xs text-red-500 mt-1 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
     </div>
     <div class="px-6 pb-5 flex gap-3 justify-between items-center border-t border-gray-100 pt-4">
@@ -234,24 +282,333 @@
     document.querySelectorAll('.tab-btn').forEach(b => {
       b.className = b.className.replace('bg-saffron-600 text-white border-saffron-600 shadow', 'bg-white text-gray-600 border-gray-200 hover:border-saffron-400 hover:text-saffron-600');
       const badge = b.querySelector('span:last-child');
-      if (badge) badge.className = badge.className.replace('bg-white/30 text-white', 'bg-gray-100 text-gray-500');
+      if (badge) { badge.classList.remove('bg-white/30', 'text-white'); badge.classList.add('bg-gray-100', 'text-gray-500'); }
     });
     btn.className = btn.className.replace('bg-white text-gray-600 border-gray-200 hover:border-saffron-400 hover:text-saffron-600', 'bg-saffron-600 text-white border-saffron-600 shadow');
     const badge = btn.querySelector('span:last-child');
-    if (badge) badge.className = badge.className.replace('bg-gray-100 text-gray-500', 'bg-white/30 text-white');
+    if (badge) { badge.classList.add('bg-white/30', 'text-white'); badge.classList.remove('bg-gray-100', 'text-gray-500'); }
+
     document.querySelectorAll('.collection-panel').forEach(p => p.classList.add('hidden'));
     document.getElementById(target).classList.remove('hidden');
+    
+    // Check view mode for this collection
+    const colName = target.replace('col-', '');
+    const currentMode = localStorage.getItem('db_view_mode_' + colName) || 'list';
+    setViewMode(colName, currentMode, true); // true = don't toggle, just set
     clearSelection();
+  }
+
+  /* ── View Mode Switching (List vs Table) ── */
+  function setViewMode(colName, mode, force = false) {
+    const listContainer = document.getElementById('list-view-' + colName);
+    const tableContainer = document.getElementById('table-view-' + colName);
+    const btnList = document.getElementById('btn-list-' + colName);
+    const btnTable = document.getElementById('btn-table-' + colName);
+    
+    if (!listContainer || !tableContainer) return;
+
+    if (mode === 'table') {
+      renderTable(colName);
+      listContainer.classList.add('hidden');
+      tableContainer.classList.remove('hidden');
+      btnTable.classList.add('bg-white', 'shadow-sm', 'text-gray-800');
+      btnTable.classList.remove('text-gray-500');
+      btnList.classList.remove('bg-white', 'shadow-sm', 'text-gray-800');
+      btnList.classList.add('text-gray-500');
+    } else {
+      listContainer.classList.remove('hidden');
+      tableContainer.classList.add('hidden');
+      btnList.classList.add('bg-white', 'shadow-sm', 'text-gray-800');
+      btnList.classList.remove('text-gray-500');
+      btnTable.classList.remove('bg-white', 'shadow-sm', 'text-gray-800');
+      btnTable.classList.add('text-gray-500');
+    }
+    
+    localStorage.setItem('db_view_mode_' + colName, mode);
+  }
+
+  function renderTable(colName) {
+    const tbody = document.getElementById('tbody-' + colName);
+    const thead = document.getElementById('thead-' + colName);
+    const listRows = document.querySelectorAll('#list-view-' + colName + ' .doc-row');
+    
+    if (listRows.length === 0) return;
+    
+    // Get headers from all rows to be comprehensive, but limit to useful fields
+    const allKeys = new Set(['_id']);
+    const skipFields = ['__v', 'password', 'passwordHash', 'id'];
+    
+    listRows.forEach(row => {
+      try {
+        const data = JSON.parse(row.dataset.json);
+        Object.keys(data).forEach(k => {
+          if (!skipFields.includes(k) && typeof data[k] !== 'object') allKeys.add(k);
+        });
+      } catch (e) {
+        console.warn("Invalid JSON in row", row.id, e);
+      }
+    });
+    
+    const headers = Array.from(allKeys).slice(0, 10); // Limit to 10 cols for sanity
+    
+    // Render Header
+    thead.innerHTML = '';
+    
+    // Row 1: Titles
+    const htr = document.createElement('tr');
+    htr.innerHTML = `
+      <th class="px-5 py-3 w-10"></th>
+      <th class="px-2 py-3 w-8 text-center"><i class="fas fa-edit text-gray-400"></i></th>
+    `;
+    headers.forEach(h => {
+      const th = document.createElement('th');
+      th.className = 'px-4 py-3 cursor-default';
+      th.textContent = h;
+      htr.appendChild(th);
+    });
+    htr.innerHTML += `<th class="px-5 py-3 text-right">Actions</th>`;
+    thead.appendChild(htr);
+
+    // Row 2: Bulk Entry Row
+    const btr = document.createElement('tr');
+    btr.className = "bg-blue-50/50 border-b border-blue-100";
+    btr.innerHTML = `
+      <td class="px-5 py-2 text-center" title="Bulk Update Column Controls">
+        <i class="fas fa-bolt text-blue-500 text-[10px]"></i>
+      </td>
+      <td></td>
+    `;
+    headers.forEach(h => {
+      const isId = h === '_id';
+      const cell = document.createElement('td');
+      cell.className = "px-2 py-2";
+      if (isId) {
+        cell.innerHTML = `<span class="text-[9px] text-gray-400 italic px-2">READ ONLY</span>`;
+      } else {
+        cell.innerHTML = `
+          <div class="flex items-center gap-1">
+            <input type="text" id="bulk-input-${colName}-${h}" placeholder="Bulk value..." 
+                   class="w-full text-[10px] px-2 py-1 rounded border border-blue-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+            <button onclick="applyColumnBulk('${h}', '${colName}')" 
+                    class="p-1 hover:bg-blue-200 text-blue-600 rounded transition-colors" title="Apply to all selected rows">
+              <i class="fas fa-check-double text-[10px]"></i>
+            </button>
+          </div>
+        `;
+      }
+      btr.appendChild(cell);
+    });
+    btr.innerHTML += `<td></td>`;
+    thead.appendChild(btr);
+    
+    // Render Body
+    tbody.innerHTML = '';
+    listRows.forEach(lRow => {
+      const data = JSON.parse(lRow.dataset.json);
+      const isSelected = lRow.querySelector('.row-cb').checked;
+      
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-blue-50/30 doc-row transition-colors group' + (isSelected ? ' selected bg-blue-50/50' : '');
+      tr.id = 'table-row-' + data._id;
+      tr.dataset.id = data._id;
+      tr.dataset.json = lRow.dataset.json;
+      tr.dataset.collection = colName;
+      
+      // Checkbox cell
+      let html = `<td class="px-5 py-3" onclick="event.stopPropagation()">
+        <input type="checkbox" class="row-cb w-4 h-4 rounded accent-blue-600" 
+               ${isSelected ? 'checked' : ''} data-id="${data._id}" data-col="${colName}"
+               onchange="syncRowSelect(this)">
+      </td>`;
+
+      // Inline Save status cell
+      html += `<td class="px-2 py-3 text-center">
+        <button id="save-btn-${data._id}" onclick="saveInlineRow('${data._id}', '${colName}')" 
+                class="save-row-btn hidden p-1.5 bg-green-500 hover:bg-green-600 text-white rounded shadow-sm transition-all" title="Save changes">
+          <i class="fas fa-save text-[10px]"></i>
+        </button>
+        <i id="edit-icon-${data._id}" class="fas fa-pen-to-square text-blue-400 opacity-20 group-hover:opacity-100 transition-opacity"></i>
+      </td>`;
+      
+      // Data cells
+      headers.forEach(h => {
+        const isId = h === '_id';
+        let val = data[h] === undefined ? '' : data[h];
+        if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
+        
+        const type = typeof data[h];
+        
+        html += `<td class="px-2 py-2">
+          <input type="${isId ? 'text' : 'text'}" 
+                 value="${String(val).replace(/"/g, '&quot;')}" 
+                 ${isId ? 'disabled' : ''}
+                 class="inline-input ${isId ? 'text-gray-400 cursor-not-allowed italic font-mono' : 'text-gray-700'}"
+                 data-field="${h}"
+                 data-original="${String(val).replace(/"/g, '&quot;')}"
+                 data-type="${type}"
+                 oninput="onCellInput(this, '${data._id}')"
+                 onkeydown="handleTableKey(event, this)">
+        </td>`;
+      });
+      
+      // Actions cell
+      html += `<td class="px-5 py-3 text-right whitespace-nowrap" onclick="event.stopPropagation()">
+        <button onclick="openEdit(document.getElementById('row-${data._id}'))" class="text-blue-600/40 hover:text-blue-600 font-medium mr-3" title="Open Deep Editor">
+          <i class="fas fa-code"></i> JSON
+        </button>
+        <button onclick="openDelete(document.getElementById('row-${data._id}'))" class="text-red-400 hover:text-red-600 font-medium">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>`;
+      
+      tr.innerHTML = html;
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* ── Spreadsheet Actions ── */
+  
+  function onCellInput(input, docId) {
+    const original = input.dataset.original;
+    const current = input.value;
+    const isChanged = original !== current;
+    
+    input.classList.toggle('changed', isChanged);
+    
+    // Check if ANY cell in the row is changed
+    const row = input.closest('tr');
+    const changedFields = row.querySelectorAll('.inline-input.changed');
+    const saveBtn = document.getElementById('save-btn-' + docId);
+    const editIcon = document.getElementById('edit-icon-' + docId);
+    
+    if (changedFields.length > 0) {
+      row.classList.add('dirty');
+      saveBtn.classList.remove('hidden');
+      editIcon.classList.add('hidden');
+    } else {
+      row.classList.remove('dirty');
+      saveBtn.classList.add('hidden');
+      editIcon.classList.remove('hidden');
+    }
+  }
+
+  function handleTableKey(e, input) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const tr = input.closest('tr');
+      const docId = tr.dataset.id;
+      const colName = tr.dataset.collection;
+      saveInlineRow(docId, colName);
+    }
+  }
+
+  async function saveInlineRow(docId, colName) {
+    const row = document.getElementById('table-row-' + docId);
+    if (!row) return;
+
+    const inputs = row.querySelectorAll('.inline-input');
+    const updatedData = JSON.parse(document.getElementById('row-' + docId).dataset.json);
+    
+    inputs.forEach(input => {
+      const field = input.dataset.field;
+      const type = input.dataset.type;
+      let val = input.value;
+      
+      if (field === '_id') return;
+
+      // Handle types
+      if (type === 'number') val = Number(val);
+      else if (type === 'boolean') val = (val.toLowerCase() === 'true' || val === '✅' || val === '1');
+      else if (type === 'object') {
+        try { val = JSON.parse(val); } catch(e) { /* keep as string if not valid JSON */ }
+      }
+      
+      updatedData[field] = val;
+    });
+
+    const res = await fetch('/admin/db/update', { 
+      method:'POST', 
+      headers:{'Content-Type':'application/json'}, 
+      body: JSON.stringify({ collection: colName, id: docId, data: JSON.stringify(updatedData) }) 
+    });
+    
+    const result = await res.json();
+    if (result.ok) {
+      // Sync with List view
+      const lRow = document.getElementById('row-' + docId);
+      lRow.dataset.json = JSON.stringify(updatedData);
+      lRow.querySelector('.doc-json').textContent = JSON.stringify(updatedData, null, 2);
+      
+      // Reset UI
+      row.classList.remove('dirty');
+      document.getElementById('save-btn-' + docId).classList.add('hidden');
+      document.getElementById('edit-icon-' + docId).classList.remove('hidden');
+      inputs.forEach(input => {
+        input.classList.remove('changed');
+        input.dataset.original = input.value;
+      });
+      
+      showToast('Row updated!', 'green');
+    } else {
+      alert('Save failed: ' + result.error);
+    }
+  }
+
+  async function applyColumnBulk(fieldName, colName) {
+    const ids = getSelectedCbs().filter(cb => cb.dataset.col === colName).map(cb => cb.dataset.id);
+    if (ids.length === 0) return showToast('Select records first!', 'orange');
+    
+    const value = document.getElementById(`bulk-input-${colName}-${fieldName}`).value.trim();
+    if (!value) return showToast('Enter a value to apply!', 'orange');
+
+    const res = await fetch('/admin/db/bulk-update', { 
+      method:'POST', 
+      headers:{'Content-Type':'application/json'}, 
+      body: JSON.stringify({ collection: colName, ids, field: fieldName, value: value }) 
+    });
+    
+    const result = await res.json();
+    if (result.ok) {
+      showToast(`Updated ${result.modified} records in ${fieldName}!`, 'blue');
+      // Reload to reflect changes (simplest way for bulk)
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      alert('Bulk update failed: ' + result.error);
+    }
+  }
+
+  // Handle cross-view selection sync
+  function syncRowSelect(cb) {
+    const id = cb.dataset.id;
+    const col = cb.dataset.col;
+    const isChecked = cb.checked;
+    
+    // Update List view checkbox
+    const listRow = document.getElementById('row-' + id);
+    const listCb = listRow.querySelector('.row-cb');
+    listCb.checked = isChecked;
+    listRow.classList.toggle('selected', isChecked);
+    
+    // Toggle class on table row too
+    const tableRow = cb.closest('tr');
+    if (tableRow) tableRow.classList.toggle('selected', isChecked);
+    
+    updateBulkBar();
   }
 
   /* ── Toggle JSON ── */
   function toggleDoc(row) { row.querySelector('.doc-json').classList.toggle('hidden'); }
 
   /* ── Search ── */
-  function filterDocs(input, panelId) {
+  function filterDocs(input, colName) {
     const term = input.value.toLowerCase().trim();
-    document.querySelectorAll(`#docs-${panelId} .doc-row`).forEach(row => {
-      row.style.display = !term || (row.dataset.json || '').toLowerCase().includes(term) ? '' : 'none';
+    const selectors = [`#list-view-${colName} .doc-row`, `#tbody-${colName} .doc-row` ];
+    
+    selectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(row => {
+        const isMatch = !term || (row.dataset.json || '').toLowerCase().includes(term);
+        row.style.display = isMatch ? '' : 'none';
+      });
     });
   }
 
@@ -283,35 +640,170 @@
   }
 
   /* ── Single Edit ── */
+  let _editMode = 'json'; // 'json' or 'form'
+
   function openEdit(row) {
     _editId  = JSON.parse(row.dataset.json)._id;
     _editCol = row.dataset.collection;
+    _editMode = 'json';
+    updateEditModeUI();
+
     document.getElementById('edit-modal-id').textContent = `Collection: ${_editCol}  ·  ID: ${_editId}`;
     document.getElementById('edit-json').value = JSON.stringify(JSON.parse(row.dataset.json), null, 2);
     document.getElementById('edit-json-error').classList.add('hidden');
     document.getElementById('edit-modal').classList.remove('hidden');
   }
+
+  function setEditMode(mode) {
+    if (_editMode === mode) return;
+    
+    // Sync logic before switching
+    if (mode === 'form') {
+      try {
+        const json = JSON.parse(document.getElementById('edit-json').value);
+        renderForm(json);
+        _editMode = 'form';
+      } catch(e) {
+        showEditError('Fix JSON syntax before switching to Form View: ' + e.message);
+        return;
+      }
+    } else {
+      syncFormToJson();
+      _editMode = 'json';
+    }
+    updateEditModeUI();
+  }
+
+  function updateEditModeUI() {
+    const isJson = _editMode === 'json';
+    document.getElementById('json-editor-container').classList.toggle('hidden', !isJson);
+    document.getElementById('form-editor-container').classList.toggle('hidden', isJson);
+    
+    const btnJson = document.getElementById('btn-json-mode');
+    const btnForm = document.getElementById('btn-form-mode');
+    
+    [btnJson, btnForm].forEach(btn => {
+      btn.classList.remove('bg-white', 'shadow-sm', 'text-gray-800');
+      btn.classList.add('text-gray-500');
+    });
+    
+    const activeBtn = isJson ? btnJson : btnForm;
+    activeBtn.classList.add('bg-white', 'shadow-sm', 'text-gray-800');
+    activeBtn.classList.remove('text-gray-500');
+  }
+
+  function renderForm(json) {
+    const container = document.getElementById('form-editor-container');
+    container.innerHTML = '';
+    
+    const protectedFields = ['_id', '__v', 'password'];
+    
+    Object.keys(json).forEach(key => {
+      if (protectedFields.includes(key)) return;
+      
+      const val = json[key];
+      const fieldDiv = document.createElement('div');
+      fieldDiv.className = 'flex flex-col gap-1.5';
+      
+      const label = document.createElement('label');
+      label.className = 'text-xs font-bold text-gray-600 uppercase tracking-wider';
+      label.textContent = key;
+      fieldDiv.appendChild(label);
+      
+      if (typeof val === 'boolean') {
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = val;
+        cb.className = 'w-5 h-5 rounded accent-blue-600 cursor-pointer form-field';
+        cb.dataset.key = key;
+        cb.dataset.type = 'boolean';
+        fieldDiv.appendChild(cb);
+      } else if (typeof val === 'number') {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = val;
+        input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none form-field';
+        input.dataset.key = key;
+        input.dataset.type = 'number';
+        fieldDiv.appendChild(input);
+      } else if (typeof val === 'object' && val !== null) {
+        const area = document.createElement('textarea');
+        area.value = JSON.stringify(val, null, 2);
+        area.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-[11px] focus:ring-2 focus:ring-blue-400 focus:outline-none form-field resize-y';
+        area.rows = 4;
+        area.dataset.key = key;
+        area.dataset.type = 'object';
+        fieldDiv.appendChild(area);
+      } else {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = val || '';
+        input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none form-field';
+        input.dataset.key = key;
+        input.dataset.type = 'string';
+        fieldDiv.appendChild(input);
+      }
+      
+      container.appendChild(fieldDiv);
+    });
+  }
+
+  function syncFormToJson() {
+    const fields = document.querySelectorAll('.form-field');
+    const json = JSON.parse(document.getElementById('edit-json').value);
+    
+    fields.forEach(field => {
+      const key = field.dataset.key;
+      const type = field.dataset.type;
+      
+      if (type === 'boolean') json[key] = field.checked;
+      else if (type === 'number') json[key] = Number(field.value);
+      else if (type === 'object') {
+        try { json[key] = JSON.parse(field.value); } catch(e) { /* keep original on error or handle it */ }
+      }
+      else json[key] = field.value;
+    });
+    
+    document.getElementById('edit-json').value = JSON.stringify(json, null, 2);
+  }
+
   function formatJson() {
     try {
+      if (_editMode === 'form') syncFormToJson();
       document.getElementById('edit-json').value = JSON.stringify(JSON.parse(document.getElementById('edit-json').value), null, 2);
+      if (_editMode === 'form') renderForm(JSON.parse(document.getElementById('edit-json').value));
       document.getElementById('edit-json-error').classList.add('hidden');
     } catch(e) { showEditError(e.message); }
   }
+
   function showEditError(msg) {
     const el = document.getElementById('edit-json-error');
     el.querySelector('span').textContent = msg; el.classList.remove('hidden');
   }
+
   async function saveEdit() {
+    if (_editMode === 'form') syncFormToJson();
+    
     let parsed;
-    try { parsed = JSON.parse(document.getElementById('edit-json').value); } catch(e) { showEditError('Invalid JSON: '+e.message); return; }
-    const res = await fetch('/admin/db/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: _editCol, id: _editId, data: JSON.stringify(parsed) }) });
+    try { parsed = JSON.parse(document.getElementById('edit-json').value); } catch(e) { showEditError('Invalid JSON structure: '+e.message); return; }
+    
+    const res = await fetch('/admin/db/update', { 
+      method:'POST', 
+      headers:{'Content-Type':'application/json'}, 
+      body: JSON.stringify({ collection: _editCol, id: _editId, data: JSON.stringify(parsed) }) 
+    });
+    
     const result = await res.json();
     if (result.ok) {
       closeModal('edit-modal');
       const row = document.getElementById('row-'+_editId);
-      if (row) { row.dataset.json = JSON.stringify(parsed); const pre = row.querySelector('.doc-json'); if(pre) pre.textContent = JSON.stringify(parsed, null, 2); }
-      showToast('Document updated!', 'blue');
-    } else { showEditError('Server: ' + result.error); }
+      if (row) { 
+        row.dataset.json = JSON.stringify(parsed); 
+        const pre = row.querySelector('.doc-json'); 
+        if(pre) pre.textContent = JSON.stringify(parsed, null, 2); 
+      }
+      showToast('Successfully updated document!', 'blue');
+    } else { showEditError('Failed to save: ' + result.error); }
   }
 
   /* ── Single Delete ── */

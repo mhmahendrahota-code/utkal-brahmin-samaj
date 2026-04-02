@@ -1,0 +1,482 @@
+<%- include('./partials/admin-header') %>
+
+<div class="container mx-auto px-4 py-6">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800">Broken Link Fixer Tool</h1>
+    <p class="text-gray-600 mt-2">Identify and repair broken family relationships interactively</p>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="text-center py-12">
+    <div class="inline-block">
+      <div class="animate-spin text-4xl mb-4">🔍</div>
+      <p class="text-lg font-semibold text-gray-800">Scanning for broken links...</p>
+      <p class="text-sm text-gray-600 mt-2">Analyzing family relationships</p>
+    </div>
+  </div>
+
+  <!-- Main Interface (Hidden initially) -->
+  <div id="mainInterface" class="hidden space-y-6">
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-red-50 rounded-lg shadow p-5 border-l-4 border-red-500">
+        <p class="text-sm text-gray-600">🔴 Critical Issues</p>
+        <p class="text-3xl font-bold text-red-600" id="criticalCount">0</p>
+        <p class="text-xs text-gray-500 mt-1">Broken/conflicting references</p>
+      </div>
+
+      <div class="bg-yellow-50 rounded-lg shadow p-5 border-l-4 border-yellow-500">
+        <p class="text-sm text-gray-600">🟡 High Priority</p>
+        <p class="text-3xl font-bold text-yellow-600" id="highCount">0</p>
+        <p class="text-xs text-gray-500 mt-1">Non-reciprocal links</p>
+      </div>
+
+      <div class="bg-blue-50 rounded-lg shadow p-5 border-l-4 border-blue-500">
+        <p class="text-sm text-gray-600">📋 Total Suggestions</p>
+        <p class="text-3xl font-bold text-blue-600" id="totalCount">0</p>
+        <p class="text-xs text-gray-500 mt-1">Repair options available</p>
+      </div>
+    </div>
+
+    <!-- No Issues Message -->
+    <div id="noIssuesMessage" class="hidden bg-green-50 border-l-4 border-green-500 p-6 rounded-lg text-center">
+      <div class="text-4xl mb-3">✨</div>
+      <h2 class="text-xl font-bold text-green-900">All Relationships Are Healthy!</h2>
+      <p class="text-green-800 mt-2">No broken links or conflicts detected.</p>
+    </div>
+
+    <!-- Issues List & Fixer -->
+    <div id="issuesList" class="space-y-4 hidden">
+      <!-- Issues populated here -->
+    </div>
+
+    <!-- Action Buttons -->
+    <div id="actionButtons" class="flex flex-wrap gap-3 hidden">
+      <button type="button" id="selectAllBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded font-semibold">
+        ☑️ Select All
+      </button>
+      <button type="button" id="deselectAllBtn" class="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded font-semibold">
+        ☐ Deselect All
+      </button>
+      <div class="flex-1"></div>
+      <button type="button" id="applyRepairsBtn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-semibold" disabled>
+        🛠️ Apply Selected Repairs
+      </button>
+      <button type="button" id="refreshBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded font-semibold">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">Repair Results</h2>
+      
+      <div id="resultsSummary" class="mb-6 p-4 rounded-lg border-l-4 bg-green-50 border-green-500">
+        <p class="text-lg font-semibold text-green-900" id="resultsSummaryText"></p>
+        <p class="text-sm text-green-800 mt-1" id="resultsDetails"></p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-100 border-b-2 border-gray-200">
+            <tr>
+              <th class="px-4 py-2 text-left">Status</th>
+              <th class="px-4 py-2 text-left">Issue</th>
+              <th class="px-4 py-2 text-left">Member</th>
+              <th class="px-4 py-2 text-left">Action Applied</th>
+              <th class="px-4 py-2 text-left">Result</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTableBody">
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button type="button" id="closeResultsBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded font-semibold">
+          ← Back to Issues
+        </button>
+        <a href="/admin/family-tree-validation" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-semibold inline-block">
+          📊 Validation Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Box -->
+  <div class="mt-8 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+    <p class="text-sm text-blue-800">
+      💡 <strong>Tip:</strong> Each issue shows suggested fixes. Review each fix carefully before applying, 
+      especially those marked "⚠️ High Risk". You can select multiple fixes and apply them in batch mode.
+    </p>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 shadow-xl max-w-2xl">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Confirm Repairs</h3>
+    <div id="confirmContent" class="mb-6 max-h-96 overflow-y-auto"></div>
+    <div class="flex gap-3">
+      <button type="button" id="confirmYes" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-semibold">
+        ✅ Apply All Repairs
+      </button>
+      <button type="button" id="confirmNo" class="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded font-semibold">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+.issue-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.issue-header {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9fafb;
+}
+
+.issue-body {
+  padding: 1rem;
+}
+
+.issue-severity-critical {
+  border-left: 4px solid #dc2626;
+}
+
+.issue-severity-high {
+  border-left: 4px solid #f59e0b;
+}
+
+.fix-option {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fix-option:hover {
+  background: #f3f4f6;
+  border-color: #3b82f6;
+}
+
+.fix-option.selected {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  border-width: 2px;
+}
+
+.risk-low {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.risk-high {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+</style>
+
+<script>
+let suggestionsData = [];
+let selectedFixes = new Map(); // Map of suggestionId -> fixId
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadSuggestions();
+  
+  document.getElementById('refreshBtn').addEventListener('click', loadSuggestions);
+  document.getElementById('selectAllBtn').addEventListener('click', selectAll);
+  document.getElementById('deselectAllBtn').addEventListener('click', deselectAll);
+  document.getElementById('applyRepairsBtn').addEventListener('click', confirmRepairs);
+  document.getElementById('closeResultsBtn').addEventListener('click', () => {
+    document.getElementById('resultsSection').classList.add('hidden');
+    document.getElementById('mainInterface').classList.remove('hidden');
+    loadSuggestions();
+  });
+  
+  document.getElementById('confirmYes').addEventListener('click', applyRepairs);
+  document.getElementById('confirmNo').addEventListener('click', () => {
+    document.getElementById('confirmModal').classList.add('hidden');
+  });
+});
+
+// Load suggestions from API
+async function loadSuggestions() {
+  document.getElementById('loadingState').classList.remove('hidden');
+  document.getElementById('mainInterface').classList.add('hidden');
+  selectedFixes.clear();
+  
+  try {
+    const response = await fetch('/admin/api/family-tree/repair-suggestions');
+    const data = await response.json();
+    
+    if (!response.ok) throw new Error(data.error);
+    
+    suggestionsData = data.suggestions;
+    
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('mainInterface').classList.remove('hidden');
+    
+    renderSuggestions();
+  } catch (err) {
+    alert('Error loading suggestions: ' + err.message);
+    console.error(err);
+    document.getElementById('loadingState').classList.add('hidden');
+  }
+}
+
+// Render suggestions
+function renderSuggestions() {
+  document.getElementById('criticalCount').textContent = suggestionsData.filter(s => s.severity === 'critical').length;
+  document.getElementById('highCount').textContent = suggestionsData.filter(s => s.severity === 'high').length;
+  document.getElementById('totalCount').textContent = suggestionsData.length;
+
+  const issuesContainer = document.getElementById('issuesList');
+  issuesContainer.innerHTML = '';
+  
+  if (suggestionsData.length === 0) {
+    document.getElementById('noIssuesMessage').classList.remove('hidden');
+    document.getElementById('actionButtons').classList.add('hidden');
+    return;
+  }
+
+  document.getElementById('noIssuesMessage').classList.add('hidden');
+  document.getElementById('actionButtons').classList.remove('hidden');
+
+  suggestionsData.forEach(suggestion => {
+    const card = document.createElement('div');
+    card.className = `issue-card issue-severity-${suggestion.severity}`;
+    
+    const severityEmoji = suggestion.severity === 'critical' ? '🔴' : '🟡';
+    const severityLabel = suggestion.severity === 'critical' ? 'CRITICAL' : 'HIGH PRIORITY';
+    
+    let relatedInfo = '';
+    if (suggestion.relatedMember) {
+      relatedInfo = `<br><strong>Related Member:</strong> ${suggestion.relatedMember.name}`;
+    }
+
+    card.innerHTML = `
+      <div class="issue-header">
+        <div>
+          <div class="font-semibold text-gray-900">${severityEmoji} ${suggestion.member.name}</div>
+          <div class="text-xs text-gray-600 mt-1">${severityLabel}: ${suggestion.type.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase())}</div>
+        </div>
+        <button type="button" onclick="toggleIssue('${suggestion.id}')" class="text-2xl">
+          <span id="toggle-${suggestion.id}">▼</span>
+        </button>
+      </div>
+      
+      <div id="content-${suggestion.id}" class="hidden issue-body">
+        <p class="text-gray-700 mb-3"><strong>Issue:</strong> ${suggestion.issue}${relatedInfo}</p>
+        
+        <p class="text-sm font-semibold text-gray-800 mb-2">Available Fixes:</p>
+        <div id="fixes-${suggestion.id}" class="space-y-2">
+          <!-- Fixes rendered here -->
+        </div>
+      </div>
+    `;
+    
+    issuesContainer.appendChild(card);
+
+    // Render fix options
+    const fixesContainer = card.querySelector(`#fixes-${suggestion.id}`);
+    suggestion.suggestedFixes.forEach(fix => {
+      const fixOption = document.createElement('div');
+      fixOption.className = `fix-option`;
+      fixOption.id = `fix-${fix.fixId}`;
+      
+      const riskClass = fix.riskLevel === 'low' ? 'risk-low' : 'risk-high';
+      const riskLabel = fix.riskLevel === 'low' ? '✓ Low Risk' : '⚠️ High Risk';
+      
+      fixOption.innerHTML = `
+        <div class="flex items-start gap-3">
+          <input type="checkbox" class="mt-1" data-suggestion-id="${suggestion.id}" data-fix-id="${fix.fixId}" onchange="toggleFix(this)">
+          <div class="flex-1">
+            <div class="font-semibold text-gray-900">${fix.title}</div>
+            <p class="text-sm text-gray-600 mt-1">${fix.description}</p>
+            <div class="flex gap-2 mt-2">
+              <span class="text-xs px-2 py-1 rounded ${riskClass}">${riskLabel}</span>
+              <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">${fix.impact}</span>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      fixesContainer.appendChild(fixOption);
+    });
+  });
+}
+
+// Toggle issue expand/collapse
+function toggleIssue(suggestionId) {
+  const content = document.getElementById(`content-${suggestionId}`);
+  const toggle = document.getElementById(`toggle-${suggestionId}`);
+  const isHidden = content.classList.toggle('hidden');
+  toggle.textContent = isHidden ? '▶' : '▼';
+}
+
+// Toggle fix selection
+function toggleFix(checkbox) {
+  const suggestionId = checkbox.dataset.suggestionId;
+  const fixId = checkbox.dataset.fixId;
+  
+  if (checkbox.checked) {
+    selectedFixes.set(suggestionId, fixId);
+  } else {
+    selectedFixes.delete(suggestionId);
+  }
+  
+  // Update button state
+  const hasSelections = selectedFixes.size > 0;
+  document.getElementById('applyRepairsBtn').disabled = !hasSelections;
+}
+
+// Select all fixes
+function selectAll() {
+  suggestionsData.forEach(suggestion => {
+    if (suggestion.suggestedFixes.length > 0) {
+      selectedFixes.set(suggestion.id, suggestion.suggestedFixes[0].fixId);
+      const checkbox = document.querySelector(`input[data-suggestion-id="${suggestion.id}"]`);
+      if (checkbox) {
+        checkbox.checked = true;
+      }
+    }
+  });
+  document.getElementById('applyRepairsBtn').disabled = false;
+}
+
+// Deselect all
+function deselectAll() {
+  selectedFixes.clear();
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  document.getElementById('applyRepairsBtn').disabled = true;
+}
+
+// Confirm repairs
+function confirmRepairs() {
+  if (selectedFixes.size === 0) {
+    alert('Please select at least one fix to apply');
+    return;
+  }
+
+  // Build repair list
+  const repairs = [];
+  selectedFixes.forEach((fixId, suggestionId) => {
+    const suggestion = suggestionsData.find(s => s.id === suggestionId);
+    const fix = suggestion.suggestedFixes.find(f => f.fixId === fixId);
+    
+    repairs.push({
+      suggestionId,
+      fixId,
+      action: fix.action,
+      memberId: suggestion.member._id,
+      childId: fix.childId,
+      relatedMemberId: suggestion.relatedMember?._id
+    });
+  });
+
+  // Show confirmation dialog
+  const confirmContent = document.getElementById('confirmContent');
+  confirmContent.innerHTML = `
+    <div class="space-y-3">
+      <p class="font-semibold text-gray-900">You are about to apply ${repairs.length} repairs:</p>
+      <div class="bg-gray-50 rounded p-3 max-h-64 overflow-y-auto">
+        ${repairs.map((r, i) => {
+          const suggestion = suggestionsData.find(s => s.id === r.suggestionId);
+          const fix = suggestion.suggestedFixes.find(f => f.fixId === r.fixId);
+          return `
+            <div class="text-sm py-1 border-b border-gray-200 last:border-b-0">
+              <span class="font-semibold">${i + 1}.</span> 
+              ${suggestion.member.name} - ${fix.title}
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="text-sm text-red-600 font-semibold">⚠️ This action cannot be easily undone. Please review carefully!</div>
+    </div>
+  `;
+
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+// Apply repairs
+async function applyRepairs() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  
+  // Build repair array
+  const repairs = [];
+  selectedFixes.forEach((fixId, suggestionId) => {
+    const suggestion = suggestionsData.find(s => s.id === suggestionId);
+    const fix = suggestion.suggestedFixes.find(f => f.fixId === fixId);
+    
+    repairs.push({
+      suggestionId,
+      fixId,
+      action: fix.action,
+      memberId: suggestion.member._id,
+      childId: fix.childId,
+      relatedMemberId: suggestion.relatedMember?._id
+    });
+  });
+
+  try {
+    const response = await fetch('/admin/api/family-tree/apply-repair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repairs })
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+
+    // Show results
+    showResults(result);
+  } catch (err) {
+    alert('Error applying repairs: ' + err.message);
+    console.error(err);
+  }
+}
+
+// Show results
+function showResults(result) {
+  document.getElementById('mainInterface').classList.add('hidden');
+  document.getElementById('resultsSection').classList.remove('hidden');
+  
+  document.getElementById('resultsSummaryText').textContent = result.summary;
+  document.getElementById('resultsDetails').textContent = result.message;
+
+  const tbody = document.getElementById('resultsTableBody');
+  tbody.innerHTML = '';
+
+  result.results.forEach((resultItem, i) => {
+    const tr = document.createElement('tr');
+    tr.className = i % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+    
+    const suggestion = suggestionsData.find(s => s.id === resultItem.suggestionId);
+    const fix = suggestion.suggestedFixes.find(f => f.fixId === resultItem.fixId);
+    
+    tr.innerHTML = `
+      <td class="px-4 py-2 border-b border-gray-200 font-semibold">${resultItem.status}</td>
+      <td class="px-4 py-2 border-b border-gray-200 text-sm">${suggestion.type.replace(/-/g, ' ')}</td>
+      <td class="px-4 py-2 border-b border-gray-200 font-semibold">${suggestion.member.name}</td>
+      <td class="px-4 py-2 border-b border-gray-200 text-sm">${fix.title}</td>
+      <td class="px-4 py-2 border-b border-gray-200 text-sm text-gray-700">${resultItem.message}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+</script>
+
+<%- include('./partials/admin-footer') %>

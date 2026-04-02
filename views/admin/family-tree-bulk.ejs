@@ -1,0 +1,512 @@
+<%- include('./partials/admin-header') %>
+
+<div class="container mx-auto px-4 py-6">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800">Bulk Family Tree Relationships Import</h1>
+    <p class="text-gray-600 mt-2">Import multiple family relationships from CSV in seconds</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Info Cards -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+      <h3 class="font-semibold text-blue-900 mb-2">💡 How It Works</h3>
+      <p class="text-sm text-blue-800">Upload a CSV file with member names and their family relationships. The system will link them in your database.</p>
+    </div>
+    
+    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+      <h3 class="font-semibold text-green-900 mb-2">⚡ Time Saved</h3>
+      <p class="text-sm text-green-800">Link 100 relationships in 2 minutes instead of 2 hours!</p>
+    </div>
+    
+    <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
+      <h3 class="font-semibold text-purple-900 mb-2">✅ CSV Format</h3>
+      <p class="text-sm text-purple-800">Columns: member_name, father_name, mother_name, spouse_name</p>
+      <a href="#" id="downloadTemplate" class="text-purple-600 font-semibold text-xs mt-2 hover:underline">📥 Download Template</a>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="mb-6 border-b border-gray-200">
+    <div class="flex gap-4">
+      <button type="button" id="uploadTab" class="tab-button active px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
+        📤 Upload CSV
+      </button>
+      <button type="button" id="pasteTab" class="tab-button px-4 py-2 font-semibold text-gray-600 border-b-2 border-transparent hover:text-gray-800">
+        📋 Paste Data
+      </button>
+      <button type="button" id="previewTab" class="tab-button px-4 py-2 font-semibold text-gray-600 border-b-2 border-transparent hover:text-gray-800">
+        👁️ Preview
+      </button>
+      <button type="button" id="resultsTab" class="tab-button px-4 py-2 font-semibold text-gray-600 border-b-2 border-transparent hover:text-gray-800">
+        📊 Results
+      </button>
+    </div>
+  </div>
+
+  <!-- Tab Content -->
+  <div id="tabContent" class="space-y-6">
+
+    <!-- Upload Tab -->
+    <div id="uploadTab-content" class="tab-content block">
+      <div class="bg-white rounded-lg shadow-md p-8">
+        <!-- Drag and Drop Area -->
+        <div id="dropZone" class="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center bg-blue-50 cursor-pointer hover:bg-blue-100 transition">
+          <div class="text-4xl mb-4">📁</div>
+          <h3 class="font-semibold text-gray-800 mb-2">Drag and drop CSV file here</h3>
+          <p class="text-sm text-gray-600 mb-4">or click to browse</p>
+          <input type="file" id="csvFile" accept=".csv" class="hidden">
+          <button type="button" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-semibold" id="browseBtn">Browse Files</button>
+        </div>
+
+        <div id="fileInfo" class="mt-4 hidden">
+          <div class="flex items-center justify-between bg-green-50 p-4 rounded border border-green-200">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">✅</span>
+              <div>
+                <p class="font-semibold text-green-900">File loaded: <span id="fileName"></span></p>
+                <p class="text-sm text-green-700"><span id="fileSize"></span> | <span id="rowCount"></span> rows</p>
+              </div>
+            </div>
+            <button type="button" id="clearFileBtn" class="text-red-600 hover:text-red-800 font-semibold">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paste Tab -->
+    <div id="pasteTab-content" class="tab-content hidden">
+      <div class="bg-white rounded-lg shadow-md p-8">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Paste your CSV data:</label>
+        <textarea id="csvTextarea" class="w-full h-64 p-4 border border-gray-300 rounded-lg font-mono text-sm" placeholder="member_name,father_name,mother_name,spouse_name
+राज शर्मा,रामू शर्मा,गीता शर्मा,प्रिया शर्मा
+प्रीति शर्मा,राज शर्मा,प्रिया शर्मा,"></textarea>
+        <p class="text-xs text-gray-500 mt-2">💾 Paste CSV data with headers in the first line</p>
+      </div>
+    </div>
+
+    <!-- Preview Tab -->
+    <div id="previewTab-content" class="tab-content hidden">
+      <div class="bg-white rounded-lg shadow-md p-8">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Preview & Validation</h2>
+        
+        <!-- Stats -->
+        <div id="previewStats" class="grid grid-cols-4 gap-4 mb-6 hidden">
+          <div class="bg-blue-50 p-4 rounded text-center">
+            <p class="text-3xl font-bold text-blue-600" id="statTotal">0</p>
+            <p class="text-sm text-blue-700">Total Rows</p>
+          </div>
+          <div class="bg-green-50 p-4 rounded text-center">
+            <p class="text-3xl font-bold text-green-600" id="statValid">0</p>
+            <p class="text-sm text-green-700">Valid</p>
+          </div>
+          <div class="bg-yellow-50 p-4 rounded text-center">
+            <p class="text-3xl font-bold text-yellow-600" id="statWarning">0</p>
+            <p class="text-sm text-yellow-700">Warnings</p>
+          </div>
+          <div class="bg-red-50 p-4 rounded text-center">
+            <p class="text-3xl font-bold text-red-600" id="statError">0</p>
+            <p class="text-sm text-red-700">Errors</p>
+          </div>
+        </div>
+
+        <!-- Preview Table -->
+        <div id="previewTable" class="overflow-x-auto mb-6 hidden">
+          <table class="w-full text-sm border-collapse">
+            <thead class="bg-gray-100 border-b-2 border-gray-300">
+              <tr>
+                <th class="px-3 py-2 text-left text-gray-700">Row</th>
+                <th class="px-3 py-2 text-left text-gray-700">Status</th>
+                <th class="px-3 py-2 text-left text-gray-700">Member Name</th>
+                <th class="px-3 py-2 text-left text-gray-700">Father</th>
+                <th class="px-3 py-2 text-left text-gray-700">Mother</th>
+                <th class="px-3 py-2 text-left text-gray-700">Spouse</th>
+                <th class="px-3 py-2 text-left text-gray-700">Notes</th>
+              </tr>
+            </thead>
+            <tbody id="previewTableBody">
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3" id="previewActions" hidden>
+          <button type="button" id="validateBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded font-semibold">
+            🔍 Validate
+          </button>
+          <button type="button" id="importBtn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-semibold" disabled>
+            ✅ Import Now
+          </button>
+          <div class="flex-1"></div>
+          <button type="button" id="cancelBtn" class="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded font-semibold">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Tab -->
+    <div id="resultsTab-content" class="tab-content hidden">
+      <div class="bg-white rounded-lg shadow-md p-8">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Import Results</h2>
+        
+        <div id="resultsSummary" class="hidden mb-6 p-4 rounded-lg border-l-4" :class="">
+          <p class="text-lg font-semibold" id="resultsSummaryText"></p>
+          <p class="text-sm text-gray-600 mt-1" id="resultDetails"></p>
+        </div>
+
+        <div id="resultsTable" class="overflow-x-auto hidden">
+          <table class="w-full text-sm border-collapse">
+            <thead class="bg-gray-100 border-b-2 border-gray-300">
+              <tr>
+                <th class="px-3 py-2 text-left text-gray-700">Row</th>
+                <th class="px-3 py-2 text-left text-gray-700">Status</th>
+                <th class="px-3 py-2 text-left text-gray-700">Member</th>
+                <th class="px-3 py-2 text-left text-gray-700">Action</th>
+                <th class="px-3 py-2 text-left text-gray-700">Details</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button type="button" id="resetBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded font-semibold">
+            🔄 Import More
+          </button>
+          <a href="/admin/members" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-semibold inline-block">
+            👥 View All Members
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-8 shadow-xl text-center">
+      <div class="animate-spin text-4xl mb-4">⏳</div>
+      <p class="text-lg font-semibold text-gray-800">Processing relationships...</p>
+      <p class="text-sm text-gray-600 mt-2">Please wait, this may take a moment</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// State management
+let csvData = {
+  raw: '',
+  parsed: [],
+  headers: []
+};
+
+let validationResults = [];
+let importResults = [];
+
+// DOM Elements
+const uploadTabBtn = document.getElementById('uploadTab');
+const pasteTabBtn = document.getElementById('pasteTab');
+const previewTabBtn = document.getElementById('previewTab');
+const resultsTabBtn = document.getElementById('resultsTab');
+
+const dropZone = document.getElementById('dropZone');
+const csvFile = document.getElementById('csvFile');
+const browseBtn = document.getElementById('browseBtn');
+const fileInfo = document.getElementById('fileInfo');
+const csvTextarea = document.getElementById('csvTextarea');
+
+const validateBtn = document.getElementById('validateBtn');
+const importBtn = document.getElementById('importBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const resetBtn = document.getElementById('resetBtn');
+const loading = document.getElementById('loading');
+
+// Event Listeners - File Upload
+browseBtn.addEventListener('click', () => csvFile.click());
+
+csvFile.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) loadCSVFile(file);
+});
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('bg-blue-200');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('bg-blue-200');
+});
+
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('bg-blue-200');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.csv')) {
+    loadCSVFile(file);
+  } else {
+    alert('Please drop a CSV file');
+  }
+});
+
+document.getElementById('clearFileBtn').addEventListener('click', () => {
+  csvFile.value = '';
+  fileInfo.classList.add('hidden');
+  csvData = { raw: '', parsed: [], headers: [] };
+});
+
+// Tab Navigation
+function switchTab(tabId) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.classList.remove('text-blue-600', 'border-blue-600');
+    btn.classList.add('text-gray-600', 'border-transparent');
+  });
+
+  // Show selected tab
+  document.getElementById(tabId + '-content').classList.remove('hidden');
+  document.getElementById(tabId).classList.remove('text-gray-600', 'border-transparent');
+  document.getElementById(tabId).classList.add('text-blue-600', 'border-blue-600');
+}
+
+uploadTabBtn.addEventListener('click', () => switchTab('uploadTab'));
+pasteTabBtn.addEventListener('click', () => switchTab('pasteTab'));
+previewTabBtn.addEventListener('click', () => switchTab('previewTab'));
+resultsTabBtn.addEventListener('click', () => switchTab('resultsTab'));
+
+// Load CSV from file
+function loadCSVFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    csvData.raw = e.target.result;
+    parseCSV();
+    
+    // Update file info
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+    document.getElementById('rowCount').textContent = csvData.parsed.length;
+    fileInfo.classList.remove('hidden');
+    
+    // Switch to preview
+    switchTab('previewTab');
+  };
+  reader.readAsText(file);
+}
+
+// Parse CSV
+function parseCSV() {
+  const lines = (csvData.raw || csvTextarea.value).trim().split('\n').filter(l => l.trim());
+  if (lines.length < 2) {
+    alert('CSV must have header and at least 1 data row');
+    return;
+  }
+
+  // Parse headers
+  csvData.headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  csvData.parsed = [];
+
+  // Parse data rows
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+    const row = {};
+    csvData.headers.forEach((header, idx) => {
+      row[header] = parts[idx] || '';
+    });
+    csvData.parsed.push(row);
+  }
+
+  updatePreviewTable();
+}
+
+// Update preview table
+function updatePreviewTable() {
+  const tbody = document.getElementById('previewTableBody');
+  tbody.innerHTML = '';
+
+  csvData.parsed.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.className = i % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+    tr.innerHTML = `
+      <td class="px-3 py-2 border-b border-gray-200">${i + 2}</td>
+      <td class="px-3 py-2 border-b border-gray-200">⏳</td>
+      <td class="px-3 py-2 border-b border-gray-200 font-semibold">${row.member_name || '-'}</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-gray-600">${row.father_name || '-'}</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-gray-600">${row.mother_name || '-'}</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-gray-600">${row.spouse_name || '-'}</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-gray-500 text-xs">-</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('previewTable').classList.remove('hidden');
+  document.getElementById('previewActions').removeAttribute('hidden');
+}
+
+// Validate CSV
+validateBtn.addEventListener('click', async () => {
+  if (!csvData.raw && !csvTextarea.value) {
+    alert('Please load or paste CSV data first');
+    return;
+  }
+
+  if (!csvData.parsed.length) {
+    parseCSV();
+  }
+
+  loading.classList.remove('hidden');
+  
+  try {
+    const response = await fetch('/admin/api/family-tree/bulk-validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csvData: csvData.raw || csvTextarea.value })
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+
+    validationResults = result.results;
+    updateValidationUI(result);
+    importBtn.disabled = result.invalidRecords > 0;
+  } catch (error) {
+    alert('Validation error: ' + error.message);
+    console.error(error);
+  } finally {
+    loading.classList.add('hidden');
+  }
+});
+
+// Update validation UI
+function updateValidationUI(result) {
+  document.getElementById('statTotal').textContent = result.totalRecords;
+  document.getElementById('statValid').textContent = result.validRecords;
+  document.getElementById('statWarning').textContent = result.results.filter(r => r.status === '⚠️').length;
+  document.getElementById('statError').textContent = result.invalidRecords;
+  document.getElementById('previewStats').classList.remove('hidden');
+
+  // Update table with validation results
+  const tbody = document.getElementById('previewTableBody');
+  tbody.innerHTML = '';
+
+  result.results.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.className = i % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+    
+    let statusDisplay = row.status;
+    let noteDisplay = row.issues ? row.issues.join('; ') : (row.reason || '-');
+    
+    tr.innerHTML = `
+      <td class="px-3 py-2 border-b border-gray-200">${row.row}</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-lg">${statusDisplay}</td>
+      <td class="px-3 py-2 border-b border-gray-200 font-semibold">${row.memberName || '-'}</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-gray-600">-</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-gray-600">-</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-gray-600">-</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-xs text-red-600">${noteDisplay}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  importBtn.disabled = result.invalidRecords > 0;
+}
+
+// Import data
+importBtn.addEventListener('click', async () => {
+  if (confirm(`Import ${validationResults.filter(r => r.status !== '❌').length} relationships?`)) {
+    loading.classList.remove('hidden');
+    
+    try {
+      const response = await fetch('/admin/api/family-tree/bulk-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csvData: csvData.raw || csvTextarea.value })
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      importResults = result.results;
+      showResults(result);
+      switchTab('resultsTab');
+    } catch (error) {
+      alert('Import error: ' + error.message);
+      console.error(error);
+    } finally {
+      loading.classList.add('hidden');
+    }
+  }
+});
+
+// Show import results
+function showResults(result) {
+  const summaryClass = result.errorCount === 0 ? 'bg-green-50 border-green-500 text-green-900' : 'bg-yellow-50 border-yellow-500 text-yellow-900';
+  
+  document.getElementById('resultsSummary').classList.remove('hidden');
+  document.getElementById('resultsSummary').className = 'mb-6 p-4 rounded-lg border-l-4 ' + summaryClass;
+  document.getElementById('resultsSummaryText').textContent = result.summary;
+  document.getElementById('resultDetails').textContent = `${result.successCount} successful | ${result.errorCount} errors`;
+
+  const tbody = document.getElementById('resultsTableBody');
+  tbody.innerHTML = '';
+
+  result.results.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.className = i % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+    
+    let linkedFields = row.linkedFields ? row.linkedFields.join(', ') : '-';
+    let details = row.linkedFields ? `Linked: ${linkedFields}` : (row.message || row.issues.join('; '));
+    
+    tr.innerHTML = `
+      <td class="px-3 py-2 border-b border-gray-200">${row.row}</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-lg">${row.status}</td>
+      <td class="px-3 py-2 border-b border-gray-200 font-semibold">${row.memberName || '-'}</td>
+      <td class="px-3 py-2 border-b border-gray-200">${row.linkedFields ? row.linkedFields.length + ' links' : '-'}</td>
+      <td class="px-3 py-2 border-b border-gray-200 text-xs text-gray-600">${details}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('resultsTable').classList.remove('hidden');
+}
+
+// Reset
+resetBtn.addEventListener('click', () => {
+  csvData = { raw: '', parsed: [], headers: [] };
+  csvTextarea.value = '';
+  csvFile.value = '';
+  fileInfo.classList.add('hidden');
+  validationResults = [];
+  importResults = [];
+  switchTab('uploadTab');
+});
+
+cancelBtn.addEventListener('click', () => {
+  csvData = { raw: '', parsed: [], headers: [] };
+  csvTextarea.value = '';
+  csvFile.value = '';
+  fileInfo.classList.add('hidden');
+  switchTab('uploadTab');
+});
+
+// Download CSV template
+document.getElementById('downloadTemplate').addEventListener('click', (e) => {
+  e.preventDefault();
+  const csv = 'member_name,father_name,mother_name,spouse_name\nराज शर्मा,रामू शर्मा,गीता शर्मा,प्रिया शर्मा\nप्रीति शर्मा,राज शर्मा,प्रिया शर्मा,';
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bulk-relationships-template.csv';
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// Load data on tab switch
+pasteTabBtn.addEventListener('click', () => {
+  parseCSV();
+  switchTab('pasteTab');
+});
+</script>
+
+<%- include('./partials/admin-footer') %>

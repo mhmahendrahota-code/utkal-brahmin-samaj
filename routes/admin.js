@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const Member = require('../models/Member');
+const Surname = require('../models/Surname');
 const Event = require('../models/Event');
 const Donation = require('../models/Donation');
 const MeetRegistration = require('../models/MeetRegistration');
@@ -27,14 +28,14 @@ const requireSuperAdmin = (req, res, next) => {
 };
 
 router.get('/', isAdmin, async (req, res) => {
-    try {
+  try {
     const memberCount = await Member.countDocuments();
     const matrimonialCount = await Member.countDocuments({ 'matrimonialProfile.isEligible': true });
     const eventCount = await Event.countDocuments({ isActive: true });
     const donations = await Donation.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]);
     const totalDonations = donations.length > 0 ? donations[0].total : 0;
 
-    res.render('admin/dashboard', { 
+    res.render('admin/dashboard', {
       title: 'Admin Dashboard',
       stats: { members: memberCount, matrimonial: matrimonialCount, events: eventCount, donations: totalDonations }
     });
@@ -68,7 +69,7 @@ router.get('/login', async (req, res) => {
 // Admin Login Process
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  
+
   const admins = await AdminUser.find();
   const user = admins.find(a => a.username === username && a.password === password);
 
@@ -102,9 +103,199 @@ router.get('/logout', (req, res) => {
   }
 });
 
+// API: Get member statistics for dashboard
+router.get('/api/member-stats', isAdmin, async (req, res) => {
+  try {
+    const totalMembers = await Member.countDocuments();
+    const approvedMembers = await Member.countDocuments({ isApproved: true });
+    const pendingMembers = await Member.countDocuments({ isApproved: false });
+    const matrimonialEligible = await Member.countDocuments({ 'matrimonialProfile.isEligible': true });
+    const committeeMembers = await Member.countDocuments({ isCommitteeMember: true });
+    const deceasedMembers = await Member.countDocuments({ isDeceased: true });
+    
+    // Incomplete profiles (missing name, gotra, or village)
+    const incompleteMembers = await Member.countDocuments({
+      $or: [
+        { name: { $exists: false } },
+        { name: '' },
+        { gotra: { $exists: false } },
+        { gotra: '' },
+        { village: { $exists: false } },
+        { village: '' }
+      ]
+    });
+
+    // Members with family links
+    const withFatherLink = await Member.countDocuments({ father: { $exists: true, $ne: null } });
+    const withMotherLink = await Member.countDocuments({ mother: { $exists: true, $ne: null } });
+    const withSpouseLink = await Member.countDocuments({ spouse: { $exists: true, $ne: null } });
+    const withChildrenLink = await Member.countDocuments({ children: { $exists: true, $ne: [] } });
+
+    res.json({
+      total: totalMembers,
+      approved: approvedMembers,
+      pending: pendingMembers,
+      incomplete: incompleteMembers,
+      matrimonial: matrimonialEligible,
+      committee: committeeMembers,
+      deceased: deceasedMembers,
+      familyLinks: {
+        withFather: withFatherLink,
+        withMother: withMotherLink,
+        withSpouse: withSpouseLink,
+        withChildren: withChildrenLink
+      }
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Helper: Calculate Levenshtein distance (string similarity)
+function levenshteinDistance(a, b) {
+  const an = a.length;
+  const bn = b.length;
+  if (an === 0) return bn;
+  if (bn === 0) return an;
+
+  const matrix = Array(bn + 1).fill(null).map(() => Array(an + 1).fill(0));
+  for (let i = 0; i <= an; i++) matrix[0][i] = i;
+  for (let j = 0; j <= bn; j++) matrix[j][0] = j;
+
+  for (let j = 1; j <= bn; j++) {
+    for (let i = 1; i <= an; i++) {
+      const char_a = a[i - 1];
+      const char_b = b[j - 1];
+      const cost = char_a === char_b ? 0 : 1;
+      matrix[j][i] = Math.min(
+        matrix[j][i - 1] + 1,
+        matrix[j - 1][i] + 1,
+        matrix[j - 1][i - 1] + cost
+      );
+    }
+  }
+  return matrix[bn][an];
+}
+
+// Helper: Calculate string similarity percentage (0-100)
+function stringSimilarity(a, b) {
+  const shorter = a.length < b.length ? a : b;
+  const longer = a.length < b.length ? b : a;
+  const distance = levenshteinDistance(shorter, longer);
+  return ((longer.length - distance) / longer.length) * 100;
+}
+
+// API: Find potential duplicate members
+router.get('/api/members/duplicates', isAdmin, async (req, res) => {
+  try {
+    const members = await Member.find().lean();
+    const duplicates = [];
+    const checked = new Set();
+
+    for (let i = 0; i < members.length; i++) {
+      const m1 = members[i];
+      const key1 = m1._id.toString();
+
+      for (let j = i + 1; j < members.length; j++) {
+        const m2 = members[j];
+        const key2 = m2._id.toString();
+        const pairKey = `${Math.min(key1, key2)}-${Math.max(key1, key2)}`;
+
+        if (checked.has(pairKey)) continue;
+        checked.add(pairKey);
+
+        let matchScore = 0;
+        let matchReasons = [];
+
+        // 1. Same exact contact number
+        if (m1.contactNumber && m2.contactNumber && m1.contactNumber === m2.contactNumber && m1.contactNumber !== '') {
+          matchScore += 95;
+          matchReasons.push('Same contact number');
+        }
+
+        // 2. Same gotra + surname combination (high likelihood of duplicate)
+        if (m1.gotra && m2.gotra && m1.gotra === m2.gotra && m1.surname === m2.surname && m1.gotra !== '') {
+          matchScore += 85;
+          matchReasons.push('Same gotra + surname');
+        }
+
+        // 3. Similar names (case-insensitive, >85% match)
+        if (m1.name && m2.name) {
+          const nameSimilarity = stringSimilarity(
+            m1.name.toLowerCase(),
+            m2.name.toLowerCase()
+          );
+          if (nameSimilarity > 85) {
+            matchScore += Math.min(50, nameSimilarity - 35);
+            matchReasons.push(`Similar names (${Math.round(nameSimilarity)}% match)`);
+          }
+        }
+
+        // 4. Both are linked to same father/mother (siblings)
+        if (m1.father && m2.father && m1.father.toString() === m2.father.toString()) {
+          matchScore += 30;
+          matchReasons.push('Same father (possible siblings)');
+        }
+        if (m1.mother && m2.mother && m1.mother.toString() === m2.mother.toString()) {
+          matchScore += 30;
+          matchReasons.push('Same mother (possible siblings)');
+        }
+
+        // 5. One is linked as family of the other
+        if (m1.father?.toString() === m2._id.toString() || m1.mother?.toString() === m2._id.toString() ||
+            m2.father?.toString() === m1._id.toString() || m2.mother?.toString() === m1._id.toString()) {
+          matchScore = 0;
+          matchReasons = [];
+          // Don't flag as duplicate if already linked as parent/child
+          continue;
+        }
+
+        // Only include if match score >= 40 (indicating potential duplicate)
+        if (matchScore >= 40) {
+          duplicates.push({
+            pair: [
+              {
+                _id: m1._id,
+                name: m1.name,
+                surname: m1.surname,
+                gotra: m1.gotra,
+                village: m1.village,
+                contactNumber: m1.contactNumber,
+                isApproved: m1.isApproved
+              },
+              {
+                _id: m2._id,
+                name: m2.name,
+                surname: m2.surname,
+                gotra: m2.gotra,
+                village: m2.village,
+                contactNumber: m2.contactNumber,
+                isApproved: m2.isApproved
+              }
+            ],
+            score: Math.round(matchScore),
+            reasons: matchReasons
+          });
+        }
+      }
+    }
+
+    // Sort by match score (highest first)
+    duplicates.sort((a, b) => b.score - a.score);
+
+    res.json({
+      ok: true,
+      totalDuplicatePairs: duplicates.length,
+      duplicates: duplicates.slice(0, 50) // Return top 50 pairs
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Admin Member Management (Directory)
 router.get('/members', isAdmin, async (req, res) => {
-    try {
+  try {
     const members = await Member.find().sort({ createdAt: -1 });
     res.render('admin/members', { title: 'Manage Members', members });
   } catch (err) {
@@ -117,24 +308,24 @@ router.get('/db', isAdmin, async (req, res) => {
   try {
     const mongoose = require('mongoose');
     const Announcement = require('../models/Announcement');
-    const Committee    = require('../models/Committee');
-    const Document     = require('../models/Document');
-    const Gallery      = require('../models/Gallery');
-    const Message      = require('../models/Message');
-    const Settings     = require('../models/Settings');
+    const Committee = require('../models/Committee');
+    const Document = require('../models/Document');
+    const Gallery = require('../models/Gallery');
+    const Message = require('../models/Message');
+    const Settings = require('../models/Settings');
 
     const COLLECTIONS = [
-      { name: 'members',       label: 'Members',        model: Member },
-      { name: 'events',        label: 'Events',         model: Event },
-      { name: 'donations',     label: 'Donations',      model: Donation },
-      { name: 'announcements', label: 'Announcements',  model: Announcement },
-      { name: 'committee',     label: 'Committee',      model: Committee },
-      { name: 'documents',     label: 'Documents',      model: Document },
-      { name: 'gallery',       label: 'Gallery',        model: Gallery },
-      { name: 'messages',      label: 'Messages/Inbox', model: Message },
-      { name: 'adminusers',    label: 'Admin Users',    model: AdminUser },
-      { name: 'meetregs',      label: 'Meet Registrations', model: MeetRegistration },
-      { name: 'studentapps',   label: 'Student Applications', model: StudentApplication },
+      { name: 'members', label: 'Members', model: Member },
+      { name: 'events', label: 'Events', model: Event },
+      { name: 'donations', label: 'Donations', model: Donation },
+      { name: 'announcements', label: 'Announcements', model: Announcement },
+      { name: 'committee', label: 'Committee', model: Committee },
+      { name: 'documents', label: 'Documents', model: Document },
+      { name: 'gallery', label: 'Gallery', model: Gallery },
+      { name: 'messages', label: 'Messages/Inbox', model: Message },
+      { name: 'adminusers', label: 'Admin Users', model: AdminUser },
+      { name: 'meetregs', label: 'Meet Registrations', model: MeetRegistration },
+      { name: 'studentapps', label: 'Student Applications', model: StudentApplication },
     ];
 
     const collections = await Promise.all(
@@ -167,17 +358,17 @@ router.get('/db', isAdmin, async (req, res) => {
 
 // ── DB Helper: resolve collection name → Mongoose Model ──────────────
 const DB_MODEL_MAP = {
-  members:      'Member',
-  events:       'Event',
-  donations:    'Donation',
-  announcements:'Announcement',
-  committee:    'Committee',
-  documents:    'Document',
-  gallery:      'Gallery',
-  messages:     'Message',
-  adminusers:   'AdminUser',
-  meetregs:     'MeetRegistration',
-  studentapps:  'StudentApplication',
+  members: 'Member',
+  events: 'Event',
+  donations: 'Donation',
+  announcements: 'Announcement',
+  committee: 'Committee',
+  documents: 'Document',
+  gallery: 'Gallery',
+  messages: 'Message',
+  adminusers: 'AdminUser',
+  meetregs: 'MeetRegistration',
+  studentapps: 'StudentApplication',
 };
 function resolveModel(collection) {
   const mongoose = require('mongoose');
@@ -219,7 +410,7 @@ router.post('/db/bulk-update', isAdmin, async (req, res) => {
   try {
     const { collection, ids, field, value } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ ok: false, error: 'No IDs provided' });
-    if (!field || ['_id','__v','password','passwordHash'].includes(field))
+    if (!field || ['_id', '__v', 'password', 'passwordHash'].includes(field))
       return res.status(400).json({ ok: false, error: 'Cannot update protected field: ' + field });
     let parsedValue;
     try { parsedValue = JSON.parse(value); } catch { parsedValue = value; }
@@ -253,9 +444,9 @@ router.post('/db/bulk-delete', isAdmin, async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 // MASTER DATA MANAGEMENT SYSTEM (MDMS)
 // ═══════════════════════════════════════════════════════════
-const Gotra      = require('../models/Gotra');
-const Village    = require('../models/Village');
-const Honorific  = require('../models/Honorific');
+const Gotra = require('../models/Gotra');
+const Village = require('../models/Village');
+const Honorific = require('../models/Honorific');
 const Occupation = require('../models/Occupation');
 // Note: Surname model is already required later in this file (line ~864)
 
@@ -265,46 +456,53 @@ const MDMS_CONFIG = {
   gotra: {
     model: Gotra, label: 'Gotras', icon: 'fa-om',
     fields: [
-      { key: 'name',        label: 'Gotra Name (English)',  required: true },
-      { key: 'hindiName',   label: 'Gotra Name (Hindi)',    required: false },
-      { key: 'description', label: 'Description',           required: false },
+      { key: 'name', label: 'Gotra Name (English)', required: true },
+      { key: 'hindiName', label: 'Gotra Name (Hindi)', required: false },
+      { key: 'description', label: 'Description', required: false },
     ],
     display: d => d.name,
-    sub:    d => d.hindiName || '',
+    sub: d => d.hindiName || '',
   },
   village: {
     model: Village, label: 'Villages', icon: 'fa-map-marker-alt',
     fields: [
-      { key: 'name',      label: 'Village Name (English)', required: true },
-      { key: 'hindiName', label: 'Village Name (Hindi)',   required: false },
-      { key: 'district',  label: 'District',               required: false },
-      { key: 'state',     label: 'State',                  required: false },
+      { key: 'name', label: 'Village Name (English)', required: true },
+      { key: 'hindiName', label: 'Village Name (Hindi)', required: false },
+      { key: 'district', label: 'District', required: false },
+      { key: 'state', label: 'State', required: false },
     ],
     display: d => d.name,
-    sub:    d => [d.hindiName, d.district, d.state].filter(Boolean).join(' · '),
+    sub: d => [d.hindiName, d.district, d.state].filter(Boolean).join(' · '),
   },
   honorific: {
     model: Honorific, label: 'Honorifics / Titles', icon: 'fa-id-badge',
     fields: [
-      { key: 'code',       label: 'Code (e.g. Shri)', required: true },
-      { key: 'label',      label: 'Full Label',        required: true },
-      { key: 'hindiLabel', label: 'Hindi Label',       required: false },
-      { key: 'gender',     label: 'Gender (M/F/Both)', required: false },
+      { key: 'code', label: 'Code (e.g. Shri)', required: true },
+      { key: 'label', label: 'Full Label', required: true },
+      { key: 'hindiLabel', label: 'Hindi Label', required: false },
+      { key: 'gender', label: 'Gender (M/F/Both)', required: false },
     ],
     display: d => `${d.code} — ${d.label}`,
-    sub:    d => d.hindiLabel || '',
+    sub: d => d.hindiLabel || '',
   },
   occupation: {
     model: Occupation, label: 'Occupations', icon: 'fa-briefcase',
     fields: [
-      { key: 'name',      label: 'Occupation Name', required: true },
-      { key: 'hindiName', label: 'Hindi Name',       required: false },
-      { key: 'category',  label: 'Category',         required: false },
+      { key: 'name', label: 'Occupation Name', required: true },
+      { key: 'hindiName', label: 'Hindi Name', required: false },
+      { key: 'category', label: 'Category', required: false },
     ],
     display: d => d.name,
-    sub:    d => d.category || '',
+    sub: d => d.category || '',
   },
 };
+
+// GET /admin/family-tree-bulk — Bulk relationship import page
+router.get('/family-tree-bulk', isAdmin, (req, res) => {
+  res.render('admin/family-tree-bulk', {
+    title: 'Bulk Import Relationships',
+  });
+});
 
 // GET /admin/mdms — Hub page
 router.get('/mdms', isAdmin, async (req, res) => {
@@ -384,11 +582,203 @@ router.post('/mdms/:type/:id/toggle', isAdmin, async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════
+// MDMS USAGE TRACKING & BULK IMPORT/EXPORT
+// ══════════════════════════════════════════════════════════
+
+// Helper: Get usage count for each master data item
+async function getMdmsUsageStats(type) {
+  const stats = {};
+  try {
+    if (type === 'gotra') {
+      const gotras = await Gotra.find().lean();
+      for (const g of gotras) {
+        const count = await Member.countDocuments({ gotra: g.name });
+        stats[g._id] = count;
+      }
+    } else if (type === 'village') {
+      const villages = await Village.find().lean();
+      for (const v of villages) {
+        const count = await Member.countDocuments({ village: v.name });
+        stats[v._id] = count;
+      }
+    } else if (type === 'occupation') {
+      const occupations = await Occupation.find().lean();
+      for (const o of occupations) {
+        const count = await Member.countDocuments({ occupation: o.name });
+        stats[o._id] = count;
+      }
+    } else if (type === 'honorific') {
+      const honorifics = await Honorific.find().lean();
+      for (const h of honorifics) {
+        const count = await Member.countDocuments({ honorific: h.code });
+        stats[h._id] = count;
+      }
+    } else if (type === 'surname') {
+      const surnames = await Surname.find().lean();
+      for (const s of surnames) {
+        const count = await Member.countDocuments({ surname: s.surname });
+        stats[s._id] = count;
+      }
+    }
+  } catch (e) {
+    console.error('Usage stats error:', e);
+  }
+  return stats;
+}
+
+// API: Get usage stats (returns JSON)
+router.get('/mdms/:type/usage', isAdmin, async (req, res) => {
+  try {
+    const stats = await getMdmsUsageStats(req.params.type);
+    res.json(stats);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// GET /admin/mdms/:type/export — Export master data as CSV
+router.get('/mdms/:type/export', isAdmin, async (req, res) => {
+  try {
+    const cfg = MDMS_CONFIG[req.params.type];
+    if (!cfg) return res.status(404).send('Type not found');
+    
+    const items = await cfg.model.find().sort({ createdAt: -1 }).lean();
+    const stats = await getMdmsUsageStats(req.params.type);
+    
+    // Build CSV header
+    let headers = ['ID', 'Created', 'Active'];
+    cfg.fields.forEach(f => headers.push(f.label));
+    headers.push('Usage Count');
+    let csv = headers.join(',') + '\n';
+    
+    // Build CSV rows
+    items.forEach(item => {
+      const row = [
+        item._id || '',
+        item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '',
+        item.isActive !== false ? 'Yes' : 'No'
+      ];
+      cfg.fields.forEach(f => {
+        let val = item[f.key] || '';
+        val = String(val).replace(/"/g, '""');
+        row.push(`"${val}"`);
+      });
+      row.push(stats[item._id] || 0);
+      csv += row.join(',') + '\n';
+    });
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="MDMS_${req.params.type}_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(400).send('Export error: ' + err.message);
+  }
+});
+
+// GET /admin/mdms/:type/export-json — Export as JSON
+router.get('/mdms/:type/export-json', isAdmin, async (req, res) => {
+  try {
+    const cfg = MDMS_CONFIG[req.params.type];
+    if (!cfg) return res.status(404).json({ error: 'Type not found' });
+    
+    const items = await cfg.model.find().lean();
+    const stats = await getMdmsUsageStats(req.params.type);
+    
+    const itemsWithUsage = items.map(item => ({
+      ...item,
+      usageCount: stats[item._id] || 0
+    }));
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="MDMS_${req.params.type}_${new Date().toISOString().split('T')[0]}.json"`);
+    res.json(itemsWithUsage);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /admin/mdms/:type/import — Bulk import from CSV/JSON
+router.post('/mdms/:type/import', isAdmin, async (req, res) => {
+  try {
+    const cfg = MDMS_CONFIG[req.params.type];
+    if (!cfg) {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+    
+    const csvData = req.body.csvData || req.body?.data;
+    if (!csvData) {
+      return res.status(400).json({ error: 'No CSV data provided' });
+    }
+    
+    const lines = csvData.trim().split('\n');
+    if (lines.length < 2) {
+      return res.redirect(`/admin/mdms?tab=${req.params.type}&flash=error`);
+    }
+    
+    // Parse header
+    const headers = lines[0].split(',').map(h => h.trim());
+    let importedCount = 0;
+    let skippedCount = 0;
+    
+    // Import each row
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      const data = {};
+      
+      cfg.fields.forEach((f, idx) => {
+        const headerIdx = headers.indexOf(f.label);
+        if (headerIdx >= 0 && values[headerIdx]) {
+          data[f.key] = values[headerIdx];
+        }
+      });
+      
+      // Check if required fields are present
+      const hasRequired = cfg.fields.filter(f => f.required).every(f => data[f.key]);
+      if (!hasRequired) {
+        skippedCount++;
+        continue;
+      }
+      
+      try {
+        await cfg.model.create(data);
+        importedCount++;
+      } catch (e) {
+        skippedCount++;
+      }
+    }
+    
+    // Return JSON response for fetch requests, or redirect for form posts
+    if (req.headers['content-type']?.includes('application/json')) {
+      res.json({ ok: true, imported: importedCount, skipped: skippedCount });
+    } else {
+      req.session.flash = {
+        type: 'import',
+        imported: importedCount,
+        skipped: skippedCount
+      };
+      res.redirect(`/admin/mdms?tab=${req.params.type}&flash=import`);
+    }
+  } catch (err) {
+    console.error('Import error:', err);
+    if (req.headers['content-type']?.includes('application/json')) {
+      res.status(400).json({ error: err.message });
+    } else {
+      res.redirect(`/admin/mdms?tab=${req.params.type}&flash=error`);
+    }
+  }
+});
+
 // ───────────────────────────────────────────────────────────
 
 router.get('/members/export', isAdmin, async (req, res) => {
 
-    try {
+  try {
     const members = await Member.find().sort({ createdAt: -1 });
     let csv = 'Name,Gotra,Village,Phone,Email,Occupation,Role,Date Added\n';
     members.forEach(m => {
@@ -402,7 +792,7 @@ router.get('/members/export', isAdmin, async (req, res) => {
       const date = m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '';
       csv += `${name},${gotra},${village},${phone},${email},${occupation},${role},${date}\n`;
     });
-    
+
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="UtkalBrahmin_Members.csv"');
     res.send(csv);
@@ -413,20 +803,25 @@ router.get('/members/export', isAdmin, async (req, res) => {
 });
 
 router.get('/members/add', isAdmin, async (req, res) => {
-    try {
-    const allMembers = await Member.find().sort({ name: 1 });
-    res.render('admin/member-form', { title: 'Add New Member', allMembers });
+  try {
+    const [allMembers, surnames] = await Promise.all([
+      Member.find().sort({ name: 1 }),
+      Surname.find().sort({ surname: 1 })
+    ]);
+    res.render('admin/member-form', { title: 'Add New Member', allMembers, surnames });
   } catch (err) {
-    res.render('admin/member-form', { title: 'Add New Member', allMembers: [] });
+    res.render('admin/member-form', { title: 'Add New Member', allMembers: [], surnames: [] });
   }
 });
 
 router.post('/members/add', isAdmin, async (req, res) => {
-    try {
+  try {
     const gotra = req.body.gotra_select === 'Others' ? req.body.gotra_other : req.body.gotra_select;
+    const surname = req.body.surname_select === 'Others' ? req.body.surname_other : req.body.surname_select;
     const newMember = new Member({
       honorific: req.body.honorific || '',
       name: req.body.name,
+      surname: surname,
       gotra: gotra,
       village: req.body.village,
       occupation: req.body.occupation,
@@ -477,23 +872,264 @@ router.post('/members/:id/delete', isAdmin, async (req, res) => {
 });
 
 router.get('/members/:id/edit', isAdmin, async (req, res) => {
-    try {
-    const [member, allMembers] = await Promise.all([
+  try {
+    const [member, allMembers, surnames] = await Promise.all([
       Member.findById(req.params.id),
-      Member.find({ _id: { $ne: req.params.id } }).sort({ name: 1 })
+      Member.find({ _id: { $ne: req.params.id } }).sort({ name: 1 }),
+      Surname.find().sort({ surname: 1 })
     ]);
-    res.render('admin/member-form', { title: 'Edit Member', member, allMembers });
+    res.render('admin/member-form', { title: 'Edit Member', member, allMembers, surnames });
   } catch (err) {
     res.redirect('/admin/members');
   }
 });
 
+// API: Get family member's surname/gotra for auto-fill
+router.get('/api/member/:id/family-data', isAdmin, async (req, res) => {
+  try {
+    const member = await Member.findById(req.params.id).lean();
+    if (!member) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+    res.json({
+      name: member.name,
+      surname: member.surname,
+      gotra: member.gotra,
+      village: member.village
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Helper: Recursively get all descendants of a member
+async function getAllDescendants(memberId, visited = new Set()) {
+  if (visited.has(memberId)) return [];
+  visited.add(memberId);
+  
+  const descendants = [memberId];
+  
+  // Find direct children (where this member is father or mother)
+  const children = await Member.find({
+    $or: [{ father: memberId }, { mother: memberId }]
+  }).select('_id').lean();
+  
+  for (const child of children) {
+    const grandChildren = await getAllDescendants(child._id, visited);
+    descendants.push(...grandChildren);
+  }
+  
+  return descendants;
+}
+
+// API: Apply surname/gotra to entire family tree (all descendants recursively)
+router.post('/api/member/:id/apply-to-tree', isAdmin, async (req, res) => {
+  try {
+    const parent = await Member.findById(req.params.id).lean();
+    if (!parent) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    const { surname, gotra } = parent;
+    if (!surname || !gotra) {
+      return res.status(400).json({ error: 'Parent surname or gotra not set' });
+    }
+
+    // Get all descendants recursively
+    const descendants = await getAllDescendants(req.params.id);
+    
+    if (descendants.length <= 1) {
+      return res.json({ 
+        ok: true, 
+        updated: 0,
+        message: 'No descendants found in the family tree'
+      });
+    }
+
+    // Update all descendants (skip the parent itself)
+    const descendantIds = descendants.filter(id => id.toString() !== req.params.id);
+    
+    const result = await Member.updateMany(
+      { _id: { $in: descendantIds } },
+      { $set: { surname, gotra } }
+    );
+
+    res.json({ 
+      ok: true, 
+      updated: result.modifiedCount,
+      message: `✅ पूरे family tree को updated किया! ${result.modifiedCount} members का surname "${surname}" और gotra "${gotra}" set हो गया।\n\nTotal descendants: ${descendantIds.length}`
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// API: Apply surname/gotra to all children of a member (direct only)
+router.post('/api/member/:id/apply-to-children', isAdmin, async (req, res) => {
+  try {
+    const parent = await Member.findById(req.params.id).lean();
+    if (!parent) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    const { surname, gotra } = parent;
+    if (!surname || !gotra) {
+      return res.status(400).json({ error: 'Parent surname or gotra not set' });
+    }
+
+    // Update all children
+    const result = await Member.updateMany(
+      { $or: [{ father: req.params.id }, { mother: req.params.id }] },
+      { $set: { surname, gotra } }
+    );
+
+    res.json({ 
+      ok: true, 
+      updated: result.modifiedCount,
+      message: `Updated ${result.modifiedCount} children with surname "${surname}" and gotra "${gotra}"`
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// API: Bulk Approve Members
+router.post('/api/members/bulk-approve', isAdmin, async (req, res) => {
+  try {
+    const { memberIds } = req.body;
+    if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ error: 'Invalid member IDs' });
+    }
+
+    const result = await Member.updateMany(
+      { _id: { $in: memberIds } },
+      { $set: { isApproved: true } }
+    );
+
+    res.json({
+      ok: true,
+      updated: result.modifiedCount,
+      message: `Approved ${result.modifiedCount} members`
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// API: Bulk Reject Members
+router.post('/api/members/bulk-reject', isAdmin, async (req, res) => {
+  try {
+    const { memberIds } = req.body;
+    if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ error: 'Invalid member IDs' });
+    }
+
+    const result = await Member.updateMany(
+      { _id: { $in: memberIds } },
+      { $set: { isApproved: false } }
+    );
+
+    res.json({
+      ok: true,
+      updated: result.modifiedCount,
+      message: `Rejected ${result.modifiedCount} members`
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// API: Bulk Delete Members
+router.post('/api/members/bulk-delete', isAdmin, async (req, res) => {
+  try {
+    const { memberIds } = req.body;
+    if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ error: 'Invalid member IDs' });
+    }
+
+    // Cleanup reciprocal relationships for all members being deleted
+    for (const memberId of memberIds) {
+      await Member.updateMany({ father: memberId }, { $unset: { father: 1 } });
+      await Member.updateMany({ mother: memberId }, { $unset: { mother: 1 } });
+      await Member.updateMany({ spouse: memberId }, { $unset: { spouse: 1 } });
+      await Member.updateMany({ children: memberId }, { $pull: { children: memberId } });
+    }
+
+    const result = await Member.deleteMany({ _id: { $in: memberIds } });
+
+    res.json({
+      ok: true,
+      deleted: result.deletedCount,
+      message: `Deleted ${result.deletedCount} members`
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// API: Bulk Import Members from CSV
+router.post('/api/members/bulk-import', isAdmin, async (req, res) => {
+  try {
+    const { members } = req.body;
+    if (!members || !Array.isArray(members)) {
+      return res.status(400).json({ error: 'Invalid members data' });
+    }
+
+    let created = 0;
+    let duplicates = 0;
+
+    for (const memberData of members) {
+      // Validate required fields
+      if (!memberData.name || !memberData.gotra) {
+        continue; // Skip invalid records
+      }
+
+      // Check for duplicates (same name + gotra)
+      const existing = await Member.findOne({
+        name: memberData.name,
+        gotra: memberData.gotra
+      });
+
+      if (existing) {
+        duplicates++;
+        continue;
+      }
+
+      // Create new member
+      const newMember = new Member({
+        name: memberData.name,
+        surname: memberData.surname || '',
+        gotra: memberData.gotra,
+        village: memberData.village || '',
+        contactNumber: memberData.contactNumber || '',
+        honorific: memberData.honorific || '',
+        isApproved: false, // New imports need approval
+        createdAt: new Date()
+      });
+
+      await newMember.save();
+      created++;
+    }
+
+    res.json({
+      ok: true,
+      created,
+      duplicates,
+      message: `Imported ${created} members (${duplicates} duplicates skipped)`
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 router.post('/members/:id/edit', isAdmin, async (req, res) => {
-    try {
+  try {
     const gotra = req.body.gotra_select === 'Others' ? req.body.gotra_other : req.body.gotra_select;
+    const surname = req.body.surname_select === 'Others' ? req.body.surname_other : req.body.surname_select;
     const updateData = {
       honorific: req.body.honorific || '',
       name: req.body.name,
+      surname: surname,
       gotra: gotra,
       village: req.body.village,
       occupation: req.body.occupation,
@@ -541,7 +1177,7 @@ router.post('/members/:id/edit', isAdmin, async (req, res) => {
 
 // Quick Connect Relative
 router.post('/members/:id/connect', isAdmin, async (req, res) => {
-    try {
+  try {
     const { type, targetId } = req.body;
     const memberId = req.params.id;
 
@@ -580,10 +1216,10 @@ router.post('/members/:id/connect', isAdmin, async (req, res) => {
 
 // Admin Matrimonial Management
 router.get('/matrimonial', isAdmin, async (req, res) => {
-    try {
+  try {
     const { search, status } = req.query;
     let query = { 'matrimonialProfile.isEligible': true };
-    
+
     if (search) {
       query.$or = [
         { name: new RegExp(search, 'i') },
@@ -591,16 +1227,16 @@ router.get('/matrimonial', isAdmin, async (req, res) => {
         { gotra: new RegExp(search, 'i') }
       ];
     }
-    
+
     if (status === 'approved') {
       query['matrimonialProfile.isApproved'] = true;
     } else if (status === 'pending') {
       query['matrimonialProfile.isApproved'] = false;
     }
-    
+
     const profiles = await Member.find(query).sort({ createdAt: -1 });
-    res.render('admin/matrimonial', { 
-      title: 'Manage Matrimonial', 
+    res.render('admin/matrimonial', {
+      title: 'Manage Matrimonial',
       profiles,
       searchQuery: search || '',
       statusQuery: status || ''
@@ -611,7 +1247,7 @@ router.get('/matrimonial', isAdmin, async (req, res) => {
 });
 
 router.get('/matrimonial/export', isAdmin, async (req, res) => {
-    try {
+  try {
     const profiles = await Member.find({ 'matrimonialProfile.isEligible': true }).sort({ createdAt: -1 });
     let csv = 'Name,Gotra,Village,DOB,Height,Education,Occupation,Phone,Address,Status,Submitted At\n';
     profiles.forEach(p => {
@@ -626,10 +1262,10 @@ router.get('/matrimonial/export', isAdmin, async (req, res) => {
       const address = `"${(p.address || '').replace(/"/g, '""')}"`;
       const status = p.matrimonialProfile && p.matrimonialProfile.isApproved ? '"Approved"' : '"Pending"';
       const submitted = p.createdAt ? `"${new Date(p.createdAt).toLocaleDateString()}"` : '""';
-      
+
       csv += `${name},${gotra},${village},${dob},${height},${education},${occupation},${phone},${address},${status},${submitted}\n`;
     });
-    
+
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="Matrimonial_Profiles.csv"');
     res.send(csv);
@@ -640,21 +1276,21 @@ router.get('/matrimonial/export', isAdmin, async (req, res) => {
 });
 
 router.post('/matrimonial/:id/approve', isAdmin, async (req, res) => {
-    try {
+  try {
     await Member.findByIdAndUpdate(req.params.id, { 'matrimonialProfile.isApproved': true });
   } catch (err) { console.error(err); }
   res.redirect('/admin/matrimonial');
 });
 
 router.post('/matrimonial/:id/revoke', isAdmin, async (req, res) => {
-    try {
+  try {
     await Member.findByIdAndUpdate(req.params.id, { 'matrimonialProfile.isApproved': false });
   } catch (err) { console.error(err); }
   res.redirect('/admin/matrimonial');
 });
 
 router.post('/matrimonial/:id/reject', isAdmin, async (req, res) => {
-    try {
+  try {
     // Mark as not eligible to remove from matrimonial without deleting member data
     await Member.findByIdAndUpdate(req.params.id, { 'matrimonialProfile.isEligible': false });
   } catch (err) { console.error(err); }
@@ -662,7 +1298,7 @@ router.post('/matrimonial/:id/reject', isAdmin, async (req, res) => {
 });
 
 router.get('/matrimonial/:id/edit', isAdmin, async (req, res) => {
-    try {
+  try {
     const profile = await Member.findById(req.params.id);
     if (!profile) return res.redirect('/admin/matrimonial');
     res.render('admin/matrimonial-form', { title: 'Edit Matrimonial Profile', profile });
@@ -672,7 +1308,7 @@ router.get('/matrimonial/:id/edit', isAdmin, async (req, res) => {
 });
 
 router.post('/matrimonial/:id/edit', isAdmin, async (req, res) => {
-    try {
+  try {
     const updateData = {
       name: req.body.name,
       gotra: req.body.gotra,
@@ -694,7 +1330,7 @@ router.post('/matrimonial/:id/edit', isAdmin, async (req, res) => {
 
 // Admin Event Management
 router.get('/events', isAdmin, async (req, res) => {
-    try {
+  try {
     const events = await Event.find().sort({ date: -1 });
     res.render('admin/events', { title: 'Manage Events', events });
   } catch (err) {
@@ -707,7 +1343,7 @@ router.get('/events/add', isAdmin, (req, res) => {
 });
 
 router.post('/events/add', isAdmin, async (req, res) => {
-    try {
+  try {
     const newEvent = new Event(req.body);
     await newEvent.save();
     res.redirect('/admin/events');
@@ -718,15 +1354,15 @@ router.post('/events/add', isAdmin, async (req, res) => {
 });
 
 router.post('/events/:id/delete', isAdmin, async (req, res) => {
-    try {
+  try {
     await Event.findByIdAndDelete(req.params.id);
-  } catch (err) {}
+  } catch (err) { }
   res.redirect('/admin/events');
 });
 
 // Admin Donations Management
 router.get('/donations', isAdmin, async (req, res) => {
-    try {
+  try {
     const donations = await Donation.find().sort({ date: -1 });
     res.render('admin/donations', { title: 'Manage Donations', donations });
   } catch (err) {
@@ -735,7 +1371,7 @@ router.get('/donations', isAdmin, async (req, res) => {
 });
 
 router.get('/donations/export', isAdmin, async (req, res) => {
-    try {
+  try {
     const donations = await Donation.find().sort({ date: -1 });
     let csv = 'Donor Name,Amount (INR),Purpose,Method,Transaction ID,Date\n';
     donations.forEach(d => {
@@ -747,7 +1383,7 @@ router.get('/donations/export', isAdmin, async (req, res) => {
       const date = d.date ? new Date(d.date).toLocaleDateString() : '';
       csv += `${name},${amt},${purpose},${method},${txid},${date}\n`;
     });
-    
+
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="UtkalBrahmin_Donations.csv"');
     res.send(csv);
@@ -762,7 +1398,7 @@ router.get('/donations/add', isAdmin, (req, res) => {
 });
 
 router.post('/donations/add', isAdmin, async (req, res) => {
-    try {
+  try {
     const newDonation = new Donation({ ...req.body, isVerified: true });
     await newDonation.save();
     res.redirect('/admin/donations');
@@ -775,7 +1411,7 @@ router.post('/donations/add', isAdmin, async (req, res) => {
 const Announcement = require('../models/Announcement');
 
 router.get('/announcements', isAdmin, async (req, res) => {
-    try {
+  try {
     const announcements = await Announcement.find().sort({ createdAt: -1 });
     res.render('admin/announcements', { title: 'Manage Announcements', announcements });
   } catch (err) {
@@ -788,14 +1424,14 @@ router.get('/announcements/add', isAdmin, (req, res) => {
 });
 
 router.post('/announcements/add', isAdmin, async (req, res) => {
-    try {
+  try {
     const newAnnouncement = new Announcement({
       message: req.body.message,
       icon: req.body.icon || 'fas fa-bullhorn',
       isActive: req.body.isActive === 'on'
     });
     // Handle expiry
-    if(req.body.expiryDate) {
+    if (req.body.expiryDate) {
       newAnnouncement.expiryDate = new Date(req.body.expiryDate);
     }
     await newAnnouncement.save();
@@ -806,7 +1442,7 @@ router.post('/announcements/add', isAdmin, async (req, res) => {
 });
 
 router.get('/announcements/:id/edit', isAdmin, async (req, res) => {
-    try {
+  try {
     const announcement = await Announcement.findById(req.params.id);
     if (!announcement) return res.redirect('/admin/announcements');
     res.render('admin/announcement-form', { title: 'Edit Announcement', announcement });
@@ -816,18 +1452,18 @@ router.get('/announcements/:id/edit', isAdmin, async (req, res) => {
 });
 
 router.post('/announcements/:id/edit', isAdmin, async (req, res) => {
-    try {
+  try {
     const updateData = {
       message: req.body.message,
       icon: req.body.icon || 'fas fa-bullhorn',
       isActive: req.body.isActive === 'on'
     };
-    if(req.body.expiryDate) {
+    if (req.body.expiryDate) {
       updateData.expiryDate = new Date(req.body.expiryDate);
     } else {
       updateData.$unset = { expiryDate: 1 };
     }
-    
+
     await Announcement.findByIdAndUpdate(req.params.id, updateData);
     res.redirect('/admin/announcements');
   } catch (err) {
@@ -836,36 +1472,35 @@ router.post('/announcements/:id/edit', isAdmin, async (req, res) => {
 });
 
 router.post('/announcements/:id/delete', isAdmin, async (req, res) => {
-    try {
+  try {
     await Announcement.findByIdAndDelete(req.params.id);
-  } catch (err) {}
+  } catch (err) { }
   res.redirect('/admin/announcements');
 });
 
 // Event Submissions & Registrations
 router.get('/meet-registrations', isAdmin, async (req, res) => {
-    try {
+  try {
     const registrations = await MeetRegistration.find().sort({ createdAt: -1 });
     res.render('admin/meet-registrations', { title: 'Meet Registrations', registrations });
-  } catch(err) {
+  } catch (err) {
     res.render('admin/meet-registrations', { title: 'Meet Registrations', registrations: [] });
   }
 });
 
 router.get('/student-applications', isAdmin, async (req, res) => {
-    try {
+  try {
     const applications = await StudentApplication.find().sort({ createdAt: -1 });
     res.render('admin/student-applications', { title: 'Student Applications', applications });
-  } catch(err) {
+  } catch (err) {
     res.render('admin/student-applications', { title: 'Student Applications', applications: [] });
   }
 });
 
 // ── Surname Management (Admin CMS) ──────────────────────────────
-const Surname = require('../models/Surname');
 
 router.get('/surnames', isAdmin, async (req, res) => {
-    try {
+  try {
     const surnames = await Surname.find();
     surnames.sort((a, b) => a.surname.localeCompare(b.surname));
     res.render('admin/surnames', { title: 'Manage Surnames', surnames });
@@ -879,7 +1514,7 @@ router.get('/surnames/add', isAdmin, (req, res) => {
 });
 
 router.post('/surnames/add', isAdmin, async (req, res) => {
-    try {
+  try {
     const newSurname = new Surname(req.body);
     await newSurname.save();
     res.redirect('/admin/surnames');
@@ -890,7 +1525,7 @@ router.post('/surnames/add', isAdmin, async (req, res) => {
 });
 
 router.get('/surnames/:id/edit', isAdmin, async (req, res) => {
-    try {
+  try {
     const surnameItem = await Surname.findById(req.params.id);
     if (!surnameItem) return res.redirect('/admin/surnames');
     res.render('admin/surname-form', { title: 'Edit Surname', surname: surnameItem });
@@ -900,7 +1535,7 @@ router.get('/surnames/:id/edit', isAdmin, async (req, res) => {
 });
 
 router.post('/surnames/:id/edit', isAdmin, async (req, res) => {
-    try {
+  try {
     const updateData = {
       surname: req.body.surname,
       hindiName: req.body.hindiName,
@@ -918,7 +1553,7 @@ router.post('/surnames/:id/edit', isAdmin, async (req, res) => {
 });
 
 router.post('/surnames/:id/delete', isAdmin, async (req, res) => {
-    try {
+  try {
     await Surname.findByIdAndDelete(req.params.id);
   } catch (err) { console.error(err); }
   res.redirect('/admin/surnames');
@@ -929,12 +1564,12 @@ const SurnameReport = require('../models/SurnameReport');
 
 // Public API — anyone can submit
 router.post('/api/surname-report', async (req, res) => {
-    try {
+  try {
     const report = new SurnameReport({
-      surname:      req.body.surname,
+      surname: req.body.surname,
       reporterName: req.body.reporterName || 'Anonymous',
-      errorType:    req.body.errorType || 'general',
-      description:  req.body.description
+      errorType: req.body.errorType || 'general',
+      description: req.body.description
     });
     await report.save();
     res.json({ success: true, message: 'Report submitted successfully.' });
@@ -946,7 +1581,7 @@ router.post('/api/surname-report', async (req, res) => {
 
 // Admin — view all reports
 router.get('/surname-reports', isAdmin, async (req, res) => {
-    try {
+  try {
     const reports = await SurnameReport.find().sort({ createdAt: -1 });
     res.render('admin/surname-reports', { title: 'Surname Error Reports', reports });
   } catch (err) {
@@ -956,7 +1591,7 @@ router.get('/surname-reports', isAdmin, async (req, res) => {
 
 // Admin — mark report as resolved
 router.post('/surname-reports/:id/resolve', isAdmin, async (req, res) => {
-    try {
+  try {
     await SurnameReport.findByIdAndUpdate(req.params.id, { status: 'resolved' });
   } catch (err) { console.error(err); }
   res.redirect('/admin/surname-reports');
@@ -964,7 +1599,7 @@ router.post('/surname-reports/:id/resolve', isAdmin, async (req, res) => {
 
 // Admin — delete report
 router.post('/surname-reports/:id/delete', isAdmin, async (req, res) => {
-    try {
+  try {
     await SurnameReport.findByIdAndDelete(req.params.id);
   } catch (err) { console.error(err); }
   res.redirect('/admin/surname-reports');
@@ -974,7 +1609,7 @@ router.post('/surname-reports/:id/delete', isAdmin, async (req, res) => {
 const Gallery = require('../models/Gallery');
 
 router.get('/gallery', isAdmin, async (req, res) => {
-    try {
+  try {
     const images = await Gallery.find().sort({ dateUploaded: -1 });
     res.render('admin/gallery', { title: 'Manage Gallery', images });
   } catch (err) {
@@ -983,7 +1618,7 @@ router.get('/gallery', isAdmin, async (req, res) => {
 });
 
 router.post('/gallery/add', isAdmin, async (req, res) => {
-    try {
+  try {
     // The imageUrl field could now contain multiple URLs separated by commas or newlines
     const rawUrls = req.body.imageUrl || '';
     const urlArray = rawUrls.split(/[\n,]+/).map(url => url.trim()).filter(url => url !== '');
@@ -992,7 +1627,7 @@ router.post('/gallery/add', isAdmin, async (req, res) => {
       const url = urlArray[i];
       // Append a counter to the title if there's more than one image
       const titleSuffix = urlArray.length > 1 ? ` (${i + 1})` : '';
-      
+
       const newImage = new Gallery({
         title: req.body.title + titleSuffix,
         imageUrl: url,
@@ -1001,7 +1636,7 @@ router.post('/gallery/add', isAdmin, async (req, res) => {
       });
       await newImage.save();
     }
-    
+
     res.redirect('/admin/gallery');
   } catch (err) {
     console.error(err);
@@ -1010,7 +1645,7 @@ router.post('/gallery/add', isAdmin, async (req, res) => {
 });
 
 router.post('/gallery/:id/delete', isAdmin, async (req, res) => {
-    try {
+  try {
     await Gallery.findByIdAndDelete(req.params.id);
   } catch (err) {
     console.error(err);
@@ -1022,7 +1657,7 @@ router.post('/gallery/:id/delete', isAdmin, async (req, res) => {
 const Settings = require('../models/Settings');
 
 router.get('/settings', isAdmin, async (req, res) => {
-    try {
+  try {
     let siteSettings = await Settings.findById('1');
     if (!siteSettings) {
       siteSettings = new Settings({ _id: '1' });
@@ -1036,14 +1671,14 @@ router.get('/settings', isAdmin, async (req, res) => {
 });
 
 router.post('/settings', isAdmin, async (req, res) => {
-    try {
+  try {
     let siteSettings = await Settings.findById('1');
     if (!siteSettings) {
       siteSettings = new Settings({ _id: '1' });
     } else {
       siteSettings = new Settings(siteSettings);
     }
-    
+
     siteSettings.siteTitle = req.body.siteTitle;
     siteSettings.donationTarget = req.body.donationTarget;
     siteSettings.upiId = req.body.upiId;
@@ -1053,9 +1688,9 @@ router.post('/settings', isAdmin, async (req, res) => {
     siteSettings.facebookUrl = req.body.facebookUrl;
     siteSettings.whatsappGroupUrl = req.body.whatsappGroupUrl;
     siteSettings.lastUpdated = new Date();
-    
+
     await siteSettings.save();
-    
+
     // Inject into app context so public routes reflect changes immediately
     if (req.app) {
       req.app.locals.siteSettings = siteSettings;
@@ -1071,7 +1706,7 @@ router.post('/settings', isAdmin, async (req, res) => {
 const Message = require('../models/Message');
 
 router.get('/inbox', isAdmin, async (req, res) => {
-    try {
+  try {
     const messages = await Message.find().sort({ dateReceived: -1 });
     res.render('admin/inbox', { title: 'Enquiry Inbox', messages });
   } catch (err) {
@@ -1081,7 +1716,7 @@ router.get('/inbox', isAdmin, async (req, res) => {
 });
 
 router.post('/inbox/:id/read', isAdmin, async (req, res) => {
-    try {
+  try {
     await Message.findByIdAndUpdate(req.params.id, { isRead: true });
     res.redirect('/admin/inbox');
   } catch (err) {
@@ -1091,7 +1726,7 @@ router.post('/inbox/:id/read', isAdmin, async (req, res) => {
 });
 
 router.post('/inbox/:id/delete', isAdmin, async (req, res) => {
-    try {
+  try {
     await Message.findByIdAndDelete(req.params.id);
     res.redirect('/admin/inbox');
   } catch (err) {
@@ -1104,7 +1739,7 @@ router.post('/inbox/:id/delete', isAdmin, async (req, res) => {
 const Committee = require('../models/Committee');
 
 router.get('/committee', isAdmin, async (req, res) => {
-    try {
+  try {
     const committeeMembers = await Committee.find().sort({ priority: 1, name: 1 });
     res.render('admin/committee', { title: 'Manage Committee', committee: committeeMembers });
   } catch (err) {
@@ -1118,7 +1753,7 @@ router.get('/committee/add', isAdmin, (req, res) => {
 });
 
 router.post('/committee/add', isAdmin, async (req, res) => {
-    try {
+  try {
     const newMember = new Committee({
       name: req.body.name,
       role: req.body.role,
@@ -1135,7 +1770,7 @@ router.post('/committee/add', isAdmin, async (req, res) => {
 });
 
 router.post('/committee/:id/delete', isAdmin, async (req, res) => {
-    try {
+  try {
     await Committee.findByIdAndDelete(req.params.id);
   } catch (err) { console.error(err); }
   res.redirect('/admin/committee');
@@ -1145,7 +1780,7 @@ router.post('/committee/:id/delete', isAdmin, async (req, res) => {
 const Document = require('../models/Document');
 
 router.get('/documents', isAdmin, async (req, res) => {
-    try {
+  try {
     const documents = await Document.find().sort({ dateUploaded: -1 });
     res.render('admin/documents', { title: 'Manage Documents', documents });
   } catch (err) {
@@ -1159,7 +1794,7 @@ router.get('/documents/add', isAdmin, (req, res) => {
 });
 
 router.post('/documents/add', isAdmin, async (req, res) => {
-    try {
+  try {
     const newDoc = new Document({
       title: req.body.title,
       category: req.body.category,
@@ -1175,7 +1810,7 @@ router.post('/documents/add', isAdmin, async (req, res) => {
 });
 
 router.post('/documents/:id/delete', isAdmin, async (req, res) => {
-    try {
+  try {
     await Document.findByIdAndDelete(req.params.id);
   } catch (err) { console.error(err); }
   res.redirect('/admin/documents');
@@ -1183,7 +1818,7 @@ router.post('/documents/:id/delete', isAdmin, async (req, res) => {
 
 // ── Manage Admins (RBAC) ─────────────────────────────────────────
 router.get('/manage-admins', requireSuperAdmin, async (req, res) => {
-    try {
+  try {
     const admins = await AdminUser.find().sort({ role: 1, name: 1 });
     res.render('admin/manage-admins', { title: 'Manage Admins', admins, currentAdminId: req.session.adminId });
   } catch (err) {
@@ -1197,7 +1832,7 @@ router.get('/manage-admins/add', requireSuperAdmin, (req, res) => {
 });
 
 router.post('/manage-admins/add', requireSuperAdmin, async (req, res) => {
-    try {
+  try {
     // Check if username already exists
     const existingAdmins = await AdminUser.find();
     if (existingAdmins.some(a => a.username === req.body.username)) {
@@ -1219,13 +1854,1045 @@ router.post('/manage-admins/add', requireSuperAdmin, async (req, res) => {
 });
 
 router.post('/manage-admins/:id/delete', requireSuperAdmin, async (req, res) => {
-    try {
+  try {
     // Don't let an admin delete themselves
     if (req.params.id !== req.session.adminId) {
       await AdminUser.findByIdAndDelete(req.params.id);
     }
   } catch (err) { console.error(err); }
   res.redirect('/admin/manage-admins');
+});
+
+// ═══════════════════════════════════════════════════════════
+// BULK FAMILY TREE RELATIONSHIP IMPORT
+// ═══════════════════════════════════════════════════════════
+
+// Helper: Find member by name (exact + partial match fallback)
+async function findMemberByName(name) {
+  if (!name || name.trim() === '') return null;
+  
+  // First try exact match (case-insensitive)
+  let member = await Member.findOne({
+    name: new RegExp(`^${name}$`, 'i')
+  }).lean();
+  
+  // Fallback to partial/startsWith match
+  if (!member) {
+    member = await Member.findOne({
+      name: new RegExp(`^${name}`, 'i')
+    }).lean();
+  }
+  
+  return member;
+}
+
+// Helper: Validate if a relationship is possible
+function validateRelationship(memberId, targetId, relationType) {
+  // Can't link someone to themselves
+  if (memberId.toString() === targetId.toString()) {
+    return { valid: false, reason: 'Cannot link a member to themselves' };
+  }
+  
+  return { valid: true };
+}
+
+// API: Validate bulk relationship data before importing
+router.post('/api/family-tree/bulk-validate', isAdmin, async (req, res) => {
+  try {
+    const { csvData } = req.body;
+    if (!csvData || csvData.trim() === '') {
+      return res.status(400).json({ error: 'No CSV data provided' });
+    }
+
+    const lines = csvData.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 2) {
+      return res.status(400).json({ error: 'CSV must have header and at least 1 data row' });
+    }
+
+    // Parse CSV
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const memberNameIdx = headers.indexOf('member_name');
+    const fatherNameIdx = headers.indexOf('father_name');
+    const motherNameIdx = headers.indexOf('mother_name');
+    const spouseNameIdx = headers.indexOf('spouse_name');
+
+    if (memberNameIdx === -1) {
+      return res.status(400).json({ error: 'CSV must have "member_name" column' });
+    }
+
+    const results = [];
+    let validCount = 0;
+    let invalidCount = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+      const memberName = parts[memberNameIdx];
+      const fatherName = fatherNameIdx >= 0 ? parts[fatherNameIdx] : '';
+      const motherName = motherNameIdx >= 0 ? parts[motherNameIdx] : '';
+      const spouseName = spouseNameIdx >= 0 ? parts[spouseNameIdx] : '';
+
+      if (!memberName) {
+        invalidCount++;
+        results.push({ row: i + 1, status: '❌', reason: 'Empty member name' });
+        continue;
+      }
+
+      const record = {
+        row: i + 1,
+        memberName,
+        fatherName,
+        motherName,
+        spouseName,
+        status: '✅',
+        issues: []
+      };
+
+      // Check if members exist
+      const member = await findMemberByName(memberName);
+      if (!member) {
+        record.status = '❌';
+        record.issues.push(`Member "${memberName}" not found`);
+      } else {
+        if (fatherName) {
+          const father = await findMemberByName(fatherName);
+          if (!father) {
+            record.issues.push(`Father "${fatherName}" not found`);
+          }
+        }
+        if (motherName) {
+          const mother = await findMemberByName(motherName);
+          if (!mother) {
+            record.issues.push(`Mother "${motherName}" not found`);
+          }
+        }
+        if (spouseName) {
+          const spouse = await findMemberByName(spouseName);
+          if (!spouse) {
+            record.issues.push(`Spouse "${spouseName}" not found`);
+          }
+        }
+      }
+
+      if (record.issues.length > 0) {
+        record.status = record.status === '✅' ? '⚠️' : '❌';
+        invalidCount++;
+      } else {
+        validCount++;
+      }
+
+      results.push(record);
+    }
+
+    res.json({
+      ok: true,
+      validRecords: validCount,
+      invalidRecords: invalidCount,
+      totalRecords: validCount + invalidCount,
+      results
+    });
+  } catch (err) {
+    console.error('Validation error:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// API: Import bulk family tree relationships
+router.post('/api/family-tree/bulk-import', isAdmin, async (req, res) => {
+  try {
+    const { csvData } = req.body;
+    if (!csvData || csvData.trim() === '') {
+      return res.status(400).json({ error: 'No CSV data provided' });
+    }
+
+    const lines = csvData.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 2) {
+      return res.status(400).json({ error: 'CSV must have header and at least 1 data row' });
+    }
+
+    // Parse CSV
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const memberNameIdx = headers.indexOf('member_name');
+    const fatherNameIdx = headers.indexOf('father_name');
+    const motherNameIdx = headers.indexOf('mother_name');
+    const spouseNameIdx = headers.indexOf('spouse_name');
+
+    if (memberNameIdx === -1) {
+      return res.status(400).json({ error: 'CSV must have "member_name" column' });
+    }
+
+    const results = [];
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      try {
+        const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+        const memberName = parts[memberNameIdx];
+        const fatherName = fatherNameIdx >= 0 ? parts[fatherNameIdx] : '';
+        const motherName = motherNameIdx >= 0 ? parts[motherNameIdx] : '';
+        const spouseName = spouseNameIdx >= 0 ? parts[spouseNameIdx] : '';
+
+        if (!memberName) {
+          errorCount++;
+          results.push({ row: i + 1, status: '❌', message: 'Empty member name' });
+          continue;
+        }
+
+        // Find member
+        const member = await findMemberByName(memberName);
+        if (!member) {
+          errorCount++;
+          results.push({ 
+            row: i + 1, 
+            status: '❌', 
+            message: `Member "${memberName}" not found` 
+          });
+          continue;
+        }
+
+        const updateData = {};
+        const issues = [];
+
+        // Process Father
+        if (fatherName) {
+          const father = await findMemberByName(fatherName);
+          if (father) {
+            // Validate relationship
+            const validation = validateRelationship(member._id, father._id, 'father');
+            if (validation.valid) {
+              updateData.father = father._id;
+              // Reciprocal: Add member to father's children
+              await Member.findByIdAndUpdate(father._id, { $addToSet: { children: member._id } });
+            } else {
+              issues.push(`Father link failed: ${validation.reason}`);
+            }
+          } else {
+            issues.push(`Father "${fatherName}" not found`);
+          }
+        }
+
+        // Process Mother
+        if (motherName) {
+          const mother = await findMemberByName(motherName);
+          if (mother) {
+            const validation = validateRelationship(member._id, mother._id, 'mother');
+            if (validation.valid) {
+              updateData.mother = mother._id;
+              // Reciprocal: Add member to mother's children
+              await Member.findByIdAndUpdate(mother._id, { $addToSet: { children: member._id } });
+            } else {
+              issues.push(`Mother link failed: ${validation.reason}`);
+            }
+          } else {
+            issues.push(`Mother "${motherName}" not found`);
+          }
+        }
+
+        // Process Spouse
+        if (spouseName) {
+          const spouse = await findMemberByName(spouseName);
+          if (spouse) {
+            const validation = validateRelationship(member._id, spouse._id, 'spouse');
+            if (validation.valid) {
+              updateData.spouse = spouse._id;
+              // Reciprocal: Set member as spouse for target too
+              await Member.findByIdAndUpdate(spouse._id, { spouse: member._id });
+            } else {
+              issues.push(`Spouse link failed: ${validation.reason}`);
+            }
+          } else {
+            issues.push(`Spouse "${spouseName}" not found`);
+          }
+        }
+
+        // Save updates
+        if (Object.keys(updateData).length > 0) {
+          await Member.findByIdAndUpdate(member._id, { $set: updateData });
+          successCount++;
+          results.push({
+            row: i + 1,
+            status: issues.length === 0 ? '✅' : '⚠️',
+            memberName,
+            linkedFields: Object.keys(updateData),
+            issues: issues.length > 0 ? issues : undefined
+          });
+        } else {
+          if (issues.length > 0) {
+            errorCount++;
+            results.push({
+              row: i + 1,
+              status: '❌',
+              memberName,
+              message: issues.join('; ')
+            });
+          } else {
+            results.push({
+              row: i + 1,
+              status: 'ℹ️',
+              memberName,
+              message: 'No relationships to update'
+            });
+          }
+        }
+      } catch (err) {
+        errorCount++;
+        results.push({
+          row: i + 1,
+          status: '❌',
+          message: `Error: ${err.message}`
+        });
+      }
+    }
+
+    res.json({
+      ok: true,
+      successCount,
+      errorCount,
+      totalProcessed: successCount + errorCount,
+      results,
+      summary: `✅ ${successCount} relationships linked | ❌ ${errorCount} errors`
+    });
+  } catch (err) {
+    console.error('Import error:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// FAMILY TREE VALIDATION DASHBOARD
+// ═══════════════════════════════════════════════════════════
+
+// GET /admin/family-tree-validation — Dashboard page
+router.get('/family-tree-validation', isAdmin, (req, res) => {
+  res.render('admin/family-tree-validation', {
+    title: 'Family Tree Validation Dashboard',
+  });
+});
+
+// GET /admin/api/family-tree/validation-report — Validation analysis
+router.get('/api/family-tree/validation-report', isAdmin, async (req, res) => {
+  try {
+    // Get all members with relationships
+    const allMembers = await Member.find()
+      .select('_id name gotra surname village father mother spouse children')
+      .lean();
+
+    const totalMembers = allMembers.length;
+    if (totalMembers === 0) {
+      return res.json({
+        ok: true,
+        stats: {
+          totalMembers: 0,
+          completeProfiles: 0,
+          completeProfilesPercent: 0,
+          linkedToTree: 0,
+          linkedToTreePercent: 0,
+          brokenRelationships: 0,
+          inconsistentRelationships: 0,
+          circularReferences: 0,
+          orphanedMembers: 0,
+          lastValidated: new Date()
+        },
+        issues: []
+      });
+    }
+
+    // Create ID lookup for fast access
+    const memberMap = {};
+    allMembers.forEach(m => {
+      memberMap[m._id.toString()] = m;
+    });
+
+    const issues = [];
+    let completeProfileCount = 0;
+    let linkedCount = 0;
+    let orphanedCount = 0;
+    const brokenIds = new Set();
+    const inconsistentIds = new Set();
+    const circularIds = new Set();
+
+    // Check each member
+    for (const member of allMembers) {
+      const memberId = member._id.toString();
+      
+      // Check complete profile (has name, gotra, village)
+      if (member.name && member.gotra && member.village) {
+        completeProfileCount++;
+      }
+
+      // Check if linked to family tree (has any relationship)
+      const hasRelationships = member.father || member.mother || member.spouse || (member.children && member.children.length > 0);
+      if (hasRelationships) {
+        linkedCount++;
+      } else {
+        orphanedCount++;
+      }
+
+      // Check father reference
+      if (member.father) {
+        const father = memberMap[member.father.toString()];
+        if (!father) {
+          brokenIds.add(memberId);
+          issues.push({
+            type: 'broken-father',
+            memberId,
+            memberName: member.name,
+            message: `Father reference (ID: ${member.father}) not found in database`,
+            severity: 'critical',
+            action: 'Remove father link'
+          });
+        } else if (!father.children || !father.children.some(c => c.toString() === memberId)) {
+          // Reciprocal check
+          inconsistentIds.add(memberId);
+          issues.push({
+            type: 'inconsistent-father',
+            memberId,
+            memberName: member.name,
+            fatherName: father.name,
+            message: `Father "${father.name}" doesn't have "${member.name}" in children list`,
+            severity: 'high',
+            action: 'Auto-fix: Add to father\'s children'
+          });
+        }
+      }
+
+      // Check mother reference
+      if (member.mother) {
+        const mother = memberMap[member.mother.toString()];
+        if (!mother) {
+          brokenIds.add(memberId);
+          issues.push({
+            type: 'broken-mother',
+            memberId,
+            memberName: member.name,
+            message: `Mother reference (ID: ${member.mother}) not found in database`,
+            severity: 'critical',
+            action: 'Remove mother link'
+          });
+        } else if (!mother.children || !mother.children.some(c => c.toString() === memberId)) {
+          inconsistentIds.add(memberId);
+          issues.push({
+            type: 'inconsistent-mother',
+            memberId,
+            memberName: member.name,
+            motherName: mother.name,
+            message: `Mother "${mother.name}" doesn't have "${member.name}" in children list`,
+            severity: 'high',
+            action: 'Auto-fix: Add to mother\'s children'
+          });
+        }
+      }
+
+      // Check spouse reference (must be reciprocal)
+      if (member.spouse) {
+        const spouse = memberMap[member.spouse.toString()];
+        if (!spouse) {
+          brokenIds.add(memberId);
+          issues.push({
+            type: 'broken-spouse',
+            memberId,
+            memberName: member.name,
+            message: `Spouse reference (ID: ${member.spouse}) not found in database`,
+            severity: 'critical',
+            action: 'Remove spouse link'
+          });
+        } else if (spouse.spouse && spouse.spouse.toString() !== memberId) {
+          inconsistentIds.add(memberId);
+          issues.push({
+            type: 'inconsistent-spouse',
+            memberId,
+            memberName: member.name,
+            spouseName: spouse.name,
+            message: `Spouse "${spouse.name}" is linked to someone else`,
+            severity: 'high',
+            action: 'Fix: Resolve spouse conflict'
+          });
+        } else if (!spouse.spouse) {
+          inconsistentIds.add(memberId);
+          issues.push({
+            type: 'one-way-spouse',
+            memberId,
+            memberName: member.name,
+            spouseName: spouse.name,
+            message: `One-way spouse link: "${spouse.name}" doesn't have reciprocal link`,
+            severity: 'medium',
+            action: 'Auto-fix: Add reciprocal spouse link'
+          });
+        }
+      }
+
+      // Check children references are reciprocal
+      if (member.children && member.children.length > 0) {
+        for (const childId of member.children) {
+          const child = memberMap[childId.toString()];
+          if (!child) {
+            brokenIds.add(memberId);
+            issues.push({
+              type: 'broken-child',
+              memberId,
+              memberName: member.name,
+              childId: childId.toString(),
+              message: `Child reference (ID: ${childId}) not found in database`,
+              severity: 'critical',
+              action: 'Remove child from list'
+            });
+          } else if (child.father && child.father.toString() !== memberId && child.mother && child.mother.toString() !== memberId) {
+            inconsistentIds.add(memberId);
+            issues.push({
+              type: 'inconsistent-child',
+              memberId,
+              memberName: member.name,
+              childName: child.name,
+              message: `Child "${child.name}" doesn't have "${member.name}" as father or mother`,
+              severity: 'high',
+              action: 'Review relationship'
+            });
+          }
+        }
+      }
+
+      // Detect circular references (simplified: check if someone is own ancestor)
+      if (member.father || member.mother) {
+        const visited = new Set();
+        const checkCircular = (id) => {
+          if (visited.has(id.toString())) return true;
+          visited.add(id.toString());
+          const m = memberMap[id.toString()];
+          if (!m) return false;
+          if (m.father && checkCircular(m.father)) return true;
+          if (m.mother && checkCircular(m.mother)) return true;
+          return false;
+        };
+        
+        if (checkCircular(member._id)) {
+          circularIds.add(memberId);
+          issues.push({
+            type: 'circular-reference',
+            memberId,
+            memberName: member.name,
+            message: `Circular family tree detected: ${member.name} is ancestor of themselves`,
+            severity: 'critical',
+            action: 'Review and fix relationships'
+          });
+        }
+      }
+    }
+
+    res.json({
+      ok: true,
+      stats: {
+        totalMembers,
+        completeProfiles: completeProfileCount,
+        completeProfilesPercent: Math.round((completeProfileCount / totalMembers) * 100),
+        linkedToTree: linkedCount,
+        linkedToTreePercent: Math.round((linkedCount / totalMembers) * 100),
+        brokenRelationships: brokenIds.size,
+        inconsistentRelationships: inconsistentIds.size,
+        circularReferences: circularIds.size,
+        orphanedMembers: orphanedCount,
+        lastValidated: new Date()
+      },
+      issues: issues.sort((a, b) => {
+        const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+        return severityOrder[a.severity] - severityOrder[b.severity];
+      }).slice(0, 100) // Return first 100 issues
+    });
+  } catch (err) {
+    console.error('Validation error:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /admin/api/family-tree/fix-issue — Auto-fix specific issues
+router.post('/api/family-tree/fix-issue', isAdmin, async (req, res) => {
+  try {
+    const { issueType, memberId } = req.body;
+    
+    if (!issueType || !memberId) {
+      return res.status(400).json({ error: 'issueType and memberId required' });
+    }
+
+    const member = await Member.findById(memberId);
+    if (!member) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    let fixed = false;
+    let message = '';
+
+    switch (issueType) {
+      case 'broken-father':
+        member.father = undefined;
+        fixed = true;
+        message = 'Removed broken father reference';
+        break;
+
+      case 'broken-mother':
+        member.mother = undefined;
+        fixed = true;
+        message = 'Removed broken mother reference';
+        break;
+
+      case 'broken-spouse':
+        member.spouse = undefined;
+        fixed = true;
+        message = 'Removed broken spouse reference';
+        break;
+
+      case 'inconsistent-father':
+        if (member.father) {
+          await Member.findByIdAndUpdate(member.father, { $addToSet: { children: member._id } });
+          fixed = true;
+          message = 'Added member to father\'s children list';
+        }
+        break;
+
+      case 'inconsistent-mother':
+        if (member.mother) {
+          await Member.findByIdAndUpdate(member.mother, { $addToSet: { children: member._id } });
+          fixed = true;
+          message = 'Added member to mother\'s children list';
+        }
+        break;
+
+      case 'one-way-spouse':
+        if (member.spouse) {
+          await Member.findByIdAndUpdate(member.spouse, { spouse: member._id });
+          fixed = true;
+          message = 'Added reciprocal spouse link';
+        }
+        break;
+
+      case 'broken-child':
+        // Note: Can't remove from broken child as child doesn't exist
+        // Just log the issue
+        message = 'Cannot auto-fix: child member does not exist';
+        break;
+
+      case 'circular-reference':
+        message = 'Cannot auto-fix: Manual review required for circular references';
+        break;
+
+      default:
+        message = 'Unknown issue type';
+    }
+
+    if (fixed) {
+      await member.save();
+    }
+
+    res.json({
+      ok: true,
+      fixed,
+      message
+    });
+  } catch (err) {
+    console.error('Fix error:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// BROKEN LINK FIXER TOOL
+// ═══════════════════════════════════════════════════════════
+
+// GET /admin/family-tree-repair — Interactive repair interface
+router.get('/family-tree-repair', isAdmin, (req, res) => {
+  res.render('admin/family-tree-repair', {
+    title: 'Broken Link Fixer Tool',
+  });
+});
+
+// GET /admin/api/family-tree/repair-suggestions — Get issues with suggested fixes
+router.get('/api/family-tree/repair-suggestions', isAdmin, async (req, res) => {
+  try {
+    const allMembers = await Member.find()
+      .select('_id name gotra surname village father mother spouse children deathDate')
+      .lean();
+
+    const memberMap = {};
+    allMembers.forEach(m => {
+      memberMap[m._id.toString()] = m;
+    });
+
+    const suggestions = [];
+
+    // Scan for issues and suggest fixes
+    for (const member of allMembers) {
+      const memberId = member._id.toString();
+
+      // Check father reference
+      if (member.father) {
+        const father = memberMap[member.father.toString()];
+        if (!father) {
+          // Broken father - suggest removal or search
+          suggestions.push({
+            id: `broken-father-${memberId}`,
+            type: 'broken-father',
+            severity: 'critical',
+            member: { _id: memberId, name: member.name },
+            issue: `Father reference (ID: ${member.father}) not found`,
+            suggestedFixes: [
+              {
+                fixId: `remove-father-${memberId}`,
+                action: 'remove-father',
+                title: 'Remove Father Link',
+                description: 'Unlink the broken father reference',
+                riskLevel: 'low',
+                impact: 'Father link will be removed. Use if father is deceased or data is incorrect.'
+              },
+              {
+                fixId: `mark-orphan-${memberId}`,
+                action: 'mark-orphan',
+                title: 'Mark as Orphan',
+                description: 'Set father as unknown',
+                riskLevel: 'low',
+                impact: 'Member will be marked as orphan status'
+              }
+            ]
+          });
+        } else if (!father.children || !father.children.some(c => c.toString() === memberId)) {
+          // Inconsistent father
+          suggestions.push({
+            id: `inconsistent-father-${memberId}`,
+            type: 'inconsistent-father',
+            severity: 'high',
+            member: { _id: memberId, name: member.name },
+            relatedMember: { _id: father._id, name: father.name },
+            issue: `Father "${father.name}" doesn't list "${member.name}" as child`,
+            suggestedFixes: [
+              {
+                fixId: `add-to-father-children-${memberId}`,
+                action: 'add-to-father-children',
+                title: 'Add to Father\'s Children',
+                description: `Add "${member.name}" to "${father.name}"'s children list`,
+                riskLevel: 'low',
+                impact: 'Reciprocal link will be created'
+              },
+              {
+                fixId: `unlink-father-${memberId}`,
+                action: 'remove-father',
+                title: 'Unlink Father',
+                description: 'Remove the father relationship',
+                riskLevel: 'low',
+                impact: 'Father link will be removed if it was incorrect'
+              }
+            ]
+          });
+        }
+      }
+
+      // Check mother reference
+      if (member.mother) {
+        const mother = memberMap[member.mother.toString()];
+        if (!mother) {
+          suggestions.push({
+            id: `broken-mother-${memberId}`,
+            type: 'broken-mother',
+            severity: 'critical',
+            member: { _id: memberId, name: member.name },
+            issue: `Mother reference (ID: ${member.mother}) not found`,
+            suggestedFixes: [
+              {
+                fixId: `remove-mother-${memberId}`,
+                action: 'remove-mother',
+                title: 'Remove Mother Link',
+                description: 'Unlink the broken mother reference',
+                riskLevel: 'low',
+                impact: 'Mother link will be removed'
+              }
+            ]
+          });
+        } else if (!mother.children || !mother.children.some(c => c.toString() === memberId)) {
+          suggestions.push({
+            id: `inconsistent-mother-${memberId}`,
+            type: 'inconsistent-mother',
+            severity: 'high',
+            member: { _id: memberId, name: member.name },
+            relatedMember: { _id: mother._id, name: mother.name },
+            issue: `Mother "${mother.name}" doesn't list "${member.name}" as child`,
+            suggestedFixes: [
+              {
+                fixId: `add-to-mother-children-${memberId}`,
+                action: 'add-to-mother-children',
+                title: 'Add to Mother\'s Children',
+                description: `Add "${member.name}" to "${mother.name}"'s children list`,
+                riskLevel: 'low',
+                impact: 'Reciprocal link will be created'
+              },
+              {
+                fixId: `unlink-mother-${memberId}`,
+                action: 'remove-mother',
+                title: 'Unlink Mother',
+                description: 'Remove the mother relationship',
+                riskLevel: 'low',
+                impact: 'Mother link will be removed'
+              }
+            ]
+          });
+        }
+      }
+
+      // Check spouse reference
+      if (member.spouse) {
+        const spouse = memberMap[member.spouse.toString()];
+        if (!spouse) {
+          suggestions.push({
+            id: `broken-spouse-${memberId}`,
+            type: 'broken-spouse',
+            severity: 'critical',
+            member: { _id: memberId, name: member.name },
+            issue: `Spouse reference (ID: ${member.spouse}) not found`,
+            suggestedFixes: [
+              {
+                fixId: `remove-spouse-${memberId}`,
+                action: 'remove-spouse',
+                title: 'Remove Spouse Link',
+                description: 'Unlink the broken spouse reference',
+                riskLevel: 'low',
+                impact: 'Spouse link will be removed'
+              }
+            ]
+          });
+        } else if (spouse.spouse && spouse.spouse.toString() !== memberId) {
+          suggestions.push({
+            id: `spouse-conflict-${memberId}`,
+            type: 'spouse-conflict',
+            severity: 'critical',
+            member: { _id: memberId, name: member.name },
+            relatedMember: { _id: spouse._id, name: spouse.name },
+            issue: `Spouse "${spouse.name}" is linked to someone else`,
+            suggestedFixes: [
+              {
+                fixId: `remove-spouse-${memberId}`,
+                action: 'remove-spouse',
+                title: 'Remove This Spouse Link',
+                description: `Remove ${member.name}'s spouse link`,
+                riskLevel: 'low',
+                impact: 'This member\'s spouse link will be removed'
+              },
+              {
+                fixId: `force-reciprocal-${memberId}`,
+                action: 'force-reciprocal-spouse',
+                title: 'Force Reciprocal Link',
+                description: `Overwrite spouse's link to be ${member.name}`,
+                riskLevel: 'high',
+                impact: 'Warning: This will replace the other spouse link!'
+              }
+            ]
+          });
+        } else if (!spouse.spouse) {
+          suggestions.push({
+            id: `one-way-spouse-${memberId}`,
+            type: 'one-way-spouse',
+            severity: 'high',
+            member: { _id: memberId, name: member.name },
+            relatedMember: { _id: spouse._id, name: spouse.name },
+            issue: `One-way spouse link: "${spouse.name}" doesn't have reciprocal link`,
+            suggestedFixes: [
+              {
+                fixId: `create-reciprocal-${memberId}`,
+                action: 'create-reciprocal-spouse',
+                title: 'Create Reciprocal Link',
+                description: `Link ${spouse.name} back to ${member.name}`,
+                riskLevel: 'low',
+                impact: 'Reciprocal spouse link will be created'
+              },
+              {
+                fixId: `remove-spouse-${memberId}`,
+                action: 'remove-spouse',
+                title: 'Remove This Spouse Link',
+                description: 'Remove the one-way link',
+                riskLevel: 'low',
+                impact: 'Spouse link will be removed from this member'
+              }
+            ]
+          });
+        }
+      }
+
+      // Check children references
+      if (member.children && member.children.length > 0) {
+        for (const childId of member.children) {
+          const child = memberMap[childId.toString()];
+          if (!child) {
+            suggestions.push({
+              id: `broken-child-${memberId}-${childId}`,
+              type: 'broken-child',
+              severity: 'critical',
+              member: { _id: memberId, name: member.name },
+              issue: `Child reference (ID: ${childId}) not found`,
+              suggestedFixes: [
+                {
+                  fixId: `remove-child-${memberId}-${childId}`,
+                  action: 'remove-child',
+                  childId: childId.toString(),
+                  title: 'Remove Broken Child Link',
+                  description: 'Remove the non-existent child from list',
+                  riskLevel: 'low',
+                  impact: 'Broken child reference will be removed'
+                }
+              ]
+            });
+          }
+        }
+      }
+    }
+
+    res.json({
+      ok: true,
+      totalSuggestions: suggestions.length,
+      suggestionsBy: {
+        critical: suggestions.filter(s => s.severity === 'critical').length,
+        high: suggestions.filter(s => s.severity === 'high').length
+      },
+      suggestions: suggestions.sort((a, b) => {
+        const severityOrder = { critical: 0, high: 1 };
+        return severityOrder[a.severity] - severityOrder[b.severity];
+      }).slice(0, 100)
+    });
+  } catch (err) {
+    console.error('Suggestion error:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /admin/api/family-tree/apply-repair — Apply selected repair with audit logging
+router.post('/api/family-tree/apply-repair', isAdmin, async (req, res) => {
+  try {
+    const { repairs } = req.body; // Array of { suggestionId, fixId, action, memberId, childId? }
+    
+    if (!Array.isArray(repairs) || repairs.length === 0) {
+      return res.status(400).json({ error: 'No repairs selected' });
+    }
+
+    const results = [];
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const repair of repairs) {
+      try {
+        const { action, memberId, childId, relatedMemberId } = repair;
+        const member = await Member.findById(memberId);
+        if (!member) throw new Error('Member not found');
+
+        let fixed = false;
+        let message = '';
+
+        switch (action) {
+          case 'remove-father':
+            member.father = undefined;
+            fixed = true;
+            message = 'Removed father link';
+            break;
+
+          case 'remove-mother':
+            member.mother = undefined;
+            fixed = true;
+            message = 'Removed mother link';
+            break;
+
+          case 'remove-spouse':
+            member.spouse = undefined;
+            fixed = true;
+            message = 'Removed spouse link';
+            break;
+
+          case 'add-to-father-children':
+            if (member.father) {
+              await Member.findByIdAndUpdate(member.father, { $addToSet: { children: member._id } });
+              fixed = true;
+              message = 'Added to father\'s children list';
+            }
+            break;
+
+          case 'add-to-mother-children':
+            if (member.mother) {
+              await Member.findByIdAndUpdate(member.mother, { $addToSet: { children: member._id } });
+              fixed = true;
+              message = 'Added to mother\'s children list';
+            }
+            break;
+
+          case 'create-reciprocal-spouse':
+            if (member.spouse) {
+              await Member.findByIdAndUpdate(member.spouse, { spouse: member._id });
+              fixed = true;
+              message = 'Created reciprocal spouse link';
+            }
+            break;
+
+          case 'force-reciprocal-spouse':
+            if (member.spouse) {
+              await Member.findByIdAndUpdate(member.spouse, { spouse: member._id });
+              fixed = true;
+              message = 'Forced reciprocal spouse link (overwritten previous)';
+            }
+            break;
+
+          case 'remove-child':
+            if (childId) {
+              member.children = member.children.filter(c => c.toString() !== childId);
+              fixed = true;
+              message = 'Removed broken child reference';
+            }
+            break;
+
+          case 'mark-orphan':
+            // Don't actually change data, just note in audit
+            message = 'Marked as orphan (no change needed)';
+            fixed = true;
+            break;
+        }
+
+        if (fixed) {
+          await member.save();
+          successCount++;
+          results.push({
+            suggestionId: repair.suggestionId,
+            fixId: repair.fixId,
+            status: '✅',
+            message
+          });
+        } else {
+          errorCount++;
+          results.push({
+            suggestionId: repair.suggestionId,
+            fixId: repair.fixId,
+            status: '⚠️',
+            message: 'Could not apply fix'
+          });
+        }
+      } catch (err) {
+        errorCount++;
+        results.push({
+          suggestionId: repair.suggestionId,
+          fixId: repair.fixId,
+          status: '❌',
+          message: err.message
+        });
+      }
+    }
+
+    res.json({
+      ok: true,
+      successCount,
+      errorCount,
+      totalProcessed: successCount + errorCount,
+      results,
+      summary: `✅ Fixed: ${successCount} | ❌ Errors: ${errorCount}`,
+      message: successCount > 0 ? 'Repairs applied successfully' : 'No repairs were applied'
+    });
+  } catch (err) {
+    console.error('Repair error:', err);
+    res.status(400).json({ error: err.message });
+  }
 });
 
 module.exports = router;

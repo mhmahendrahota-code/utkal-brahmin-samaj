@@ -1,0 +1,542 @@
+<%- include('./partials/admin-header') %>
+
+<div class="container mx-auto px-4 py-6">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800">Family Tree Validation Dashboard</h1>
+    <p class="text-gray-600 mt-2">Monitor health of family relationships and detect issues</p>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="text-center py-8">
+    <div class="inline-block">
+      <div class="animate-spin text-4xl mb-4">⏳</div>
+      <p class="text-lg font-semibold text-gray-800">Scanning family tree...</p>
+      <p class="text-sm text-gray-600 mt-2">Checking all relationships for issues</p>
+    </div>
+  </div>
+
+  <!-- Main Dashboard (Hidden initially) -->
+  <div id="dashboard" class="hidden space-y-6">
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white rounded-lg shadow p-5 border-l-4 border-blue-500">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600">Total Members</p>
+            <p class="text-3xl font-bold text-blue-600" id="statTotalMembers">0</p>
+          </div>
+          <div class="text-4xl opacity-30">👥</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-5 border-l-4 border-green-500">
+        <div>
+          <p class="text-sm text-gray-600">Complete Profiles</p>
+          <div class="mt-2">
+            <p class="text-3xl font-bold text-green-600"><span id="statCompleteProfiles">0</span>/<span id="statTotalForComplete">0</span></p>
+            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div id="completeProfileBar" class="bg-green-500 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1"><span id="statCompleteProfilesPercent">0</span>%</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-5 border-l-4 border-purple-500">
+        <div>
+          <p class="text-sm text-gray-600">Linked to Tree</p>
+          <div class="mt-2">
+            <p class="text-3xl font-bold text-purple-600"><span id="statLinkedMembers">0</span>/<span id="statTotalForLinked">0</span></p>
+            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div id="linkedMembersBar" class="bg-purple-500 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1"><span id="statLinkedMembersPercent">0</span>%</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-5 border-l-4 border-orange-500">
+        <div>
+          <p class="text-sm text-gray-600">Members Orphaned</p>
+          <div class="mt-2">
+            <p class="text-3xl font-bold text-orange-600" id="statOrphaned">0</p>
+            <p class="text-xs text-gray-500 mt-2">(No father, mother, or spouse)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Health Indicators -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white rounded-lg shadow p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-gray-800">Broken Relationships</h3>
+          <span class="text-2xl">🔗</span>
+        </div>
+        <p class="text-3xl font-bold" id="statBrokenRelationships">0</p>
+        <p class="text-xs text-gray-600 mt-2">References to non-existent members</p>
+        <div class="mt-3">
+          <button type="button" class="text-blue-600 hover:text-blue-800 font-semibold text-sm" onclick="scrollToIssue('broken')">
+            View Details →
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-gray-800">Inconsistent Links</h3>
+          <span class="text-2xl">⚠️</span>
+        </div>
+        <p class="text-3xl font-bold" id="statInconsistentRelationships">0</p>
+        <p class="text-xs text-gray-600 mt-2">Non-reciprocal relationships</p>
+        <div class="mt-3">
+          <button type="button" class="text-blue-600 hover:text-blue-800 font-semibold text-sm" onclick="scrollToIssue('inconsistent')">
+            View Details →
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-gray-800">Circular References</h3>
+          <span class="text-2xl">♻️</span>
+        </div>
+        <p class="text-3xl font-bold" id="statCircularReferences">0</p>
+        <p class="text-xs text-gray-600 mt-2">Someone is their own ancestor</p>
+        <div class="mt-3">
+          <button type="button" class="text-blue-600 hover:text-blue-800 font-semibold text-sm" onclick="scrollToIssue('circular')">
+            View Details →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Health Summary -->
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow p-6 border border-blue-200">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">📊 Relationship Health Summary</h2>
+      
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 flex-1">
+            <span class="text-2xl">✅</span>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800">Healthy Relationships</p>
+              <p class="text-sm text-gray-600">Members with valid, reciprocal links</p>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-green-600" id="healthyCount">0</p>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 flex-1">
+            <span class="text-2xl">⚠️</span>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800">Needs Attention</p>
+              <p class="text-sm text-gray-600">Issues found that need review/fixing</p>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-yellow-600" id="needsAttentionCount">0</p>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 flex-1">
+            <span class="text-2xl">❌</span>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800">Critical Issues</p>
+              <p class="text-sm text-gray-600">Broken links that must be fixed</p>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-red-600" id="criticalCount">0</p>
+        </div>
+      </div>
+
+      <!-- Overall Score -->
+      <div class="mt-6 p-4 bg-white rounded border border-blue-200">
+        <div class="text-center">
+          <p class="text-sm text-gray-600 mb-2">Overall Data Quality Score</p>
+          <div class="flex items-center justify-center gap-4">
+            <div class="text-5xl font-bold" id="overallScore">0</div>
+            <div class="text-right">
+              <div id="scoreRating" class="text-2xl">⭐</div>
+              <p class="text-sm text-gray-600 mt-1" id="scoreLabel">Excellent</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issues List -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-800">🔍 Detected Issues</h2>
+        <div class="text-sm text-gray-600">
+          <span id="totalIssuesCount">0</span> issues found
+        </div>
+      </div>
+
+      <!-- Filter Buttons -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button type="button" class="filter-btn active px-3 py-1 rounded-full text-sm font-semibold border-2" data-filter="all">
+          All Issues
+        </button>
+        <button type="button" class="filter-btn px-3 py-1 rounded-full text-sm font-semibold border-2 border-red-400 text-red-600" data-filter="critical">
+          🔴 Critical
+        </button>
+        <button type="button" class="filter-btn px-3 py-1 rounded-full text-sm font-semibold border-2 border-yellow-400 text-yellow-600" data-filter="high">
+          🟡 High
+        </button>
+        <button type="button" class="filter-btn px-3 py-1 rounded-full text-sm font-semibold border-2 border-orange-400 text-orange-600" data-filter="medium">
+          🟠 Medium
+        </button>
+        <button type="button" class="filter-btn px-3 py-1 rounded-full text-sm font-semibold border-2 border-blue-400 text-blue-600" data-filter="low">
+          🔵 Low
+        </button>
+      </div>
+
+      <!-- Issues Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b-2 border-gray-200">
+            <tr>
+              <th class="px-4 py-2 text-left">Status</th>
+              <th class="px-4 py-2 text-left">Type</th>
+              <th class="px-4 py-2 text-left">Member</th>
+              <th class="px-4 py-2 text-left">Issue</th>
+              <th class="px-4 py-2 text-left">Action</th>
+            </tr>
+          </thead>
+          <tbody id="issuesTableBody" class="divide-y divide-gray-200">
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- No Issues -->
+      <div id="noIssuesMessage" class="text-center py-8 text-gray-600" style="display: none;">
+        <div class="text-4xl mb-2">✨</div>
+        <p class="font-semibold">All relationships are healthy!</p>
+        <p class="text-sm">No issues detected in the family tree</p>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex gap-3">
+      <button type="button" id="refreshBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded font-semibold">
+        🔄 Refresh Report
+      </button>
+      <button type="button" id="fixAllBtn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-semibold">
+        🛠️ Auto-Fix All
+      </button>
+      <a href="/admin/members" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded font-semibold inline-block">
+        👥 View All Members
+      </a>
+    </div>
+
+    <!-- Last Validated -->
+    <div class="text-center text-sm text-gray-500 mt-4">
+      Last validated: <span id="lastValidated">-</span>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm">
+    <h3 class="text-lg font-bold text-gray-800 mb-4" id="confirmTitle"></h3>
+    <p class="text-gray-600 mb-6" id="confirmMessage"></p>
+    <div class="flex gap-3">
+      <button type="button" id="confirmYes" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-semibold">
+        Yes, Proceed
+      </button>
+      <button type="button" id="confirmNo" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded font-semibold">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let validationData = null;
+let currentFilter = 'all';
+
+// Load validation report on page load
+document.addEventListener('DOMContentLoaded', () => {
+  loadValidationReport();
+  
+  // Event listeners
+  document.getElementById('refreshBtn').addEventListener('click', loadValidationReport);
+  document.getElementById('fixAllBtn').addEventListener('click', resetFixAllFn);
+  
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active', 'bg-gray-100', 'border-gray-400', 'text-gray-800'));
+      e.target.classList.add('active', 'bg-gray-100', 'border-gray-400', 'text-gray-800');
+      currentFilter = e.target.dataset.filter;
+      renderIssues();
+    });
+  });
+});
+
+// Load validation report from API
+async function loadValidationReport() {
+  document.getElementById('loadingState').classList.remove('hidden');
+  document.getElementById('dashboard').classList.add('hidden');
+  
+  try {
+    const response = await fetch('/admin/api/family-tree/validation-report');
+    const data = await response.json();
+    
+    if (!response.ok) throw new Error(data.error);
+    
+    validationData = data;
+    renderDashboard();
+    
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+  } catch (err) {
+    alert('Error loading validation report: ' + err.message);
+    console.error(err);
+    document.getElementById('loadingState').classList.add('hidden');
+  }
+}
+
+// Render dashboard with data
+function renderDashboard() {
+  const stats = validationData.stats;
+  
+  // Update stats cards
+  document.getElementById('statTotalMembers').textContent = stats.totalMembers;
+  document.getElementById('statCompleteProfiles').textContent = stats.completeProfiles;
+  document.getElementById('statTotalForComplete').textContent = stats.totalMembers;
+  document.getElementById('statCompleteProfilesPercent').textContent = stats.completeProfilesPercent;
+  document.getElementById('completeProfileBar').style.width = stats.completeProfilesPercent + '%';
+  
+  document.getElementById('statLinkedMembers').textContent = stats.linkedToTree;
+  document.getElementById('statTotalForLinked').textContent = stats.totalMembers;
+  document.getElementById('statLinkedMembersPercent').textContent = stats.linkedToTreePercent;
+  document.getElementById('linkedMembersBar').style.width = stats.linkedToTreePercent + '%';
+  
+  document.getElementById('statOrphaned').textContent = stats.orphanedMembers;
+  
+  document.getElementById('statBrokenRelationships').textContent = stats.brokenRelationships;
+  document.getElementById('statInconsistentRelationships').textContent = stats.inconsistentRelationships;
+  document.getElementById('statCircularReferences').textContent = stats.circularReferences;
+  
+  // Calculate counts
+  const healthyCount = stats.linkedToTree;
+  const criticalCount = stats.brokenRelationships + stats.circularReferences;
+  const needsAttentionCount = stats.inconsistentRelationships;
+  
+  document.getElementById('healthyCount').textContent = healthyCount;
+  document.getElementById('criticalCount').textContent = criticalCount;
+  document.getElementById('needsAttentionCount').textContent = needsAttentionCount;
+  
+  // Calculate overall score (0-100)
+  const completenessScore = stats.completeProfilesPercent;
+  const linkageScore = stats.linkedToTreePercent;
+  const integrityPenalty = (criticalCount / stats.totalMembers) * 50;
+  const overallScore = Math.max(0, Math.round((completenessScore * 0.4 + linkageScore * 0.4 + (100 - integrityPenalty) * 0.2)));
+  
+  document.getElementById('overallScore').textContent = overallScore;
+  
+  if (overallScore >= 90) {
+    document.getElementById('scoreRating').textContent = '⭐⭐⭐⭐⭐';
+    document.getElementById('scoreLabel').textContent = 'Excellent';
+  } else if (overallScore >= 75) {
+    document.getElementById('scoreRating').textContent = '⭐⭐⭐⭐';
+    document.getElementById('scoreLabel').textContent = 'Good';
+  } else if (overallScore >= 60) {
+    document.getElementById('scoreRating').textContent = '⭐⭐⭐';
+    document.getElementById('scoreLabel').textContent = 'Fair';
+  } else {
+    document.getElementById('scoreRating').textContent = '⭐⭐';
+    document.getElementById('scoreLabel').textContent = 'Poor';
+  }
+  
+  // Update issues count
+  document.getElementById('totalIssuesCount').textContent = validationData.issues.length;
+  
+  // Render issues
+  renderIssues();
+  
+  // Update last validated
+  const now = new Date();
+  document.getElementById('lastValidated').textContent = now.toLocaleString();
+  
+  // Show/hide no issues message
+  if (validationData.issues.length === 0) {
+    document.getElementById('noIssuesMessage').style.display = 'block';
+    document.getElementById('issuesTableBody').parentElement.style.display = 'none';
+  } else {
+    document.getElementById('noIssuesMessage').style.display = 'none';
+    document.getElementById('issuesTableBody').parentElement.style.display = 'block';
+  }
+}
+
+// Render issues with filtering
+function renderIssues() {
+  const tbody = document.getElementById('issuesTableBody');
+  tbody.innerHTML = '';
+  
+  let filtered = validationData.issues;
+  if (currentFilter !== 'all') {
+    filtered = validationData.issues.filter(i => i.severity === currentFilter);
+  }
+  
+  if (filtered.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="5" class="px-4 py-4 text-center text-gray-600">
+        No issues in this category
+      </td>
+    `;
+    tbody.appendChild(tr);
+    return;
+  }
+  
+  filtered.forEach((issue, idx) => {
+    const tr = document.createElement('tr');
+    const severityEmojis = {
+      critical: '🔴',
+      high: '🟡',
+      medium: '🟠',
+      low: '🔵'
+    };
+    const severityColors = {
+      critical: 'bg-red-100 text-red-800',
+      high: 'bg-yellow-100 text-yellow-800',
+      medium: 'bg-orange-100 text-orange-800',
+      low: 'bg-blue-100 text-blue-800'
+    };
+    
+    const typeDisplay = issue.type.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
+    const statusEmoji = severityEmojis[issue.severity];
+    
+    let actionBtn = '';
+    if (['broken-father', 'broken-mother', 'broken-spouse', 'inconsistent-father', 'inconsistent-mother', 'one-way-spouse'].includes(issue.type)) {
+      actionBtn = `
+        <button type="button" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold" onclick="fixIssue('${issue.type}', '${issue.memberId}')">
+          Auto-Fix
+        </button>
+      `;
+    }
+    
+    tr.innerHTML = `
+      <td class="px-4 py-3 font-semibold">${statusEmoji}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-1 rounded text-xs font-semibold ${severityColors[issue.severity]}">
+          ${issue.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+        </span>
+      </td>
+      <td class="px-4 py-3 font-semibold">${issue.memberName || issue.memberId}</td>
+      <td class="px-4 py-3 text-gray-700">${issue.message}</td>
+      <td class="px-4 py-3">
+        ${actionBtn}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Fix individual issue
+async function fixIssue(issueType, memberId) {
+  showConfirm(
+    `Fix Issue?`,
+    `This will attempt to automatically fix the "${issueType}" issue.`,
+    async () => {
+      try {
+        const response = await fetch('/admin/api/family-tree/fix-issue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ issueType, memberId })
+        });
+        
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        
+        if (result.fixed) {
+          alert('✅ ' + result.message);
+          loadValidationReport(); // Reload report
+        } else {
+          alert('ℹ️ ' + result.message);
+        }
+      } catch (err) {
+        alert('❌ Error: ' + err.message);
+        console.error(err);
+      }
+    }
+  );
+}
+
+// Fix all auto-fixable issues
+function resetFixAllFn() {
+  const autoFixableIssues = validationData.issues.filter(i => 
+    ['broken-father', 'broken-mother', 'broken-spouse', 'inconsistent-father', 'inconsistent-mother', 'one-way-spouse'].includes(i.type)
+  );
+  
+  if (autoFixableIssues.length === 0) {
+    alert('ℹ️ No auto-fixable issues found');
+    return;
+  }
+  
+  showConfirm(
+    '🛠️ Auto-Fix All Issues?',
+    `This will automatically fix ${autoFixableIssues.length} issues. This action can be undone by reverting member changes.`,
+    async () => {
+      let fixed = 0;
+      let errors = 0;
+      
+      for (const issue of autoFixableIssues) {
+        try {
+          const response = await fetch('/admin/api/family-tree/fix-issue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ issueType: issue.type, memberId: issue.memberId })
+          });
+          
+          const result = await response.json();
+          if (result.fixed) {
+            fixed++;
+          } else {
+            errors++;
+          }
+        } catch (err) {
+          errors++;
+        }
+      }
+      
+      alert(`✅ Fixed: ${fixed} issues\n⚠️ Errors: ${errors} issues\n\nRefreshing report...`);
+      loadValidationReport();
+    }
+  );
+}
+
+// Scroll to issue type
+function scrollToIssue(type) {
+  // Filter to show only that type
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active', 'bg-gray-100', 'border-gray-400', 'text-gray-800'));
+  document.querySelector(`[data-filter="${type}"]`).classList.add('active', 'bg-gray-100', 'border-gray-400', 'text-gray-800');
+  renderIssues();
+  document.getElementById('issuesTableBody').parentElement.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Show confirmation modal
+function showConfirm(title, message, onYes) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').textContent = message;
+  document.getElementById('confirmModal').classList.remove('hidden');
+  
+  document.getElementById('confirmYes').onclick = () => {
+    onYes();
+    document.getElementById('confirmModal').classList.add('hidden');
+  };
+  
+  document.getElementById('confirmNo').onclick = () => {
+    document.getElementById('confirmModal').classList.add('hidden');
+  };
+}
+</script>
+
+<%- include('./partials/admin-footer') %>

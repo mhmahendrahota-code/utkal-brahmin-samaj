@@ -45,26 +45,44 @@
     <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden relative" style="height: 750px;">
       <div id="tree" style="width: 100%; height: 100%;"></div>
       
+      <!-- Minimap Overlay -->
+      <div class="absolute bottom-6 left-6 w-48 h-36 bg-white/95 backdrop-blur-md rounded-lg shadow-xl border border-gray-200 hidden sm:flex flex-col overflow-hidden z-[40]">
+        <div class="bg-gray-100 text-[10px] font-bold text-gray-500 text-center py-1.5 uppercase tracking-widest border-b border-gray-200">मिनीमैप (Minimap)</div>
+        <div class="flex-grow relative bg-slate-50" id="minimap-container">
+            <svg id="minimap-svg" width="100%" height="100%"></svg>
+        </div>
+      </div>
+
       <!-- Floating Legend -->
-      <div class="absolute bottom-6 right-6 bg-white/95 backdrop-blur-md p-5 rounded-xl shadow-xl border border-gray-200 flex flex-col gap-3 z-10 hidden sm:flex pointer-events-none">
+      <div class="absolute bottom-6 right-6 bg-white/95 backdrop-blur-md p-5 rounded-xl shadow-xl border border-gray-200 flex flex-col gap-3 z-10 hidden sm:flex pointer-events-none text-xs">
         <h4 class="font-bold text-sm text-gray-800 border-b pb-2 mb-1 uppercase tracking-wider">संकेत (Legend)</h4>
-        <div class="flex items-center gap-3 text-sm text-gray-600 font-medium">
-          <div class="w-5 h-5 rounded bg-white border border-gray-300 shadow-sm flex overflow-hidden">
-             <div class="w-1.5 h-full bg-saffron-500"></div>
-          </div> सामान्य सदस्य (Member)
+        
+        <div class="space-y-1.5">
+          <p class="font-bold text-gray-700 text-[11px]">📊 पीढ़ी (Generation)</p>
+          <div class="pl-2 space-y-1 text-[11px] text-gray-600">
+            <p class=""><strong>+N:</strong> पूर्वज (Ancestors)</p>
+            <p class=""><strong>0:</strong> आप/समकक्ष (You/Peers)</p>
+            <p class=""><strong>-N:</strong> वंशज (Descendants)</p>
+          </div>
         </div>
-        <div class="flex items-center gap-3 text-sm text-gray-600 font-medium">
-          <div class="w-5 h-5 rounded bg-orange-50 border border-orange-200 shadow-sm flex overflow-hidden">
-            <div class="w-1.5 h-full bg-orange-500"></div>
-          </div> स्वयं (Current Viewer)
+
+        <div class="border-t pt-2 space-y-1.5">
+          <p class="font-bold text-gray-700 text-[11px]">🎨 सदस्य प्रकार (Member Type)</p>
+          <div class="flex items-center gap-2 text-xs text-gray-600">
+            <div class="w-4 h-4 rounded bg-white border border-gray-300 shadow-sm"></div> सामान्य
+          </div>
+          <div class="flex items-center gap-2 text-xs text-gray-600">
+            <div class="w-4 h-4 rounded bg-orange-50 border border-orange-200 shadow-sm"></div> आप
+          </div>
+          <div class="flex items-center gap-2 text-xs text-gray-600">
+            <div class="w-4 h-4 rounded bg-slate-50 border border-slate-200 shadow-sm"></div> स्वर्गीय
+          </div>
         </div>
-        <div class="flex items-center gap-3 text-sm text-gray-600 font-medium">
-          <div class="w-5 h-5 rounded bg-slate-50 border border-slate-200 shadow-sm flex overflow-hidden">
-             <div class="w-1.5 h-full bg-slate-400"></div>
-          </div> स्वर्गीय (Late/Deceased)
-        </div>
-        <div class="flex items-center gap-3 text-sm text-gray-600 font-medium mt-1">
-          <div class="w-6 border-t-[2.5px] border-slate-400 rounded"></div> वंशावली संबंध (Lineage)
+
+        <div class="border-t pt-2">
+          <p class="flex items-center gap-1.5 text-xs text-gray-600">
+            <div class="w-4 border-t-[2px] border-slate-400 rounded"></div> रिश्ता
+          </p>
         </div>
       </div>
 
@@ -89,7 +107,63 @@
   </div>
 </section>
 
-<!-- Local D3.js for reliable offline use -->
+<!-- Sidebar Profile Drawer -->
+<div id="drawer-backdrop" class="fixed inset-0 bg-black/50 z-[90] hidden transition-opacity" onclick="closeDrawer()"></div>
+<div id="profile-drawer" class="fixed top-0 right-0 w-full sm:w-96 h-screen bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-[100] flex flex-col overflow-y-auto">
+  <div class="px-6 py-4 bg-saffron-600 text-white flex justify-between items-center sticky top-0 z-10 shadow-md">
+    <h2 class="text-xl font-bold">प्रोफाइल (Profile)</h2>
+    <button onclick="closeDrawer()" class="text-white hover:text-saffron-200 focus:outline-none transition-colors">
+      <i class="fas fa-times text-2xl"></i>
+    </button>
+  </div>
+  <div class="p-6 relative flex-grow">
+    <div class="flex flex-col items-center mb-6">
+      <img id="drawer-image" src="" alt="Profile Image" class="w-32 h-32 rounded-full border-4 border-saffron-100 shadow-md object-cover mb-4 bg-gray-50">
+      <h3 id="drawer-name" class="text-2xl font-bold text-gray-800 text-center leading-tight"></h3>
+      <p id="drawer-surname" class="text-xl font-bold text-saffron-600 text-center mt-1"></p>
+      <p id="drawer-title" class="text-gray-500 font-medium text-center mt-1"></p>
+    </div>
+    
+    <div class="space-y-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
+      <div class="flex flex-col gap-1">
+        <p class="text-[10px] text-gray-400 uppercase font-black tracking-widest flex items-center gap-2"><i class="fas fa-sitemap text-saffron-500 w-3"></i> पीढ़ी (Generation)</p>
+        <p id="drawer-generation" class="text-gray-800 font-semibold pl-5 text-sm">-</p>
+      </div>
+      <div class="flex flex-col gap-1">
+        <p class="text-[10px] text-gray-400 uppercase font-black tracking-widest flex items-center gap-2"><i class="fas fa-map-marker-alt text-saffron-500 w-3"></i> मूल गाँव (Village)</p>
+        <p id="drawer-village" class="text-gray-800 font-semibold pl-5 text-sm"></p>
+      </div>
+      <div class="flex flex-col gap-1">
+        <p class="text-[10px] text-gray-400 uppercase font-black tracking-widest flex items-center gap-2"><i class="fas fa-om text-saffron-500 w-3"></i> गोत्र (Gotra)</p>
+        <p id="drawer-gotra" class="text-gray-800 font-semibold pl-5 text-sm"></p>
+      </div>
+      <div class="flex flex-col gap-1">
+        <p class="text-[10px] text-gray-400 uppercase font-black tracking-widest flex items-center gap-2"><i class="fas fa-phone-alt text-saffron-500 w-3"></i> संपर्क (Contact)</p>
+        <p id="drawer-contact" class="text-gray-800 font-semibold pl-5 text-sm"></p>
+      </div>
+      <div class="flex flex-col gap-1">
+        <p class="text-[10px] text-gray-400 uppercase font-black tracking-widest flex items-center gap-2"><i class="fas fa-envelope text-saffron-500 w-3"></i> ईमेल (Email)</p>
+        <p id="drawer-email" class="text-gray-800 font-semibold pl-5 text-sm"></p>
+      </div>
+      <div class="flex flex-col gap-1">
+        <p class="text-[10px] text-gray-400 uppercase font-black tracking-widest flex items-center gap-2"><i class="fas fa-home text-saffron-500 w-3"></i> पता (Address)</p>
+        <p id="drawer-address" class="text-gray-800 font-semibold pl-5 text-sm"></p>
+      </div>
+      <div id="drawer-death-container" class="flex flex-col gap-1 hidden pt-3 border-t border-gray-200 mt-2">
+        <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest flex items-center gap-2"><i class="fas fa-dove text-slate-400 w-3"></i> स्वर्गवास (Deceased Date)</p>
+        <p id="drawer-death" class="text-slate-600 font-semibold pl-5 text-sm"></p>
+      </div>
+    </div>
+    
+    <div class="mt-8 pb-4">
+      <a id="drawer-link" href="#" class="flex items-center justify-center gap-2 w-full text-center bg-white border-2 border-saffron-600 hover:bg-saffron-50 text-saffron-700 font-bold py-3 px-4 rounded-xl transition-all shadow-sm">
+        <i class="fas fa-external-link-alt"></i> पूरा प्रोफाइल देखें (View Profile)
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Local D3.js -->
 <script src="/js/d3.v7.min.js"></script>
 
 <style>
@@ -145,10 +219,98 @@
   .badge-current { fill: #fff7ed; stroke: #fdba74; rx: 4px; }
   .badge-current-text { fill: #ea580c; font-size: 10px; font-weight: 800; text-anchor: middle;}
   
+  /* Generation Badge Styles */
+  .badge-generation { fill: #e0e7ff; stroke: #818cf8; rx: 4px; stroke-width: 1.5px; }
+  .badge-generation-ancestor { fill: #fce7f3; stroke: #f472b6; }
+  .badge-generation-you { fill: #fef3c7; stroke: #fbbf24; }
+  .badge-generation-descendant { fill: #d1fae5; stroke: #6ee7b7; }
+  .badge-generation-text { font-size: 9px; font-weight: 800; text-anchor: middle; font-family: 'Courier New', monospace; }
+  .badge-generation-ancestor-text { fill: #be185d; }
+  .badge-generation-you-text { fill: #b45309; }
+  .badge-generation-descendant-text { fill: #047857; }
+  
   .spouse-line { fill: none; stroke: #f97316; stroke-width: 2.5px; stroke-dasharray: 6,4; opacity: 0.8; }
+  
+  /* Advanced Interaction Styles */
+  .layer-label { fill: #94a3b8; font-size: 11px; font-weight: 800; text-anchor: end; letter-spacing: 2px; text-transform: uppercase; padding: 4px; }
+  .expander { stroke-width: 2px; stroke: #94a3b8; fill: #ffffff; cursor: pointer; transition: all 0.2s; filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.1)); }
+  .node:hover .expander { stroke: #ea580c; fill: #fff7ed; }
+  .expander-text { fill: #64748b; font-size: 16px; font-weight: 900; pointer-events: none; text-anchor: middle; }
+  .node:hover .expander-text { fill: #ea580c; }
+  
+  .minimap-bg { fill: #f8fafc; }
+  .minimap-node { fill: #94a3b8; }
+  .minimap-viewport { fill: #FF9933; fill-opacity: 0.15; stroke: #FF9933; stroke-width: 1.5px; cursor: move; }
+  
+  /* Manual Drawer Utilities (Fallback for Tailwind) */
+  #profile-drawer { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .translate-x-full { transform: translateX(100%); }
+  .translate-x-0 { transform: translateX(0) !important; }
+  .hidden { display: none !important; }
 </style>
 
 <script>
+  // Drawer Toggling Logic
+  function openDrawer(data) {
+    if (!data || data.id === 'virtual-root') return;
+    const backdrop = document.getElementById('drawer-backdrop');
+    const drawer = document.getElementById('profile-drawer');
+    
+    backdrop.classList.remove('hidden');
+    drawer.classList.remove('translate-x-full');
+    drawer.classList.add('translate-x-0');
+    
+    document.getElementById('drawer-image').src = data.image || '/images/default-avatar.png';
+    // If the name already contains the surname (from our API update), we might want to split it or use the separate surname field
+    document.getElementById('drawer-name').textContent = data.name || 'Unknown';
+    document.getElementById('drawer-surname').textContent = data.surname || '';
+    document.getElementById('drawer-title').textContent = data.title || '';
+    document.getElementById('drawer-village').textContent = data.village || 'N/A';
+    document.getElementById('drawer-gotra').textContent = data.gotra || 'N/A';
+    document.getElementById('drawer-contact').textContent = data.contactNumber || 'N/A';
+    document.getElementById('drawer-email').textContent = data.email || 'N/A';
+    document.getElementById('drawer-address').textContent = data.address || 'N/A';
+    
+    // NEW: Show Generation Information
+    const generationContainer = document.getElementById('drawer-generation-container');
+    if (generationContainer) {
+      if (data.generation !== undefined && data.generation !== null) {
+        let genLabel = '';
+        if (data.generation > 0) {
+          genLabel = `पीढ़ी (Gen) +${data.generation} - पूर्वज (Ancestor)`;
+        } else if (data.generation === 0) {
+          genLabel = `पीढ़ी (Gen) 0 - आप/समकक्ष (You/Peer)`;
+        } else {
+          genLabel = `पीढ़ी (Gen) ${data.generation} - वंशज (Descendant)`;
+        }
+        document.getElementById('drawer-generation').textContent = genLabel;
+        generationContainer.classList.remove('hidden');
+      } else {
+        generationContainer.classList.add('hidden');
+      }
+    }
+    
+    if (data.tags && data.tags.includes('deceased') && data.deathDate) {
+      document.getElementById('drawer-death-container').classList.remove('hidden');
+      document.getElementById('drawer-death').textContent = data.deathDate;
+    } else {
+      document.getElementById('drawer-death-container').classList.add('hidden');
+    }
+    
+    document.getElementById('drawer-link').href = '/members/' + data.id;
+  }
+
+  function closeDrawer() {
+    const drawer = document.getElementById('profile-drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+    
+    drawer.classList.remove('translate-x-0');
+    drawer.classList.add('translate-x-full');
+    setTimeout(() => {
+      backdrop.classList.add('hidden');
+    }, 300);
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     const memberId = '<%= memberId %>';
     const loading = document.getElementById('loading');
@@ -163,6 +325,14 @@
     const nodeHeight = 100;
     const verticalGap = 120;
     const horizontalGap = 80;
+    const duration = 600;
+    let i = 0;
+    
+    // GENERATION COLORS
+    const GENERATION_COLORS = ["#1e293b", "#4338ca", "#0369a1", "#047857", "#d97706", "#be123c", "#7e22ce", "#c026d3", "#db2777"];
+    function getGenColor(depth) {
+      return GENERATION_COLORS[Math.min(depth, GENERATION_COLORS.length - 1)];
+    }
 
     const svg = d3.select("#tree")
       .append("svg")
@@ -171,14 +341,32 @@
 
     const g = svg.append("g");
 
-    // Zoom behavior
+    // Zoom and Minimap Setup
+    const minimapSvg = d3.select("#minimap-svg");
+    const minimapG = minimapSvg.append("g");
+    const minimapViewport = minimapSvg.append("rect").attr("class", "minimap-viewport");
+    let currentZoomTransform = d3.zoomIdentity;
+
     const zoom = d3.zoom()
       .scaleExtent([0.1, 3])
       .on("zoom", (event) => {
-        g.attr("transform", event.transform);
+        currentZoomTransform = event.transform;
+        g.attr("transform", currentZoomTransform);
+        updateMinimapViewport();
       });
 
     svg.call(zoom);
+    
+    // Map Minimap drag back to main zoom
+    const drag = d3.drag().on("drag", (event) => {
+       const layout = minimapSvg.node().__layout;
+       if(!layout) return;
+       const t = currentZoomTransform;
+       const dx = -event.dx / layout.scale * t.k;
+       const dy = -event.dy / layout.scale * t.k;
+       svg.call(zoom.translateBy, dx / t.k, dy / t.k);
+    });
+    minimapViewport.call(drag);
 
     // Server-embedded tree data for instant first load (community tree only)
     const INLINE_TREE_DATA = <%- typeof inlineTreeData !== 'undefined' ? inlineTreeData : 'null' %>;
@@ -202,26 +390,21 @@
         const gotraFilter = document.getElementById('gotra-filter');
         const gotraValue = gotraFilter ? gotraFilter.value : '';
 
-        // Use inline data for the community tree initial load (no Gotra filter active)
-        // This avoids a second round-trip to MongoDB Atlas
         if (!forceApi && INLINE_TREE_DATA && memberId === 'all' && !gotraValue) {
           rawData = INLINE_TREE_DATA;
-          renderTree(rawData);
+          initDynamicTree(rawData);
           loading.style.display = 'none';
           return;
         }
 
-        // Otherwise fetch from API (filtered view or individual tree)
         let url = `/members/api/family-tree/${memberId}${currentMode === 'full' ? '?mode=full' : ''}`;
-        if (gotraValue) {
-          url += `${url.includes('?') ? '&' : '?'}gotra=${encodeURIComponent(gotraValue)}`;
-        }
+        if (gotraValue) url += `${url.includes('?') ? '&' : '?'}gotra=${encodeURIComponent(gotraValue)}`;
 
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch tree data');
         rawData = await response.json();
         
-        renderTree(rawData);
+        initDynamicTree(rawData);
         loading.style.display = 'none';
       } catch (err) {
         console.error(err);
@@ -234,276 +417,359 @@
       }
     }
 
-
-    function renderTree(data) {
+    let rootNode;
+    function initDynamicTree(data) {
       g.selectAll("*").remove();
-
       if (!data || data.length === 0) return;
 
       const validIds = new Set(data.map(d => d.id));
       const treeData = data.map(d => {
         let finalPid = null;
-        if (d.fatherId && validIds.has(d.fatherId)) {
-           finalPid = d.fatherId;
-        } else if (d.motherId && validIds.has(d.motherId)) {
-           finalPid = d.motherId;
-        } else if (d.pid && validIds.has(d.pid)) {
-           finalPid = d.pid;
-        }
-        return {
-          ...d,
-          parentId: finalPid
-        };
+        if (d.fatherId && validIds.has(d.fatherId)) finalPid = d.fatherId;
+        else if (d.motherId && validIds.has(d.motherId)) finalPid = d.motherId;
+        else if (d.pid && validIds.has(d.pid)) finalPid = d.pid;
+        return { ...d, parentId: finalPid };
       });
 
-      // Adjust parents for spouses who don't have blood parents in the tree
-      // IMPORTANT: Only mark as isSpouseAdopted if the member truly has NO blood parent
-      // (i.e., neither fatherId nor motherId is in the validIds set)
       treeData.forEach(d => {
-        // Only adopt if: no parentId AND has a spouse AND that spouse has a parent
-        // AND the member truly has no blood parent in the current dataset
-        const hasBloodParent = (d.fatherId && validIds.has(d.fatherId)) || 
-                               (d.motherId && validIds.has(d.motherId)) ||
-                               (d.pid && validIds.has(d.pid));
-        
+        const hasBloodParent = (d.fatherId && validIds.has(d.fatherId)) || (d.motherId && validIds.has(d.motherId)) || (d.pid && validIds.has(d.pid));
         if (!d.parentId && !hasBloodParent && d.stpid && validIds.has(d.stpid)) {
           const spouse = treeData.find(s => s.id === d.stpid);
           if (spouse && spouse.parentId) {
             d.parentId = spouse.parentId;
-            d.isSpouseAdopted = true; // Mark so we hide bloodline link for this non-blood member
+            d.isSpouseAdopted = true; 
           }
         }
       });
 
-      // Find all 'roots' (nodes with no parent in the current set)
       const roots = treeData.filter(d => !d.parentId);
-      
       let processedData = treeData;
       let rootId = null;
 
       if (roots.length > 1) {
-        // MULTIPLE ROOTS: Add a virtual "Community" node to connect them
         rootId = "virtual-root";
-        processedData.push({
-          id: rootId,
-          name: "समाज (Community)",
-          title: "Root",
-          village: "",
-          image: "/images/logo.png",
-          tags: ["virtual"],
-          parentId: null
-        });
-        // Point all real roots to this virtual root
+        processedData.push({ id: rootId, name: "समाज (Community)", title: "Root", village: "", image: "/images/logo.png", tags: ["virtual"], parentId: null });
         roots.forEach(r => r.parentId = rootId);
       } else if (roots.length === 1) {
         rootId = roots[0].id;
-      } else {
-        console.error("No roots found in data");
-        return;
-      }
+      } else return;
 
-      let root;
       try {
-        root = d3.stratify()
+        rootNode = d3.stratify()
           .id(d => d.id)
           .parentId(d => d.parentId)(processedData);
       } catch (e) {
         console.error("Hierarchy error:", e);
         return; 
       }
-
-      const treeLayout = d3.tree()
-        .nodeSize([nodeWidth + horizontalGap, nodeHeight + verticalGap]);
-
-      treeLayout(root);
-
-      // Links (Orthogonal Paths - Bloodlines)
-      // Draw link if:
-      //   1. source is not the virtual-root ghost node, AND
-      //   2. the target is NOT a spouse-borrowed-parent (isSpouseAdopted),
-      //      OR the target actually HAS a real blood parentId (i.e. a genuine child)
-      g.selectAll(".link")
-        .data(root.links())
-        .enter()
-        .filter(d => {
-          if (d.source.id === "virtual-root") return false;
-          // Always draw if not spouse-adopted (normal blood child)
-          if (!d.target.data.isSpouseAdopted) return true;
-          // If spouse-adopted, only draw if they have a genuine fatherId/motherId matching source
-          const td = d.target.data;
-          const sd = d.source.data;
-          return (td.fatherId && td.fatherId === sd.id) || (td.motherId && td.motherId === sd.id);
-        })
-        .append("path")
-        .attr("class", "link")
-        .attr("d", d => {
-          const source = { x: d.source.x, y: d.source.y + nodeHeight/2 };
-          const target = { x: d.target.x, y: d.target.y - nodeHeight/2 };
-          const midY = (source.y + target.y) / 2;
-          return `M${source.x},${source.y} L${source.x},${midY} L${target.x},${midY} L${target.x},${target.y}`;
-        });
-
-      // Spouse Connections
-      const spouseLinks = [];
-      const nodeMap = new Map();
-      root.descendants().forEach(d => nodeMap.set(d.id, d));
-
-      root.descendants().forEach(d => {
-        if (d.data.stpid && nodeMap.has(d.data.stpid)) {
-          const targetNode = nodeMap.get(d.data.stpid);
-          // ensure we only draw line once between pair
-          if (d.id < targetNode.id) {
-            spouseLinks.push({ source: d, target: targetNode });
-          }
+      
+      rootNode.x0 = document.getElementById('tree').clientWidth / 2;
+      rootNode.y0 = 0;
+      
+      // Auto-collapse nodes deeper than Level 2
+      rootNode.descendants().forEach(d => {
+        if (d.depth >= 2 && d.children) {
+          d._children = d.children;
+          d.children = null;
         }
       });
 
-      g.selectAll(".spouse-line")
-        .data(spouseLinks)
-        .enter()
-        .append("path")
-        .attr("class", "spouse-line")
-        .attr("d", d => {
-          // Draw a distinct curved or horizontal dotted line between spouses
-          const s = d.source;
-          const t = d.target;
-          
-          if (Math.abs(s.y - t.y) < nodeHeight) {
-            // Same horizontal level
-            const left = s.x < t.x ? s : t;
-            const right = s.x < t.x ? t : s;
-            return `M${left.x + nodeWidth/2},${left.y} L${right.x - nodeWidth/2},${right.y}`;
-          } else {
-            // Different levels (rare, but possible if they are in different subtrees)
-            return `M${s.x},${s.y} Q${(s.x+t.x)/2},${Math.min(s.y, t.y) - 50} ${t.x},${t.y}`;
-          }
-        });
+      updateDynamicTree(rootNode);
 
-      // Node Groups
-      const nodes = g.selectAll(".node")
-        .data(root.descendants())
-        .enter()
-        .filter(d => d.id !== "virtual-root") // Hide ghost root node
-        .append("g")
-        .attr("class", d => `node ${d.data.tags ? d.data.tags.join(' ') : ''}`)
-        .attr("transform", d => `translate(${d.x - nodeWidth/2},${d.y - nodeHeight/2})`)
-        .on("click", (event, d) => {
-          if (confirm(`View profile for ${d.data.name}?`)) {
-            window.location.href = `/members/${d.data.id}`;
-          }
-        });
-
-      // Node Box
-      nodes.append("rect")
-        .attr("class", "node-bg")
-        .attr("width", nodeWidth)
-        .attr("height", nodeHeight)
-        .attr("rx", 16);
-
-      // Node Left Accent
-      nodes.append("clipPath")
-        .attr("id", d => `node-clip-${d.data.id}`)
-        .append("rect")
-        .attr("width", nodeWidth)
-        .attr("height", nodeHeight)
-        .attr("rx", 16);
-
-      nodes.append("rect")
-        .attr("x", 0)
-        .attr("y", 0)
-        .attr("width", 6)
-        .attr("height", nodeHeight)
-        .attr("fill", d => d.data.tags && d.data.tags.includes('deceased') ? "#94a3b8" : (d.data.id === memberId ? "#f97316" : "#E68A2E"))
-        .attr("clip-path", d => `url(#node-clip-${d.data.id})`);
-
-      // Profile Image Border
-      nodes.append("circle")
-        .attr("cx", 55)
-        .attr("cy", nodeHeight / 2)
-        .attr("r", 32)
-        .attr("fill", "white")
-        .attr("stroke", d => d.data.tags && d.data.tags.includes('deceased') ? "#cbd5e1" : "#FF9933")
-        .attr("stroke-width", "3px");
-
-      // Profile Image
-      nodes.append("clipPath")
-        .attr("id", d => `clip-${d.data.id}`)
-        .append("circle")
-        .attr("cx", 55)
-        .attr("cy", nodeHeight / 2)
-        .attr("r", 29);
-
-      nodes.append("image")
-        .attr("xlink:href", d => d.data.image)
-        .attr("x", 26)
-        .attr("y", (nodeHeight / 2) - 29)
-        .attr("width", 58)
-        .attr("height", 58)
-        .attr("clip-path", d => `url(#clip-${d.data.id})`)
-        .attr("preserveAspectRatio", "xMidYMid slice");
-
-      // Texts
-      const textX = 100;
-      nodes.append("text")
-        .attr("class", "node-name")
-        .attr("x", textX)
-        .attr("y", 36)
-        .text(d => d.data.name.length > 17 ? d.data.name.substring(0,15)+'...' : d.data.name);
-
-      nodes.append("text")
-        .attr("class", "node-title")
-        .attr("x", textX)
-        .attr("y", 58)
-        .text(d => d.data.title.length > 25 ? d.data.title.substring(0,23)+'...' : d.data.title);
-
-      nodes.append("text")
-        .attr("class", "node-village")
-        .attr("x", textX)
-        .attr("y", 78)
-        .text(d => d.data.village);
-
-      // Deceased Badge
-      const deceasedNodes = nodes.filter(d => d.data.tags && d.data.tags.includes('deceased'));
-      deceasedNodes.append("rect")
-        .attr("class", "badge-deceased")
-        .attr("x", nodeWidth - 65)
-        .attr("y", 14)
-        .attr("width", 50)
-        .attr("height", 20);
-      deceasedNodes.append("text")
-        .attr("class", "badge-deceased-text")
-        .attr("x", nodeWidth - 65 + 25)
-        .attr("y", 28)
-        .text("स्वर्गीय");
-
-      // Current/You Badge
-      const currentNodes = nodes.filter(d => d.data.id === memberId);
-      currentNodes.append("rect")
-        .attr("class", "badge-current")
-        .attr("x", nodeWidth - 50)
-        .attr("y", 14)
-        .attr("width", 35)
-        .attr("height", 20);
-      currentNodes.append("text")
-        .attr("class", "badge-current-text")
-        .attr("x", nodeWidth - 50 + 17.5)
-        .attr("y", 28)
-        .text("स्वयं");
-
-      // Center the tree
+      // Centering logic on first load
       const bounds = g.node().getBBox();
       const parent = svg.node().parentElement;
       const fullWidth = parent.clientWidth;
-      const fullHeight = parent.clientHeight;
+      const initialScale = currentMode === 'full' ? 0.35 : 0.8;
+      const initialX = fullWidth / 2 - (bounds.x * initialScale);
       
-      const initialScale = currentMode === 'full' ? 0.3 : 0.8;
-      const initialX = fullWidth / 2 - (bounds.x + bounds.width / 2) * initialScale;
-      const initialY = 100;
-
       svg.transition().duration(750).call(
         zoom.transform, 
-        d3.zoomIdentity.translate(initialX, initialY).scale(initialScale)
+        d3.zoomIdentity.translate(initialX, 100).scale(initialScale)
       );
+    }
+    
+    function updateDynamicTree(source) {
+       const treeLayout = d3.tree().nodeSize([nodeWidth + horizontalGap, nodeHeight + verticalGap]);
+       const treeDataMap = treeLayout(rootNode);
+       const nodes = treeDataMap.descendants();
+       const links = treeDataMap.descendants().slice(1);
+       
+       // Force constant vertical gap between generation levels
+       nodes.forEach(d => { d.y = d.depth * (nodeHeight + verticalGap); });
+
+       const nodeGroup = g.selectAll('g.node')
+         .data(nodes, d => d.id || (d.id = ++i));
+
+       // --- ENTER NODES ---
+       const nodeEnter = nodeGroup.enter().append('g')
+         .attr('class', d => `node ${d.data.tags ? d.data.tags.join(' ') : ''}`)
+         .attr('transform', d => `translate(${source.x0 || 0}, ${source.y0 || 0})`)
+         .on("click", (event, d) => {
+            if (d.id !== "virtual-root") openDrawer(d.data);
+         });
+         
+       const realNodesEnter = nodeEnter.filter(d => d.id !== "virtual-root");
+
+       realNodesEnter.append('rect')
+         .attr('class', 'node-bg')
+         .attr('width', nodeWidth)
+         .attr('height', nodeHeight)
+         .attr('rx', 16);
+
+       realNodesEnter.append('clipPath').attr('id', d => `node-clip-${d.data.id}`)
+         .append('rect').attr('width', nodeWidth).attr('height', nodeHeight).attr('rx', 16);
+
+       // Generation Top Custom Accent Color
+       realNodesEnter.append('rect')
+         .attr('x', 0).attr('y', 0).attr('width', 6).attr('height', nodeHeight)
+         .attr('fill', d => d.data.tags && d.data.tags.includes('deceased') ? "#94a3b8" : getGenColor(d.depth))
+         .attr('clip-path', d => `url(#node-clip-${d.data.id})`);
+
+       realNodesEnter.append("circle").attr("cx", 55).attr("cy", nodeHeight / 2).attr("r", 32)
+         .attr("fill", "white")
+         .attr("stroke", d => d.data.tags && d.data.tags.includes('deceased') ? "#cbd5e1" : getGenColor(d.depth))
+         .attr("stroke-width", "3px");
+
+       realNodesEnter.append("clipPath").attr("id", d => `clip-${d.data.id}`)
+         .append("circle").attr("cx", 55).attr("cy", nodeHeight / 2).attr("r", 29);
+
+       realNodesEnter.append("image")
+         .attr("xlink:href", d => d.data.image)
+         .attr("x", 26).attr("y", (nodeHeight / 2) - 29)
+         .attr("width", 58).attr("height", 58)
+         .attr("clip-path", d => `url(#clip-${d.data.id})`)
+         .attr("preserveAspectRatio", "xMidYMid slice");
+
+       const textX = 100;
+       realNodesEnter.append("text").attr("class", "node-name").attr("x", textX).attr("y", 36)
+         .text(d => d.data.name.length > 17 ? d.data.name.substring(0,15)+'...' : d.data.name);
+
+       realNodesEnter.append("text").attr("class", "node-title").attr("x", textX).attr("y", 58)
+         .text(d => d.data.title.length > 25 ? d.data.title.substring(0,23)+'...' : d.data.title);
+
+       realNodesEnter.append("text").attr("class", "node-village").attr("x", textX).attr("y", 78)
+         .text(d => d.data.village);
+         
+       // Generation Badge - Enhanced with color-coded system
+       const generationBadges = realNodesEnter.append('g').attr('class', 'gen-badge-group');
+       
+       generationBadges.append('rect')
+         .attr('class', d => {
+           const gen = d.data.generation;
+           if (gen === 0) return 'badge-generation badge-generation-you';
+           else if (gen > 0) return 'badge-generation badge-generation-ancestor';
+           else return 'badge-generation badge-generation-descendant';
+         })
+         .attr('x', 8).attr('y', 12).attr('width', 45).attr('height', 22)
+         .attr('rx', 4);
+       
+       generationBadges.append('text')
+         .attr('class', d => {
+           const gen = d.data.generation;
+           if (gen === 0) return 'badge-generation-text badge-generation-you-text';
+           else if (gen > 0) return 'badge-generation-text badge-generation-ancestor-text';
+           else return 'badge-generation-text badge-generation-descendant-text';
+         })
+         .attr('x', 30.5).attr('y', 26)
+         .text(d => {
+           const gen = d.data.generation;
+           if (gen > 0) return `+${gen}`;
+           else if (gen === 0) return '0';
+           else return `${gen}`;
+         });
+       
+       // Generation Description Label (subtle)
+       realNodesEnter.append('text')
+         .attr('class', 'node-generation-label')
+         .attr('x', nodeWidth - 14)
+         .attr('y', nodeHeight - 12)
+         .attr('fill', '#94a3b8')
+         .attr('font-size', '9px')
+         .attr('font-weight', '600')
+         .attr('text-anchor', 'end')
+         .text(d => {
+           const gen = d.data.generation;
+           if (gen > 0) return 'ANCESTOR';
+           else if (gen === 0) return 'YOUR GEN';
+           else return 'DESCENDANT';
+         });
+       
+       // Render Layer Text (D3 depth-based)
+       realNodesEnter.append('text')
+         .attr('class', 'layer-label')
+         .attr('x', nodeWidth - 14)
+         .attr('y', nodeHeight - 12)
+         .text(d => `D${d.depth}`)
+         .style("fill", d => getGenColor(d.depth));
+
+       // Deceased Badge
+       const deceasedEnter = realNodesEnter.filter(d => d.data.tags && d.data.tags.includes('deceased'));
+       deceasedEnter.append("rect").attr("class", "badge-deceased").attr("x", nodeWidth - 65).attr("y", 12).attr("width", 50).attr("height", 20);
+       deceasedEnter.append("text").attr("class", "badge-deceased-text").attr("x", nodeWidth - 65 + 25).attr("y", 26).text("स्वर्गीय");
+
+       // Current Badge
+       const currentEnter = realNodesEnter.filter(d => d.data.id === memberId);
+       currentEnter.append("rect").attr("class", "badge-current").attr("x", nodeWidth - 50).attr("y", 12).attr("width", 35).attr("height", 20);
+       currentEnter.append("text").attr("class", "badge-current-text").attr("x", nodeWidth - 50 + 17.5).attr("y", 26).text("स्वयं");
+
+       // Expand/Collapse Circular toggler
+       const expanders = realNodesEnter.filter(d => d._children || d.children);
+       expanders.append('circle')
+         .attr('class', 'expander')
+         .attr('cx', nodeWidth / 2)
+         .attr('cy', nodeHeight + 12)
+         .attr('r', 12)
+         .on("click", (event, d) => {
+           event.stopPropagation();
+           if (d.children) { d._children = d.children; d.children = null; }
+           else { d.children = d._children; d._children = null; }
+           updateDynamicTree(d);
+         });
+       expanders.append('text')
+         .attr('class', 'expander-text')
+         .attr('x', nodeWidth / 2)
+         .attr('y', nodeHeight + 18)
+         .text(d => d.children ? '-' : '+');
+
+       // --- UPDATE NODES ---
+       const nodeUpdate = nodeEnter.merge(nodeGroup);
+       nodeUpdate.select('.expander-text').text(d => d.children ? '-' : '+');
+       nodeUpdate.select('.expander').style('display', d => d._children || d.children ? 'block' : 'none');
+       nodeUpdate.select('.expander-text').style('display', d => d._children || d.children ? 'block' : 'none');
+
+       nodeUpdate.transition()
+         .duration(duration)
+         .attr('transform', d => `translate(${d.x - nodeWidth/2}, ${d.y - nodeHeight/2})`);
+
+       // --- EXIT NODES ---
+       const nodeExit = nodeGroup.exit().transition()
+         .duration(duration)
+         .attr('transform', d => `translate(${source.x - nodeWidth/2}, ${source.y - nodeHeight/2})`)
+         .remove();
+       nodeExit.select('rect').attr('fill-opacity', 0);
+
+       // --- BLOOD LINKS ---
+       const validIds = new Set(nodes.map(n => n.id));
+       const filteredLinks = links.filter(d => {
+         if (d.parent.id === "virtual-root") return false;
+         if (!d.data.isSpouseAdopted) return true;
+         return (d.data.fatherId && d.data.fatherId === d.parent.id) || (d.data.motherId && d.data.motherId === d.parent.id);
+       });
+
+       const link = g.selectAll('path.link')
+         .data(filteredLinks, d => d.id);
+         
+       const linkEnter = link.enter().insert('path', "g")
+         .attr("class", "link")
+         .attr("d", d => {
+            const o = { x: source.x0 || 0, y: source.y0 || 0 };
+            return `M${o.x},${o.y} L${o.x},${o.y} L${o.x},${o.y} L${o.x},${o.y}`;
+         });
+
+       const linkUpdate = linkEnter.merge(link);
+       linkUpdate.transition()
+         .duration(duration)
+         .attr("d", d => {
+           const p_source = { x: d.parent.x, y: d.parent.y + nodeHeight/2 };
+           const p_target = { x: d.x, y: d.y - nodeHeight/2 };
+           const midY = (p_source.y + p_target.y) / 2;
+           return `M${p_source.x},${p_source.y} L${p_source.x},${midY} L${p_target.x},${midY} L${p_target.x},${p_target.y}`;
+         });
+
+       link.exit().transition()
+         .duration(duration)
+         .attr("d", d => {
+            const o = { x: source.x, y: source.y };
+            return `M${o.x},${o.y} L${o.x},${o.y} L${o.x},${o.y} L${o.x},${o.y}`;
+         })
+         .remove();
+         
+       // --- SPOUSE LINKS ---
+       const spouseLinksArr = [];
+       nodes.forEach(d => {
+         if (d.data.stpid && validIds.has(d.data.stpid)) {
+           const targetNode = nodes.find(n => n.id === d.data.stpid);
+           if (d.id < targetNode.id) {
+             spouseLinksArr.push({ source: d, target: targetNode, id: `${d.id}-${targetNode.id}` });
+           }
+         }
+       });
+
+       const spLink = g.selectAll('path.spouse-line').data(spouseLinksArr, d => d.id);
+       spLink.enter().insert('path', "g").attr("class", "spouse-line")
+         .merge(spLink).transition().duration(duration)
+         .attr("d", d => {
+           const s = d.source; const t = d.target;
+           if (Math.abs(s.y - t.y) < nodeHeight) {
+             const left = s.x < t.x ? s : t;
+             const right = s.x < t.x ? t : s;
+             return `M${left.x + nodeWidth/2},${left.y} L${right.x - nodeWidth/2},${right.y}`;
+           } else {
+             return `M${s.x},${s.y} Q${(s.x+t.x)/2},${Math.min(s.y, t.y) - 50} ${t.x},${t.y}`;
+           }
+         });
+         
+       spLink.exit().remove();
+
+       // Store old positions
+       nodes.forEach(d => {
+         d.x0 = d.x;
+         d.y0 = d.y;
+       });
+       
+       updateMinimap(nodes);
+    }
+    
+    function updateMinimap(nodes) {
+       minimapG.selectAll('*').remove();
+       const realNodes = nodes.filter(n => n.id !== "virtual-root");
+       if(!realNodes || realNodes.length === 0) return;
+       const xExtent = d3.extent(realNodes, d => d.x);
+       const yExtent = d3.extent(realNodes, d => d.y);
+       
+       const padding = 150;
+       const mWidth = (xExtent[1] - xExtent[0]) + nodeWidth + padding*2 || 1;
+       const mHeight = (yExtent[1] - yExtent[0]) + nodeHeight + padding*2 || 1;
+       
+       const container = document.getElementById('minimap-container');
+       const scale = Math.min(container.clientWidth / mWidth, container.clientHeight / mHeight);
+       
+       const offsetX = (container.clientWidth - mWidth * scale) / 2;
+       const offsetY = (container.clientHeight - mHeight * scale) / 2;
+       
+       const tx = offsetX - (xExtent[0] - nodeWidth/2 - padding) * scale;
+       const ty = offsetY - (yExtent[0] - nodeHeight/2 - padding) * scale;
+       
+       minimapG.attr("transform", `translate(${tx}, ${ty}) scale(${scale})`);
+       
+       minimapG.selectAll('rect.minimap-node')
+         .data(realNodes).enter().append('rect').attr('class', 'minimap-node')
+         .attr('x', d => d.x - nodeWidth/2).attr('y', d => d.y - nodeHeight/2)
+         .attr('width', nodeWidth).attr('height', nodeHeight)
+         .attr('rx', 16)
+         .attr('fill', d => getGenColor(d.depth));
+         
+       minimapSvg.node().__layout = { tx, ty, scale };
+       updateMinimapViewport();
+    }
+    
+    function updateMinimapViewport() {
+       const layout = minimapSvg.node().__layout;
+       if (!layout) return;
+       const t = currentZoomTransform;
+       const parent = document.getElementById('tree');
+       
+       const viewW = parent.clientWidth / t.k;
+       const viewH = parent.clientHeight / t.k;
+       const viewX = -t.x / t.k;
+       const viewY = -t.y / t.k;
+       
+       minimapViewport
+         .attr('x', layout.tx + viewX * layout.scale)
+         .attr('y', layout.ty + viewY * layout.scale)
+         .attr('width', viewW * layout.scale)
+         .attr('height', viewH * layout.scale);
     }
 
     if (btnImmediate) btnImmediate.addEventListener('click', () => loadTree('immediate'));
@@ -516,22 +782,46 @@
     if (treeSearch) {
       treeSearch.addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase().trim();
+        let firstMatch = null;
+
         d3.selectAll(".node").each(function(d) {
+          if (d.id === "virtual-root") return;
           const node = d3.select(this);
           const match = term && d.data.name.toLowerCase().includes(term);
+          
+          if (match && !firstMatch) firstMatch = d;
+
           node.select(".node-bg")
             .style("stroke", match ? "#FF9933" : "#e2e8f0")
             .style("stroke-width", match ? "4px" : "1px")
             .style("filter", match ? "drop-shadow(0 0 15px rgba(255, 153, 51, 0.8))" : "drop-shadow(0 4px 6px rgb(0 0 0 / 0.05))");
           
           if (match) {
-             node.selectAll("text").style("font-weight", "900").style("fill", "#000");
+             node.selectAll("text.node-name, text.node-title, text.node-village").style("font-weight", "900").style("fill", "#000");
           } else {
              node.select(".node-name").style("font-weight", "700").style("fill", "#1e293b");
              node.select(".node-title").style("font-weight", "500").style("fill", "#475569");
              node.select(".node-village").style("font-weight", "500").style("fill", "#64748b");
           }
         });
+
+        // Auto-Zoom and Center on the first match
+        if (firstMatch && term.length >= 2) {
+          const width = treeContainer.clientWidth;
+          const height = treeContainer.clientHeight;
+          const scale = 0.8;
+          
+          svg.transition()
+            .duration(800)
+            .ease(d3.easeCubicInOut)
+            .call(
+              zoom.transform,
+              d3.zoomIdentity
+                .translate(width / 2, height / 2)
+                .scale(scale)
+                .translate(-firstMatch.x, -firstMatch.y)
+            );
+        }
       });
     }
 
