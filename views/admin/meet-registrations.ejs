@@ -3,37 +3,55 @@
   <div class="container mx-auto px-4 max-w-6xl">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800"><a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a> Matrimonial Meet Registrations</h1>
+        <h1 class="text-2xl font-bold text-gray-800">
+          <a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a>
+          Matrimonial Meet Registrations
+          <span class="ml-2 text-sm font-normal text-gray-400">(<%= registrations.length %> total)</span>
+        </h1>
       </div>
+      <a href="/admin/meet-registrations/export" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors">
+        <i class="fas fa-file-csv"></i> Export CSV
+      </a>
     </div>
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+              <th class="px-6 py-4 font-medium">#</th>
               <th class="px-6 py-4 font-medium">Candidate Name</th>
               <th class="px-6 py-4 font-medium">Age</th>
               <th class="px-6 py-4 font-medium">Gotra</th>
               <th class="px-6 py-4 font-medium">Location</th>
               <th class="px-6 py-4 font-medium">Contact</th>
               <th class="px-6 py-4 font-medium">Reg Date</th>
+              <th class="px-6 py-4 font-medium text-right">Action</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 text-sm">
             <% if (registrations && registrations.length > 0) { %>
-              <% registrations.forEach(reg => { %>
+              <% registrations.forEach((reg, i) => { %>
                 <tr class="hover:bg-gray-50 text-gray-700">
+                  <td class="px-6 py-4 text-gray-400 text-xs"><%= i + 1 %></td>
                   <td class="px-6 py-4 font-medium text-gray-900 border-l-4 border-l-saffron-500"><%= reg.name %></td>
-                  <td class="px-6 py-4"><%= reg.age %></td>
-                  <td class="px-6 py-4 font-bold text-saffron-600"><%= reg.gotra %></td>
-                  <td class="px-6 py-4"><%= reg.location %></td>
-                  <td class="px-6 py-4"><%= reg.contact %></td>
-                  <td class="px-6 py-4 text-gray-500"><%= reg.createdAt ? new Date(reg.createdAt).toLocaleDateString() : 'N/A' %></td>
+                  <td class="px-6 py-4"><%= reg.age || '—' %></td>
+                  <td class="px-6 py-4 font-bold text-saffron-600"><%= reg.gotra || '—' %></td>
+                  <td class="px-6 py-4"><%= reg.location || '—' %></td>
+                  <td class="px-6 py-4"><%= reg.contact || '—' %></td>
+                  <td class="px-6 py-4 text-gray-500"><%= reg.createdAt ? new Date(reg.createdAt).toLocaleDateString('en-IN') : 'N/A' %></td>
+                  <td class="px-6 py-4 text-right">
+                    <form action="/admin/meet-registrations/<%= reg._id %>/delete" method="POST" class="inline"
+                          onsubmit="return confirm('Delete this registration?')">
+                      <button type="submit" class="text-red-400 hover:text-red-600 text-sm" title="Delete">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  </td>
                 </tr>
               <% }) %>
             <% } else { %>
               <tr>
-                <td colspan="6" class="px-6 py-8 text-center text-gray-500">No registrations found.</td>
+                <td colspan="8" class="px-6 py-8 text-center text-gray-500">No registrations found.</td>
               </tr>
             <% } %>
           </tbody>
@@ -43,3 +61,4 @@
   </div>
 </section>
 <%- include('partials/admin-footer') %>
+

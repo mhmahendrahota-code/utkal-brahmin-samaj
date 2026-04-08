@@ -10,4 +10,10 @@ const eventSchema = new mongoose.Schema({
   rsvpCount: { type: Number, default: 0 }
 }, { timestamps: true });
 
+// Add Indexes
+eventSchema.index({ title: 'text' });
+eventSchema.index({ description: 'text' });
+eventSchema.index({ date: 1 });
+eventSchema.index({ isActive: 1 });
+
 module.exports = mongoose.model('Event', eventSchema);

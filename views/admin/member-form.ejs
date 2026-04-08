@@ -3,12 +3,20 @@
   <section class="py-12 bg-gray-50 flex-grow">
     <div class="container mx-auto px-4 max-w-4xl">
 
-      <div class="flex items-center mb-6">
-        <a href="/admin/members" class="text-gray-400 hover:text-saffron-500 mr-4"><i
-            class="fas fa-arrow-left text-xl"></i></a>
-        <h1 class="text-2xl font-bold text-gray-800">
-          <%= typeof member !=='undefined' ? 'Edit Member' : 'Add New Member' %>
-        </h1>
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center">
+          <a href="/admin/members" class="text-gray-400 hover:text-saffron-500 mr-4"><i
+              class="fas fa-arrow-left text-xl"></i></a>
+          <h1 class="text-2xl font-bold text-gray-800">
+            <%= typeof member !=='undefined' ? 'Edit Member' : 'Add New Member' %>
+          </h1>
+        </div>
+        <% if (typeof member !== 'undefined' && member.generationLevel !== null && member.generationLevel !== undefined) { %>
+          <div class="flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-4 py-2 rounded-xl">
+            <span class="text-[10px] uppercase font-black tracking-widest text-indigo-400">Generation Level</span>
+            <span class="text-xl font-black text-indigo-700">P<%= member.generationLevel %></span>
+          </div>
+        <% } %>
       </div>
 
       <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 md:p-8">
@@ -251,7 +259,7 @@
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2">पिता (Father)</label>
+              <label class="block text-sm font-bold text-gray-700 mb-2">पिता (Father - Select)</label>
               <select name="father" id="father_select"
                 class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500 bg-white"
                 onchange="autoFillFromFather()">
@@ -265,10 +273,17 @@
                     <% }) %>
                       <% } %>
               </select>
+              <div class="mt-3">
+                <label class="block text-[10px] font-bold text-gray-500 uppercase">या पिता का नाम लिखें (Or type Father's Name)</label>
+                <input type="text" name="fatherName" 
+                  class="w-full px-3 py-1.5 text-sm rounded border border-gray-200 focus:ring-1 focus:ring-saffron-500 bg-gray-50"
+                  value="<%= typeof member !== 'undefined' ? (member.fatherName || '') : '' %>" 
+                  placeholder="Enter father's name manually...">
+              </div>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2">माता (Mother)</label>
+              <label class="block text-sm font-bold text-gray-700 mb-2">माता (Mother - Select)</label>
               <select name="mother"
                 class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500 bg-white">
                 <option value="">-- अज्ञात / कोई नहीं (None) --</option>
@@ -281,10 +296,17 @@
                     <% }) %>
                       <% } %>
               </select>
+              <div class="mt-3">
+                <label class="block text-[10px] font-bold text-gray-500 uppercase">या माता का नाम लिखें (Or type Mother's Name)</label>
+                <input type="text" name="motherName" 
+                  class="w-full px-3 py-1.5 text-sm rounded border border-gray-200 focus:ring-1 focus:ring-saffron-500 bg-gray-50"
+                  value="<%= typeof member !== 'undefined' ? (member.motherName || '') : '' %>" 
+                  placeholder="Enter mother's name manually...">
+              </div>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2">जीवनसाथी (Spouse)</label>
+              <label class="block text-sm font-bold text-gray-700 mb-2">जीवनसाथी (Spouse - Select Member)</label>
               <select name="spouse"
                 class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500 bg-white">
                 <option value="">-- लागू नहीं (N/A) --</option>
@@ -297,6 +319,15 @@
                     <% }) %>
                       <% } %>
               </select>
+              
+              <div class="mt-4 pt-4 border-t border-gray-100">
+                <label class="block text-xs font-bold text-saffron-600 mb-1 uppercase">या जीवनसाथी का नाम लिखें (Or type Spouse Name)</label>
+                <input type="text" name="spouseName" 
+                  class="w-full px-4 py-2 rounded-lg border border-saffron-300 focus:ring-2 focus:ring-saffron-500 bg-saffron-50"
+                  value="<%= typeof member !== 'undefined' ? (member.spouseName || '') : '' %>" 
+                  placeholder="Enter spouse name manually...">
+                <p class="text-[10px] text-gray-400 mt-1 italic">उपयोग करें यदि जीवनसाथी सदस्य नहीं है (Use if spouse is not a registered member)</p>
+              </div>
             </div>
           </div>
 
@@ -502,4 +533,40 @@
     }
   </script>
 
+
   <%- include('partials/admin-footer') %>
+  <script>
+    // Auto-prefill from ?parentId= when opened from the Family Tree
+    (function prefillFromTree() {
+      const params = new URLSearchParams(window.location.search);
+      const parentId = params.get('parentId');
+      const parentName = params.get('parentName');
+
+      if (!parentId) return;
+
+      const fatherSelect = document.getElementById('father_select');
+      if (!fatherSelect) return;
+
+      const option = Array.from(fatherSelect.options).find(o => o.value === parentId);
+      if (option) {
+        fatherSelect.value = parentId;
+        // Trigger the existing auto-fill logic to inherit surname/gotra
+        if (typeof autoFillFromFather === 'function') {
+          autoFillFromFather();
+        }
+
+        // Show a confirmation banner
+        const banner = document.createElement('div');
+        banner.className = 'mb-6 p-4 bg-green-50 border border-green-300 rounded-xl flex items-start gap-3';
+        banner.innerHTML = `
+          <i class="fas fa-tree text-green-600 text-xl"></i>
+          <div>
+            <p class="font-bold text-green-800">Family Tree se Add Ho Raha Hai</p>
+            <p class="text-green-600 text-sm">Parent: <strong>${decodeURIComponent(parentName || option.text)}</strong></p>
+          </div>
+        `;
+        const h = document.querySelector('h1');
+        if (h && h.parentNode) h.parentNode.insertBefore(banner, h.nextSibling);
+      }
+    })();
+  </script>

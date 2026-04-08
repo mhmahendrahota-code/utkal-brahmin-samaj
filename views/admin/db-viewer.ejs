@@ -34,8 +34,9 @@
 
     <!-- Toast -->
     <div id="toast" class="fixed top-5 right-5 z-[100] hidden">
-      <div class="px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2" id="toast-inner">
-        <i class="fas fa-check-circle"></i> <span id="toast-msg"></span>
+      <div class="px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-3" id="toast-inner">
+        <div class="flex items-center gap-2"><i class="fas fa-check-circle"></i> <span id="toast-msg"></span></div>
+        <button id="toast-undo-btn" class="hidden px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-xs transition-colors"><i class="fas fa-undo mr-1"></i>Undo</button>
       </div>
     </div>
 
@@ -76,7 +77,13 @@
             </div>
             <span class="text-xs text-gray-400 font-mono hidden md:inline"><%= col.name %> · <%= col.count %> docs</span>
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <button onclick="exportData('<%= col.name %>', 'csv')" class="px-2 py-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 text-[10px] font-bold uppercase tracking-wider transition-all" title="Export Filtered CSV">
+              <i class="fas fa-file-csv"></i> CSV
+            </button>
+            <button onclick="exportData('<%= col.name %>', 'json')" class="px-2 py-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 text-[10px] font-bold uppercase tracking-wider transition-all" title="Export Filtered JSON">
+              <i class="fas fa-file-code"></i> JSON
+            </button>
             <input type="text" placeholder="Search in collection..." 
                    class="w-48 md:w-64 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron-400 focus:outline-none"
                    oninput="filterDocs(this, '<%= col.name %>')">
@@ -268,13 +275,27 @@
 
   /* ── Helpers ── */
   function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-  function showToast(msg, color) {
+  let _toastTimer = null;
+  function showToast(msg, color, undoCallback = null) {
     const inner = document.getElementById('toast-inner');
     document.getElementById('toast-msg').textContent = msg;
-    inner.className = `px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2 bg-${color}-600`;
+    inner.className = `px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center justify-between gap-3 bg-${color}-600`;
+    
+    const undoBtn = document.getElementById('toast-undo-btn');
+    if (undoCallback) {
+      undoBtn.classList.remove('hidden');
+      undoBtn.onclick = () => {
+        undoCallback();
+        document.getElementById('toast').classList.add('hidden');
+      };
+    } else {
+      undoBtn.classList.add('hidden');
+    }
+
     const toast = document.getElementById('toast');
     toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 3000);
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => toast.classList.add('hidden'), undoCallback ? 8000 : 3000);
   }
 
   /* ── Tab Switching ── */
@@ -327,6 +348,30 @@
     localStorage.setItem('db_view_mode_' + colName, mode);
   }
 
+  function setNestedValue(obj, path, value) {
+    const parts = path.split('.');
+    let current = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (current[parts[i]] === undefined || current[parts[i]] === null) current[parts[i]] = {};
+      current = current[parts[i]];
+    }
+    current[parts[parts.length - 1]] = value;
+  }
+
+  function flattenObj(obj, prefix = '', res = {}) {
+    for (let key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const propName = prefix ? prefix + '.' + key : key;
+        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key]) && Object.keys(obj[key]).length > 0) {
+          flattenObj(obj[key], propName, res);
+        } else {
+          res[propName] = obj[key];
+        }
+      }
+    }
+    return res;
+  }
+
   function renderTable(colName) {
     const tbody = document.getElementById('tbody-' + colName);
     const thead = document.getElementById('thead-' + colName);
@@ -340,16 +385,16 @@
     
     listRows.forEach(row => {
       try {
-        const data = JSON.parse(row.dataset.json);
+        const data = flattenObj(JSON.parse(row.dataset.json));
         Object.keys(data).forEach(k => {
-          if (!skipFields.includes(k) && typeof data[k] !== 'object') allKeys.add(k);
+          if (!skipFields.includes(k)) allKeys.add(k);
         });
       } catch (e) {
         console.warn("Invalid JSON in row", row.id, e);
       }
     });
     
-    const headers = Array.from(allKeys).slice(0, 10); // Limit to 10 cols for sanity
+    const headers = Array.from(allKeys).slice(0, 15); // Limit to 15 cols
     
     // Render Header
     thead.innerHTML = '';
@@ -404,39 +449,40 @@
     // Render Body
     tbody.innerHTML = '';
     listRows.forEach(lRow => {
-      const data = JSON.parse(lRow.dataset.json);
+      const originalData = JSON.parse(lRow.dataset.json);
+      const flatData = flattenObj(originalData);
       const isSelected = lRow.querySelector('.row-cb').checked;
       
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-blue-50/30 doc-row transition-colors group' + (isSelected ? ' selected bg-blue-50/50' : '');
-      tr.id = 'table-row-' + data._id;
-      tr.dataset.id = data._id;
+      tr.id = 'table-row-' + originalData._id;
+      tr.dataset.id = originalData._id;
       tr.dataset.json = lRow.dataset.json;
       tr.dataset.collection = colName;
       
       // Checkbox cell
       let html = `<td class="px-5 py-3" onclick="event.stopPropagation()">
         <input type="checkbox" class="row-cb w-4 h-4 rounded accent-blue-600" 
-               ${isSelected ? 'checked' : ''} data-id="${data._id}" data-col="${colName}"
+               ${isSelected ? 'checked' : ''} data-id="${originalData._id}" data-col="${colName}"
                onchange="syncRowSelect(this)">
       </td>`;
 
       // Inline Save status cell
       html += `<td class="px-2 py-3 text-center">
-        <button id="save-btn-${data._id}" onclick="saveInlineRow('${data._id}', '${colName}')" 
+        <button id="save-btn-${originalData._id}" onclick="saveInlineRow('${originalData._id}', '${colName}')" 
                 class="save-row-btn hidden p-1.5 bg-green-500 hover:bg-green-600 text-white rounded shadow-sm transition-all" title="Save changes">
           <i class="fas fa-save text-[10px]"></i>
         </button>
-        <i id="edit-icon-${data._id}" class="fas fa-pen-to-square text-blue-400 opacity-20 group-hover:opacity-100 transition-opacity"></i>
+        <i id="edit-icon-${originalData._id}" class="fas fa-pen-to-square text-blue-400 opacity-20 group-hover:opacity-100 transition-opacity"></i>
       </td>`;
       
       // Data cells
       headers.forEach(h => {
         const isId = h === '_id';
-        let val = data[h] === undefined ? '' : data[h];
+        let val = flatData[h] === undefined ? '' : flatData[h];
         if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
         
-        const type = typeof data[h];
+        const type = typeof flatData[h];
         
         html += `<td class="px-2 py-2">
           <input type="${isId ? 'text' : 'text'}" 
@@ -446,17 +492,17 @@
                  data-field="${h}"
                  data-original="${String(val).replace(/"/g, '&quot;')}"
                  data-type="${type}"
-                 oninput="onCellInput(this, '${data._id}')"
+                 oninput="onCellInput(this, '${originalData._id}')"
                  onkeydown="handleTableKey(event, this)">
         </td>`;
       });
       
       // Actions cell
       html += `<td class="px-5 py-3 text-right whitespace-nowrap" onclick="event.stopPropagation()">
-        <button onclick="openEdit(document.getElementById('row-${data._id}'))" class="text-blue-600/40 hover:text-blue-600 font-medium mr-3" title="Open Deep Editor">
+        <button onclick="openEdit(document.getElementById('row-${originalData._id}'))" class="text-blue-600/40 hover:text-blue-600 font-medium mr-3" title="Open Deep Editor">
           <i class="fas fa-code"></i> JSON
         </button>
-        <button onclick="openDelete(document.getElementById('row-${data._id}'))" class="text-red-400 hover:text-red-600 font-medium">
+        <button onclick="openDelete(document.getElementById('row-${originalData._id}'))" class="text-red-400 hover:text-red-600 font-medium">
           <i class="fas fa-trash"></i>
         </button>
       </td>`;
@@ -523,7 +569,7 @@
         try { val = JSON.parse(val); } catch(e) { /* keep as string if not valid JSON */ }
       }
       
-      updatedData[field] = val;
+      setNestedValue(updatedData, field, val);
     });
 
     const res = await fetch('/admin/db/update', { 
@@ -814,9 +860,23 @@
     document.getElementById('del-modal').classList.remove('hidden');
   }
   async function confirmDelete() {
+    const docData = JSON.parse(_delRow.dataset.json);
     const res = await fetch('/admin/db/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: _delCol, id: _delId }) });
     const result = await res.json();
-    if (result.ok) { closeModal('del-modal'); if(_delRow) _delRow.remove(); showToast('Deleted!', 'red'); updateBulkBar(); }
+    if (result.ok) { 
+      closeModal('del-modal'); 
+      if(_delRow) _delRow.remove(); 
+      
+      const undoFn = async () => {
+        const restoreRes = await fetch('/admin/db/restore', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: _delCol, docs: [docData] }) });
+        const restoreResult = await restoreRes.json();
+        if (restoreResult.ok) window.location.reload();
+        else alert('Restore failed: ' + restoreResult.error);
+      };
+      
+      showToast('Deleted!', 'red', undoFn); 
+      updateBulkBar(); 
+    }
     else alert('Error: '+result.error);
   }
 
@@ -860,14 +920,83 @@
     const ids  = cbs.map(cb => cb.dataset.id);
     const col  = cbs[0]?.dataset.col;
     const rows = cbs.map(cb => cb.closest('.doc-row'));
+    const docs = rows.map(r => JSON.parse(r.dataset.json));
+    
     const res  = await fetch('/admin/db/bulk-delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: col, ids }) });
     const result = await res.json();
     if (result.ok) {
       closeModal('bulk-del-modal');
       rows.forEach(r => r && r.remove());
-      showToast(`Deleted ${result.deleted} document(s)!`, 'red');
+      
+      const undoFn = async () => {
+        const restoreRes = await fetch('/admin/db/restore', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: col, docs }) });
+        const restoreResult = await restoreRes.json();
+        if (restoreResult.ok) window.location.reload();
+        else alert('Restore failed: ' + restoreResult.error);
+      };
+
+      showToast(`Deleted ${result.deleted} document(s)!`, 'red', undoFn);
       clearSelection();
     } else { alert('Error: '+result.error); }
+  }
+
+  /* ── Export Data ── */
+  function exportData(colName, format) {
+    const listContainer = document.getElementById('list-view-' + colName);
+    const rows = listContainer.querySelectorAll('.doc-row');
+    const data = [];
+    
+    rows.forEach(row => {
+      // Only export rows that are visible (not filtered out)
+      if (row.style.display !== 'none') {
+        try {
+          const doc = JSON.parse(row.dataset.json);
+          data.push(doc);
+        } catch(e) { console.error('Error parsing doc', e); }
+      }
+    });
+
+    if (data.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      downloadBlob(blob, `${colName}_export.json`);
+    } else if (format === 'csv') {
+      // Collect all possible headers
+      const headers = new Set();
+      data.forEach(d => Object.keys(d).forEach(k => headers.add(k)));
+      const headerRow = Array.from(headers);
+      
+      const csvRows = [headerRow.join(',')];
+      data.forEach(row => {
+        const values = headerRow.map(header => {
+          let val = row[header];
+          if (val === null || val === undefined) return '';
+          if (typeof val === 'object') val = JSON.stringify(val);
+          // Escape quotes
+          const escaped = String(val).replace(/"/g, '""');
+          return `"${escaped}"`;
+        });
+        csvRows.push(values.join(','));
+      });
+      
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+      downloadBlob(blob, `${colName}_export.csv`);
+    }
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   /* Close modals on backdrop click */

@@ -71,7 +71,7 @@
                       class="w-14 h-14 rounded-full object-cover border-2 border-saffron-200">
                     <div class="ml-4">
                       <h3 class="text-lg font-bold text-gray-900 flex items-center gap-1">
-                        <span><%= member.name %></span>
+                        <span><%= (member.honorific ? member.honorific + ' ' : '') + member.name %></span>
                         <% if (member.surname) { %><span class="text-saffron-600"><%= member.surname %></span><% } %>
                       </h3>
                       <% if (member.isCommitteeMember) { %>

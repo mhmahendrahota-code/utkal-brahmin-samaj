@@ -13,10 +13,26 @@ const app = express();
 // Trust Railway/Render/Heroku reverse proxy for HTTPS session cookies
 app.set('trust proxy', 1);
 
+// Rate Limiting
+const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: {
+    success: false,
+    error: 'Too many requests',
+    message: 'Please try again later'
+  }
+});
+app.use('/api', limiter);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Auto-format incoming request text fields (trim, collapse spaces, title-case names, normalize phones/emails)
+const autoFormatRequest = require('./middleware/autoFormatRequest');
+app.use(autoFormatRequest);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'pusaur_samaj_secret_108',
@@ -78,14 +94,35 @@ const memberRoutes = require('./routes/members');
 const eventRoutes = require('./routes/events');
 const adminRoutes = require('./routes/admin');
 
+// Health Check Route
+app.get('/health', (req, res) => {
+  try {
+    res.json({
+      status: 'healthy',
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: 'Health check failed'
+    });
+  }
+});
+
 // Use Routes
 app.use('/admin', adminRoutes);
 app.use('/members', memberRoutes);
 app.use('/events', eventRoutes);
 app.use('/', indexRoutes);
 
+// Error Handler (must be at the end of middleware chain)
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
+
 // Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });
+

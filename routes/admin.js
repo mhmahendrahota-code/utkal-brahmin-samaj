@@ -8,6 +8,19 @@ const Donation = require('../models/Donation');
 const MeetRegistration = require('../models/MeetRegistration');
 const StudentApplication = require('../models/StudentApplication');
 const AdminUser = require('../models/AdminUser');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const { updateGenerationCascade, recalculateAllGenerations } = require('../utils/generationHelper');
+let nodemailer;
+try { nodemailer = require('nodemailer'); } catch (e) { nodemailer = null; }
+const rateLimit = require('express-rate-limit');
+
+// Limit password reset requests to prevent abuse
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: 'Too many password reset requests from this IP, please try again later.'
+});
 
 // Middleware to check if user is admin
 const isAdmin = (req, res, next) => {
@@ -51,14 +64,17 @@ router.get('/login', async (req, res) => {
   }
 
   // Self-healing: if no admins exist, create a default Super Admin from .env
-  const admins = await AdminUser.find();
-  if (admins.length === 0) {
+  const adminCount = await AdminUser.countDocuments();
+  if (adminCount === 0) {
+    const envUser = process.env.ADMIN_USERNAME || 'admin';
+    const envPass = process.env.ADMIN_PASSWORD || 'password123';
     const defaultAdmin = new AdminUser({
-      username: process.env.ADMIN_USERNAME || 'admin',
-      password: process.env.ADMIN_PASSWORD || 'password123',
+      username: envUser,
       role: 'Super Admin',
       name: 'Default Admin'
     });
+    // Use virtual `password` to ensure hashing via pre-save hook
+    defaultAdmin.password = envPass;
     await defaultAdmin.save();
     console.log('[Setup] Created default Super Admin from .env credentials.');
   }
@@ -70,25 +86,119 @@ router.get('/login', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  const admins = await AdminUser.find();
-  const user = admins.find(a => a.username === username && a.password === password);
+  try {
+    const user = await AdminUser.findOne({ username });
+    if (user) {
+      const ok = await user.comparePassword(password);
+      if (ok) {
+        req.session.isAdmin = true;
+        req.session.adminRole = user.role;
+        req.session.adminName = user.name;
+        req.session.adminId = user._id.toString();
+        return res.redirect('/admin');
+      }
+    }
 
-  // Fallback to .env if db lookup fails (safety net for development)
-  const isEnvAdmin = (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD);
+    // Fallback to .env if db lookup fails (safety net for development)
+    const isEnvAdmin = (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD);
+    if (isEnvAdmin) {
+      req.session.isAdmin = true;
+      req.session.adminRole = 'Super Admin';
+      req.session.adminName = 'Root Admin';
+      return res.redirect('/admin');
+    }
 
-  if (user) {
+    res.render('admin/login', { title: 'Admin Login', error: 'Invalid username or password' });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.render('admin/login', { title: 'Admin Login', error: 'Login failed' });
+  }
+});
+
+// ── Password Reset Request (show form)
+router.get('/password-reset', (req, res) => {
+  res.render('admin/password-reset-request', { title: 'Password Reset', error: null });
+});
+
+// Handle reset request (generate token, email or show token)
+router.post('/password-reset', resetLimiter, async (req, res) => {
+  try {
+    const { username, email } = req.body;
+    const user = await AdminUser.findOne({ username });
+    if (!user) return res.render('admin/password-reset-request', { title: 'Password Reset', error: 'No admin found with that username' });
+
+    const token = crypto.randomBytes(20).toString('hex');
+    const expires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+    user.passwordResetToken = token;
+    user.passwordResetExpires = expires;
+    await user.save();
+
+    // If SMTP configured, send email
+    if (process.env.SMTP_HOST && nodemailer) {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+      });
+
+      const resetUrl = `${req.protocol}://${req.get('host')}/admin/password-reset/${token}`;
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || 'no-reply@example.com',
+        to: email || user.username,
+        subject: 'Admin Password Reset',
+        text: `You requested a password reset. Open the link to reset your password:\n\n${resetUrl}\n\nThis link expires in 1 hour.`
+      });
+
+      return res.render('admin/password-reset-sent', { title: 'Password Reset Sent', via: 'email', email: email || user.username });
+    }
+
+    // Fallback: show token on-screen (insecure — only for local/dev)
+    res.render('admin/password-reset-sent', { title: 'Password Reset Sent', via: 'token', token, host: req.get('host') });
+  } catch (err) {
+    console.error('Password reset request error:', err);
+    res.render('admin/password-reset-request', { title: 'Password Reset', error: 'Failed to create reset token' });
+  }
+});
+
+// Show reset form if token valid
+router.get('/password-reset/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const user = await AdminUser.findOne({ passwordResetToken: token, passwordResetExpires: { $gt: new Date() } });
+    if (!user) return res.send('Invalid or expired token.');
+    res.render('admin/password-reset-form', { title: 'Set New Password', token, error: null });
+  } catch (err) {
+    console.error(err);
+    res.send('Error processing token');
+  }
+});
+
+// Handle new password submission
+router.post('/password-reset/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password, passwordConfirm } = req.body;
+    if (!password || password !== passwordConfirm) return res.render('admin/password-reset-form', { title: 'Set New Password', token, error: 'Passwords do not match' });
+
+    const user = await AdminUser.findOne({ passwordResetToken: token, passwordResetExpires: { $gt: new Date() } });
+    if (!user) return res.send('Invalid or expired token.');
+
+    user.password = password; // virtual -> hashed on save
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    // Optionally log user in after reset
     req.session.isAdmin = true;
     req.session.adminRole = user.role;
     req.session.adminName = user.name;
-    req.session.adminId = user._id;
-    res.redirect('/admin');
-  } else if (isEnvAdmin) {
-    req.session.isAdmin = true;
-    req.session.adminRole = 'Super Admin';
-    req.session.adminName = 'Root Admin';
-    res.redirect('/admin');
-  } else {
-    res.render('admin/login', { title: 'Admin Login', error: 'Invalid username or password' });
+    req.session.adminId = user._id.toString();
+
+    res.render('admin/password-reset-success', { title: 'Password Reset Successful' });
+  } catch (err) {
+    console.error('Password reset error:', err);
+    res.render('admin/password-reset-form', { title: 'Set New Password', token: req.params.token, error: 'Failed to reset password' });
   }
 });
 
@@ -303,6 +413,66 @@ router.get('/members', isAdmin, async (req, res) => {
   }
 });
 
+// Admin Family Tree
+router.get('/family-tree', isAdmin, async (req, res) => {
+  try {
+    const Gotra = require('../models/Gotra');
+    const availableGotras = await Gotra.distinct('name');
+    res.render('members/family-tree', {
+      title: 'Family Tree',
+      memberId: 'all',
+      availableGotras,
+      isAdminView: true
+    });
+  } catch (err) {
+    console.error('Error loading admin family tree:', err);
+    res.render('members/family-tree', { title: 'Family Tree', memberId: 'all', availableGotras: [], isAdminView: true });
+  }
+});
+
+// Data Health Dashboard API
+router.get('/api/data-health', isAdmin, async (req, res) => {
+  try {
+    const members = await Member.find().lean();
+    
+    const orphans = [];
+    const identicalNames = [];
+    const nameGotraMap = new Map();
+
+    members.forEach(m => {
+       // Check for orphans: missing all structural pointers
+       const hasFather = m.father && m.father.toString().trim() !== '';
+       const hasMother = m.mother && m.mother.toString().trim() !== '';
+       const hasSpouse = m.spouse && m.spouse.toString().trim() !== '';
+       const hasPid = m.pid && m.pid.toString().trim() !== '';
+       if (!hasFather && !hasMother && !hasSpouse && !hasPid) {
+           orphans.push(m);
+       }
+       
+       // Check for identical names
+       if (m.name && m.gotra) {
+           const key = `${m.name.toLowerCase().trim()}_${m.gotra.toLowerCase().trim()}`;
+           if (nameGotraMap.has(key)) {
+               identicalNames.push([nameGotraMap.get(key), m]);
+           } else {
+               nameGotraMap.set(key, m);
+           }
+       }
+    });
+
+    // We filter orphans to remove completely empty/junk entries
+    const meaningfulOrphans = orphans.filter(o => o.name && o.name.length > 2);
+
+    res.json({
+        success: true,
+        orphans: meaningfulOrphans.map(o => ({ id: o._id, name: o.name, gotra: o.gotra })),
+        identicalNames: identicalNames.map(arr => arr.map(o => ({ id: o._id, name: o.name, gotra: o.gotra })))
+    });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // ─── Database Explorer ──────────────────────────────────────────────
 router.get('/db', isAdmin, async (req, res) => {
   try {
@@ -437,6 +607,21 @@ router.post('/db/bulk-delete', isAdmin, async (req, res) => {
   }
 });
 
+// DB Explorer – Restore deleted docs (Undo)
+router.post('/db/restore', isAdmin, async (req, res) => {
+  try {
+    const { collection, docs } = req.body;
+    if (!Array.isArray(docs) || docs.length === 0) return res.status(400).json({ ok: false, error: 'No docs provided' });
+    const Model = resolveModel(collection);
+    // Use insertMany to bypass some save middleware and allow setting _id
+    await Model.insertMany(docs);
+    res.json({ ok: true, restored: docs.length });
+  } catch (err) {
+    console.error('DB Restore error:', err);
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
 
 
 
@@ -496,6 +681,176 @@ const MDMS_CONFIG = {
     sub: d => d.category || '',
   },
 };
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ONE-TIME FAMILY TREE IMPORT  (Hota family — from Google Sheet)
+// Open in browser: http://localhost:3000/admin/api/import-family-tree
+// ══════════════════════════════════════════════════════════════════════════════
+router.get('/api/import-family-tree', isAdmin, async (req, res) => {
+  const SURNAME = 'Hota';
+  const GOTRA   = 'Jat Konenya';
+
+  // ── AUTHORITATIVE DATA — Google Sheet (verified re-read, 70 rows) ──────
+  // Corrections vs previous import:
+  //   Row 17: Sudarshan parent = GHANSHYAM (not Lachhindra)
+  //   Row 47: Anil parent = PITAMBAR (not Sankarsan)
+  //   Row 56: Omprakash parent = PITAMBAR
+  //   Brajabandhu duplicate row 28-29 removed (keep only one)
+  const familyData = [
+    // Gen 1
+    { husband:'Fakir',          wife:'Malti',           isDeceased:true, honorific:'Late' },
+    // Gen 2
+    { husband:'Sobhnath',       wife:null,              fatherKey:'Fakir',      isDeceased:true, honorific:'Late' },
+    { husband:'Bhikhari',       wife:'Sunaphool',       fatherKey:'Fakir',      isDeceased:true, honorific:'Late' },
+    { husband:'Kanhai',         wife:null,              fatherKey:'Fakir' },
+    { husband:'Shankarshan',    wife:null,              fatherKey:'Fakir' },
+    // Gen 3
+    { husband:'Krishna',        wife:null,              fatherKey:'Sobhnath' },
+    { husband:'Trilochan',      wife:'Mukta',           fatherKey:'Bhikhari',   isDeceased:true, honorific:'Late' },
+    { husband:'Lachhindra',     wife:'Yashoda',         fatherKey:'Bhikhari',   isDeceased:true, honorific:'Late' },
+    { husband:'Jageshwar',      wife:'Sita',            fatherKey:'Bhikhari',   isDeceased:true, honorific:'Late' },
+    { husband:'Ghanshyam',      wife:null,              fatherKey:'Kanhai' },
+    { husband:'Gangadhar',      wife:null,              fatherKey:'Shankarshan' },
+    // Gen 4
+    { husband:'Vanmali',        wife:'Satyawati',       fatherKey:'Trilochan',  isDeceased:true, honorific:'Late' },
+    { husband:'Kripasindhu',    wife:'Rahilaxmi',       fatherKey:'Lachhindra', isDeceased:true, honorific:'Late' },
+    { husband:'Bhuvneshwar',    wife:'Rahi',            fatherKey:'Lachhindra', isDeceased:true, honorific:'Late' },
+    { husband:'Narayan',        wife:'Hemwati',         fatherKey:'Lachhindra', isDeceased:true, honorific:'Late' },
+    { husband:'Arjun',          wife:'Tripura',         fatherKey:'Lachhindra' },
+    // ✅ FIXED: Sheet row 17 — Sudarshan parent = Ghanshyam (not Lachhindra)
+    { husband:'Sudarshan_G4',   wife:null,              fatherKey:'Ghanshyam',  displayName:'Sudarshan' },
+    { husband:'Manbodh',        wife:null,              fatherKey:'Gangadhar' },
+    // Gen 5
+    { husband:'Kritiwas',       wife:null,              fatherKey:'Vanmali' },
+    { husband:'Sudarshan_G5',   wife:'Satyabhama',      fatherKey:'Vanmali',    isDeceased:true, honorific:'Late', displayName:'Sudarshan' },
+    { husband:'Satrughan',      wife:null,              fatherKey:'Vanmali' },
+    { husband:'Siddheswar',     wife:'Harawati',        fatherKey:'Kripasindhu',isDeceased:true, honorific:'Late' },
+    { husband:'Sripati',        wife:'Subhadra',        fatherKey:'Bhuvneshwar' },
+    { husband:'Lingraj',        wife:'Gauri',           fatherKey:'Narayan',    isDeceased:true, honorific:'Late' },
+    { husband:'Upendra',        wife:'Parvati',         fatherKey:'Arjun' },
+    // Gen 6
+    { husband:'Dhanurjaya',     wife:null,              fatherKey:'Sudarshan_G5' },
+    { husband:'Sahadev',        wife:'Urvashi',         fatherKey:'Sudarshan_G5' },
+    { husband:'Vrindavan',      wife:null,              fatherKey:'Sudarshan_G5' },
+    // ✅ Only ONE Brajabandhu (duplicate removed)
+    { husband:'Brajabandhu',    wife:'Priyowati',       fatherKey:'Siddheswar', isDeceased:true, honorific:'Late' },
+    { husband:'Sanatan',        wife:'Praksya Sewti',   fatherKey:'Lingraj' },
+    { husband:'Sankarsan',      wife:'Sankara',         fatherKey:'Lingraj' },
+    { husband:'Gowardhan',      wife:'Mogra',           fatherKey:'Lingraj' },
+    { husband:'Janardan',       wife:'Maya',            fatherKey:'Lingraj' },
+    { husband:'Minketan',       wife:'Bhagmati',        fatherKey:'Lingraj' },
+    { husband:'Gajanand',       wife:'Khirodhari',      fatherKey:'Lingraj' },
+    { husband:'Madusudan',      wife:null,              fatherKey:'Lingraj' },
+    // Gen 7
+    { husband:'Shiv Prashad',   wife:null,              fatherKey:'Dhanurjaya' },
+    { husband:'Karunakar',      wife:'Gandharvi',       fatherKey:'Brajabandhu' },
+    { husband:'Murlidhar',      wife:null,              fatherKey:'Brajabandhu' },
+    { husband:'Kanhya',         wife:null,              fatherKey:'Sanatan' },
+    { husband:'Yudhistir',      wife:null,              fatherKey:'Sanatan' },
+    { husband:'Sushil',         wife:'Shailendri',      fatherKey:'Sanatan',    isDeceased:true, honorific:'Late' },
+    { husband:'Surendra',       wife:null,              fatherKey:'Sanatan' },
+    { husband:'Ganesh',         wife:null,              fatherKey:'Sanatan' },
+    { husband:'Durgacharan',    wife:null,              fatherKey:'Sanatan' },
+    { husband:'Pitambar',       wife:'Uma',             fatherKey:'Sankarsan' },
+    { husband:'Suklambar',      wife:'Urkuli',          fatherKey:'Janardan',   isDeceased:true, honorific:'Late' },
+    { husband:'Maheshwar',      wife:'Safed',           fatherKey:'Janardan',   isDeceased:true, honorific:'Late' },
+    { husband:'Shradhakar',     wife:'Shailendri_S',    fatherKey:'Janardan',   isDeceased:true, honorific:'Late', wifeName:'Shailendri' },
+    { husband:'Chandrashekhar', wife:null,              fatherKey:'Minketan' },
+    // Gen 8
+    { husband:'Subhash',        wife:'Manorama',        fatherKey:'Karunakar',  isDeceased:true, honorific:'Late' },
+    { husband:'Gokul',          wife:'Gandharvi_G',     fatherKey:'Karunakar',  wifeName:'Gandharvi' },
+    { husband:'Hrishikesh',     wife:null,              fatherKey:'Murlidhar' },
+    { husband:'Dheeraj',        wife:null,              fatherKey:'Sushil' },
+    // ✅ FIXED: Anil parent = Pitambar (sheet row 47), NOT Sankarsan
+    { husband:'Anil',           wife:'Poornima',        fatherKey:'Pitambar' },
+    // ✅ FIXED: Omprakash parent = Pitambar (sheet row 56)
+    { husband:'Omprakash',      wife:'Savitri',         fatherKey:'Pitambar' },
+    { husband:'Anup',           wife:null,              fatherKey:'Suklambar' },
+    { husband:'Dinesh',         wife:null,              fatherKey:'Suklambar' },
+    { husband:'Ramesh',         wife:'Sikha',           fatherKey:'Maheshwar' },
+    { husband:'Raju',           wife:null,              fatherKey:'Maheshwar' },
+    { husband:'Sudhir',         wife:null,              fatherKey:'Shradhakar' },
+    { husband:'Sanjay',         wife:null,              fatherKey:'Shradhakar' },
+    // Gen 9
+    { husband:'Gajendra',       wife:null,              fatherKey:'Subhash' },
+    { husband:'Harshwardhan',   wife:'Jyoti',           fatherKey:'Subhash' },
+    { husband:'Mahendra',       wife:'Gyaneshwari',     fatherKey:'Subhash' },
+    { husband:'Pratap',         wife:null,              fatherKey:'Gokul' },
+    { husband:'Pranav',         wife:null,              fatherKey:'Gokul' },
+    { husband:'Subham',         wife:null,              fatherKey:'Omprakash' },
+    // Gen 10
+    { husband:'Prajwal',        wife:null,              fatherKey:'Gajendra' },
+    { husband:'Parth',          wife:null,              fatherKey:'Mahendra' },
+  ];
+
+  function escRx(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  async function upsert(name, extra = {}) {
+    let m = await Member.findOne({ name: new RegExp('^' + escRx(name) + '$', 'i') });
+    if (!m) {
+      m = new Member({ name, surname: SURNAME, gotra: GOTRA, isFamilyTreeOnly: true, isApproved: true, ...extra });
+      await m.save();
+      return { m, created: true };
+    }
+    let dirty = false;
+    if (!m.surname) { m.surname = SURNAME; dirty = true; }
+    if (!m.gotra)   { m.gotra   = GOTRA;   dirty = true; }
+    if (!m.isFamilyTreeOnly) { m.isFamilyTreeOnly = true; dirty = true; }
+    if (extra.isDeceased && !m.isDeceased) { m.isDeceased = true; m.honorific = extra.honorific || 'Late'; dirty = true; }
+    if (dirty) await m.save();
+    return { m, created: false };
+  }
+
+  const log = [];
+  const keyToId = {};
+  let created = 0, skipped = 0, linked = 0, missing = 0;
+
+  try {
+    // Pass 1: Upsert all members
+    for (const e of familyData) {
+      const displayName = e.displayName || e.husband;
+      const { m: h, created: hNew } = await upsert(displayName, { isDeceased: e.isDeceased || false, honorific: e.honorific || '' });
+      hNew ? (log.push(`✅ Created: ${displayName}`), created++) : (log.push(`ℹ️ Exists: ${displayName}`), skipped++);
+      keyToId[e.husband] = h._id;
+
+      if (e.wife) {
+        const wName = e.wifeName || e.wife;
+        const { m: w, created: wNew } = await upsert(wName, {});
+        wNew ? (log.push(`✅ Created wife: ${wName}`), created++) : (log.push(`ℹ️ Exists: ${wName}`), skipped++);
+        if (!h.spouse) {
+          await Member.findByIdAndUpdate(h._id, { spouse: w._id, spouseName: wName });
+          await Member.findByIdAndUpdate(w._id, { spouse: h._id, spouseName: displayName });
+          log.push(`💍 Linked spouses: ${displayName} ↔ ${wName}`);
+        }
+      }
+    }
+
+    // Pass 2: Link parent → child (FORCE overwrite to fix old wrong links)
+    for (const e of familyData) {
+      if (!e.fatherKey) continue;
+      const displayName = e.displayName || e.husband;
+      const childId  = keyToId[e.husband];
+      const fatherId = keyToId[e.fatherKey];
+      if (childId && fatherId) {
+        // Force-set father (overwrites any wrong old link)
+        await Member.findByIdAndUpdate(childId,  { father: fatherId });
+        await Member.findByIdAndUpdate(fatherId, { $addToSet: { children: childId } });
+        const fEntry = familyData.find(x => x.husband === e.fatherKey);
+        log.push(`🔗 ${fEntry?.displayName || e.fatherKey}  →  ${displayName}`);
+        linked++;
+      } else {
+        log.push(`⚠️ Missing parent ref: "${e.fatherKey}" for "${displayName}"`);
+        missing++;
+      }
+    }
+
+    const total = await Member.countDocuments();
+    res.json({ ok: true, summary: { created, skipped, linked, missing, totalMembersInDB: total }, log });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message, log });
+  }
+});
+
 
 // GET /admin/family-tree-bulk — Bulk relationship import page
 router.get('/family-tree-bulk', isAdmin, (req, res) => {
@@ -833,8 +1188,11 @@ router.post('/members/add', isAdmin, async (req, res) => {
       isFamilyTreeOnly: req.body.isFamilyTreeOnly === 'on',
       deathDate: req.body.deathDate || null,
       father: req.body.father || null,
+      fatherName: req.body.fatherName || null,
       mother: req.body.mother || null,
+      motherName: req.body.motherName || null,
       spouse: req.body.spouse || null,
+      spouseName: req.body.spouseName || null,
       isApproved: true // Admin added members are auto-approved
     });
 
@@ -848,6 +1206,10 @@ router.post('/members/add', isAdmin, async (req, res) => {
     if (savedMember.father) await Member.findByIdAndUpdate(savedMember.father, { $addToSet: { children: savedMember._id } });
     if (savedMember.mother) await Member.findByIdAndUpdate(savedMember.mother, { $addToSet: { children: savedMember._id } });
     if (savedMember.spouse) await Member.findByIdAndUpdate(savedMember.spouse, { spouse: savedMember._id });
+
+    // AUTO-UPDATE GENERATION
+    // Run async so it doesn't block the redirect
+    updateGenerationCascade(savedMember._id).catch(e => console.error('[Generation] Add cascade failed:', e.message));
 
     res.redirect('/admin/members');
   } catch (err) {
@@ -993,6 +1355,20 @@ router.post('/api/member/:id/apply-to-children', isAdmin, async (req, res) => {
   }
 });
 
+// API: Recalculate ALL generations in the entire community tree
+router.post('/api/members/recalculate-generations', isAdmin, async (req, res) => {
+  try {
+    const result = await recalculateAllGenerations();
+    res.json({
+      ok: true,
+      message: `✅ Generation recalculation complete! ${result.updated} members updated.${result.errors > 0 ? ` (${result.errors} errors)` : ''}`,
+      ...result
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // API: Bulk Approve Members
 router.post('/api/members/bulk-approve', isAdmin, async (req, res) => {
   try {
@@ -1103,6 +1479,10 @@ router.post('/api/members/bulk-import', isAdmin, async (req, res) => {
         village: memberData.village || '',
         contactNumber: memberData.contactNumber || '',
         honorific: memberData.honorific || '',
+        isFamilyTreeOnly: !!memberData.isFamilyTreeOnly, // Support boolean or truthy values
+        spouseName: memberData.spouseName || null,       // Support manual spouse name
+        fatherName: memberData.fatherName || null,       // Support manual father name
+        motherName: memberData.motherName || null,       // Support manual mother name
         isApproved: false, // New imports need approval
         createdAt: new Date()
       });
@@ -1141,8 +1521,11 @@ router.post('/members/:id/edit', isAdmin, async (req, res) => {
       isFamilyTreeOnly: req.body.isFamilyTreeOnly === 'on',
       deathDate: req.body.deathDate || null,
       father: req.body.father || null,
+      fatherName: req.body.fatherName || null,
       mother: req.body.mother || null,
-      spouse: req.body.spouse || null
+      motherName: req.body.motherName || null,
+      spouse: req.body.spouse || null,
+      spouseName: req.body.spouseName || null
     };
 
     if (!updateData.father) updateData.father = null;
@@ -1167,6 +1550,14 @@ router.post('/members/:id/edit', isAdmin, async (req, res) => {
     if (updatedMember.father) await Member.findByIdAndUpdate(updatedMember.father, { $addToSet: { children: updatedMember._id } });
     if (updatedMember.mother) await Member.findByIdAndUpdate(updatedMember.mother, { $addToSet: { children: updatedMember._id } });
     if (updatedMember.spouse) await Member.findByIdAndUpdate(updatedMember.spouse, { spouse: updatedMember._id });
+
+    // AUTO-UPDATE GENERATION — recalculate if parent relationship changed
+    const parentChanged =
+      (oldMember.father?.toString() !== (updatedMember.father?.toString() || null)) ||
+      (oldMember.mother?.toString() !== (updatedMember.mother?.toString() || null));
+    if (parentChanged) {
+      updateGenerationCascade(updatedMember._id).catch(e => console.error('[Generation] Edit cascade failed:', e.message));
+    }
 
     res.redirect('/admin/members');
   } catch (err) {
@@ -1486,6 +1877,37 @@ router.get('/meet-registrations', isAdmin, async (req, res) => {
   } catch (err) {
     res.render('admin/meet-registrations', { title: 'Meet Registrations', registrations: [] });
   }
+});
+
+// Export meet registrations as CSV
+router.get('/meet-registrations/export', isAdmin, async (req, res) => {
+  try {
+    const registrations = await MeetRegistration.find().sort({ createdAt: -1 });
+    let csv = 'Name,Age,Gotra,Location,Contact,Registered At\n';
+    registrations.forEach(r => {
+      const name     = `"${(r.name     || '').replace(/"/g, '""')}"`;
+      const age      = r.age || '';
+      const gotra    = `"${(r.gotra    || '').replace(/"/g, '""')}"`;
+      const location = `"${(r.location || '').replace(/"/g, '""')}"`;
+      const contact  = `"${(r.contact  || '').replace(/"/g, '""')}"`;
+      const date     = r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : '';
+      csv += `${name},${age},${gotra},${location},${contact},${date}\n`;
+    });
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="MeetRegistrations.csv"');
+    res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.redirect('/admin/meet-registrations');
+  }
+});
+
+// Delete a single meet registration
+router.post('/meet-registrations/:id/delete', isAdmin, async (req, res) => {
+  try {
+    await MeetRegistration.findByIdAndDelete(req.params.id);
+  } catch (err) { console.error(err); }
+  res.redirect('/admin/meet-registrations');
 });
 
 router.get('/student-applications', isAdmin, async (req, res) => {
@@ -1841,10 +2263,10 @@ router.post('/manage-admins/add', requireSuperAdmin, async (req, res) => {
 
     const newAdmin = new AdminUser({
       username: req.body.username,
-      password: req.body.password,
       role: req.body.role,
       name: req.body.name
     });
+    newAdmin.password = req.body.password; // virtual -> hashed in pre-save
     await newAdmin.save();
     res.redirect('/admin/manage-admins');
   } catch (err) {

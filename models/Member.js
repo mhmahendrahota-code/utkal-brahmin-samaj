@@ -10,6 +10,7 @@ const matrimonialProfileSchema = new mongoose.Schema({
 
 const memberSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  gender: { type: String, enum: ['Male', 'Female', 'Other'] },
   surname: { type: String },
   gotra: { type: String },
   village: { type: String },
@@ -24,15 +25,32 @@ const memberSchema = new mongoose.Schema({
   
   // Family Tree Fields
   father: { type: mongoose.Schema.Types.ObjectId, ref: 'Member' },
+  fatherName: { type: String }, // Manual entry for father if not a member
   mother: { type: mongoose.Schema.Types.ObjectId, ref: 'Member' },
+  motherName: { type: String }, // Manual entry for non-member spouses
   spouse: { type: mongoose.Schema.Types.ObjectId, ref: 'Member' },
+  spouseName: { type: String }, // Manual entry for non-member spouses
   children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
 
   // Ancestor / Deceased Support
   isDeceased: { type: Boolean, default: false },
   honorific: { type: String, default: '' }, // e.g., 'Late' / 'स्व.'
   deathDate: Date,
+  
+  // Generation Tracking (auto-managed, 0 = earliest known ancestor/root)
+  generationLevel: { type: Number, default: null },
+
   matrimonialProfile: { type: matrimonialProfileSchema, default: () => ({}) }
 }, { timestamps: true });
+
+// Add Indexes for better performance
+memberSchema.index({ surname: 1 });
+memberSchema.index({ village: 1 });
+memberSchema.index({ contactNumber: 1 });
+memberSchema.index({ email: 1 });
+memberSchema.index({ father: 1 });
+memberSchema.index({ spouse: 1 });
+memberSchema.index({ gender: 1, isApproved: 1 });
+memberSchema.index({ isFamilyTreeOnly: 1 });
 
 module.exports = mongoose.model('Member', memberSchema);

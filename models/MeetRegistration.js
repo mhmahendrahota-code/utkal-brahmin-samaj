@@ -1,13 +1,12 @@
 const mongoose = require('mongoose');
 
 const meetRegistrationSchema = new mongoose.Schema({
-  name: { type: String },
-  phone: { type: String },
-  email: { type: String },
-  village: { type: String },
-  numberOfAttendees: { type: Number, default: 1 },
-  eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
-  notes: { type: String, default: '' }
+  name:    { type: String, required: true, trim: true },
+  age:     { type: Number },
+  gotra:   { type: String, trim: true },
+  location:{ type: String, trim: true },  // Village / Location
+  contact: { type: String, trim: true },  // Contact number
+  notes:   { type: String, default: '' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('MeetRegistration', meetRegistrationSchema);

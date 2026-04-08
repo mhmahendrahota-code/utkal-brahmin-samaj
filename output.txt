@@ -1,0 +1,1 @@
+{"success":true,"k_id":"69d14852e7ce3813e2a353f4","k_name":"Karunakar","k_spouse":"69d14852e7ce3813e2a353f7","k_spouseName":"Gandharvi","g_id":"69d14856e7ce3813e2a35429","g_name":"Gokul","g_spouse":"69d5ffd00ff380c93d2d69ed","g_spouseName":"Gandharvi"}

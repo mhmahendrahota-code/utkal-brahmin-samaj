@@ -289,6 +289,7 @@ router.get('/api/family-tree/:id', async (req, res) => {
       const node = {
         id: member._id.toString(),
         name: member.name + (member.surname ? ' ' + member.surname : ''),
+        gender: member.gender || '',
         title: (member.honorific ? member.honorific + ' ' : '') + (member.occupation || 'Member'),
         village: member.village || '',
         image: member.profileImage || '/images/default-avatar.png',
@@ -298,7 +299,8 @@ router.get('/api/family-tree/:id', async (req, res) => {
         gotra: member.gotra || '',
         surname: member.surname || '',
         deathDate: (member.deathDate && member.deathDate.toISOString) ? member.deathDate.toISOString().split('T')[0] : (member.deathDate || ''),
-        generation: generation, // NEW: Generation level (-N for ancestors, 0 for target, +N for descendants)
+        generation: generation, // Relative level for tree layout
+        generationLevel: member.generationLevel, // Absolute level from DB
         tags: []
       };
 

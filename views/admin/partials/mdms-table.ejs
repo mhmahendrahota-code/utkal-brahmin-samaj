@@ -78,7 +78,10 @@
             </td>
             <td class="px-5 py-3 text-right whitespace-nowrap">
               <!-- Edit: inline expansion -->
-              <button onclick="openMdmsEdit('<%= type %>', '<%= item._id %>', <%= JSON.stringify(item).replace(/</g,'&lt;') %>)"
+              <button onclick="handleEditClick(this)"
+                      data-type="<%= type %>"
+                      data-id="<%= item._id %>"
+                      data-item="<%= encodeURIComponent(JSON.stringify(item)) %>"
                       class="text-blue-500 hover:text-blue-700 mr-2 text-sm" title="Edit">
                 <i class="fas fa-edit"></i>
               </button>
@@ -98,6 +101,13 @@
 </div>
 
 <script>
+  function handleEditClick(btn) {
+    const type = btn.getAttribute('data-type');
+    const id = btn.getAttribute('data-id');
+    const item = JSON.parse(decodeURIComponent(btn.getAttribute('data-item')));
+    openMdmsEdit(type, id, item);
+  }
+
   function filterMdms(input, type) {
     const term = input.value.toLowerCase().trim();
     document.querySelectorAll(`#tbl-${type} .mdms-row`).forEach(row => {

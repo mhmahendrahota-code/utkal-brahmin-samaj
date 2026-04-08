@@ -45,6 +45,12 @@
         <button type="button" onclick="openMemberImport()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center">
           <i class="fas fa-upload mr-2"></i> Import Members
         </button>
+        <button type="button" onclick="checkDataHealth()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center">
+          <i class="fas fa-notes-medical mr-2"></i> Data Health
+        </button>
+        <button type="button" onclick="recalculateGenerations()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center" title="पीढ़ी (Generation) सभी सदस्यों के लिए Recalculate करें">
+          <i class="fas fa-layer-group mr-2"></i> Recalculate पीढ़ी
+        </button>
         <button type="button" onclick="checkDuplicates()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center">
           <i class="fas fa-copy mr-2"></i> Check Duplicates
         </button>
@@ -196,6 +202,7 @@
                 Contact <span class="text-xs" id="sort-contact"></span>
               </th>
               <th class="px-6 py-4 font-medium">Family Links</th>
+              <th class="px-4 py-4 font-medium text-center cursor-pointer hover:bg-gray-100" onclick="sortTable('gen')" title="पीढ़ी (Generation Level)">Gen <span class="text-xs" id="sort-gen"></span></th>
               <th class="px-6 py-4 font-medium">Status</th>
               <th class="px-6 py-4 font-medium text-right">Actions</th>
             </tr>
@@ -266,6 +273,20 @@
                       <% if (member.children && member.children.length > 0) { %><span class="text-xs bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-medium"><%= member.children.length %> Child<%= member.children.length > 1 ? 'ren' : '' %></span><% } %>
                       <% if (!member.father && !member.mother && !member.spouse && (!member.children || member.children.length === 0)) { %><span class="text-xs text-gray-400">—</span><% } %>
                     </div>
+                  </td>
+                  <td class="px-4 py-4 text-center">
+                    <% if (member.generationLevel !== null && member.generationLevel !== undefined) { %>
+                      <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold
+                        <%= member.generationLevel === 0 ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 
+                           member.generationLevel <= 2 ? 'bg-blue-50 text-blue-700' : 
+                           member.generationLevel <= 4 ? 'bg-green-50 text-green-700' : 
+                           'bg-gray-100 text-gray-600' %>" 
+                        title="पीढ़ी <%= member.generationLevel %> (Generation Level)">
+                        <%= member.generationLevel %>
+                      </span>
+                    <% } else { %>
+                      <span class="text-gray-300" title="Not calculated yet">—</span>
+                    <% } %>
                   </td>
                   <td class="px-6 py-4">
                     <div class="flex flex-wrap gap-1 items-center">
@@ -410,7 +431,7 @@
 
       <div class="border-t-2 border-gray-200 pt-4">
         <p class="text-xs text-gray-600 mb-2">Or paste CSV data:</p>
-        <textarea id="csv-paste" placeholder="name,surname,gotra,village,contactNumber,honorific&#10;John,Sharma,Sharma Gotra,Delhi,9876543210,Mr" 
+        <textarea id="csv-paste" placeholder="Name,Surname,Gotra,Village,Contact,Honorific,TreeOnly(yes/no),SpouseName,FatherName,MotherName&#10;John,Sharma,Shandilya,Delhi,9876543210,Mr,no,Jane Sharma,Old Father,Old Mother" 
                   class="w-full h-24 px-3 py-2 border border-gray-300 rounded text-sm font-mono"
                   onchange="previewMemberCSV()"></textarea>
       </div>
@@ -421,17 +442,19 @@
           <thead>
             <tr class="bg-gray-100">
               <th class="border border-gray-300 px-2 py-1 text-left">Name</th>
-              <th class="border border-gray-300 px-2 py-1 text-left">Surname</th>
               <th class="border border-gray-300 px-2 py-1 text-left">Gotra</th>
               <th class="border border-gray-300 px-2 py-1 text-left">Village</th>
+              <th class="border border-gray-300 px-2 py-1 text-left">Tree Only?</th>
+              <th class="border border-gray-300 px-2 py-1 text-left">Spouse</th>
+              <th class="border border-gray-300 px-2 py-1 text-left">Parents</th>
             </tr>
           </thead>
           <tbody id="preview-rows"></tbody>
         </table>
       </div>
 
-      <p class="text-xs text-gray-600">
-        <strong>CSV Format Required:</strong> name, surname, gotra, village, contactNumber, honorific (all optional except name and gotra)
+      <p class="text-[10px] text-gray-500 mt-2">
+        <strong>CSV Format:</strong> Name, Surname, Gotra, Village, Contact, Honorific, Tree Only (yes/no), Spouse Name, Father Name, Mother Name
       </p>
     </div>
     
@@ -1292,7 +1315,11 @@
         gotra: parts[2] || '',
         village: parts[3] || '',
         contactNumber: parts[4] || '',
-        honorific: parts[5] || ''
+        honorific: parts[5] || '',
+        isFamilyTreeOnly: (parts[6] && (parts[6].toLowerCase() === 'yes' || parts[6].toLowerCase() === 'true' || parts[6] === '1')),
+        spouseName: parts[7] || '',
+        fatherName: parts[8] || '',
+        motherName: parts[9] || ''
       };
 
       // Validate required fields
@@ -1312,9 +1339,13 @@
     previewRows.innerHTML = pendingImportData.slice(0, 10).map(m => `
       <tr>
         <td class="border border-gray-300 px-2 py-1">${m.name}</td>
-        <td class="border border-gray-300 px-2 py-1">${m.surname}</td>
         <td class="border border-gray-300 px-2 py-1">${m.gotra}</td>
         <td class="border border-gray-300 px-2 py-1">${m.village}</td>
+        <td class="border border-gray-300 px-2 py-1">
+          ${m.isFamilyTreeOnly ? '<span class="text-xs bg-yellow-100 text-yellow-700 px-1 rounded">Tree Only</span>' : '<span class="text-xs bg-green-100 text-green-700 px-1 rounded">Samaj Member</span>'}
+        </td>
+        <td class="border border-gray-300 px-2 py-1">${m.spouseName || '—'}</td>
+        <td class="border border-gray-300 px-2 py-1">F: ${m.fatherName || '—'}, M: ${m.motherName || '—'}</td>
       </tr>
     `).join('');
 
@@ -1359,6 +1390,115 @@
     } finally {
       btn.disabled = false;
       btn.textContent = '<i class="fas fa-check mr-1"></i> Import';
+    }
+  }
+
+  // ========== DATA HEALTH DASHBOARD ==========
+  async function checkDataHealth() {
+    // We can reuse the duplicates modal markup for simplicity, or create a custom one!
+    // Since we are adding it directly here:
+    let modal = document.getElementById('data-health-modal');
+    if (!modal) {
+       document.body.insertAdjacentHTML('beforeend', `
+       <div id="data-health-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-teal-50">
+                <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-notes-medical text-teal-600 mr-2"></i> Data Health Dashboard</h3>
+                <button onclick="document.getElementById('data-health-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                   <i class="fas fa-times text-xl"></i>
+                </button>
+             </div>
+             <div class="p-6 overflow-y-auto" id="data-health-content">
+                <p class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin mr-2"></i> Scanning database health...</p>
+             </div>
+          </div>
+       </div>`);
+       modal = document.getElementById('data-health-modal');
+    }
+    modal.classList.remove('hidden');
+
+    try {
+       const res = await fetch('/admin/api/data-health');
+       const data = await res.json();
+       
+       if (!data.success) throw new Error(data.error);
+
+       let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+       
+       // Orphan Block
+       html += `<div class="bg-red-50 rounded-lg p-4 border border-red-100">
+           <h4 class="font-bold text-red-800 mb-2 border-b border-red-200 pb-2"><i class="fas fa-unlink mr-2"></i> Unlinked Members (Orphans) <span class="bg-red-200 text-red-800 text-xs px-2 py-0.5 rounded-full ml-2">${data.orphans.length}</span></h4>
+           <p class="text-xs text-red-600 mb-3 block">These members have no family ties assigned.</p>
+           <ul class="space-y-2 max-h-60 overflow-y-auto pr-2">
+               ${data.orphans.map(o => `
+                   <li class="flex justify-between items-center bg-white p-2 rounded text-sm shadow-sm border border-red-100">
+                       <span class="font-medium text-gray-800">${o.name} <span class="text-xs text-gray-500">(${o.gotra})</span></span>
+                       <a href="/admin/members/${o.id}/edit" target="_blank" class="text-blue-600 hover:text-blue-800 text-xs font-bold">Fix</a>
+                   </li>`).join('') || '<p class="text-sm text-green-600"><i class="fas fa-check-circle"></i> No orphan members found.</p>'}
+           </ul>
+       </div>`;
+
+       // Identical Names Block
+       const dupes = data.identicalNames.filter(arr => arr.length > 1);
+       html += `<div class="bg-orange-50 rounded-lg p-4 border border-orange-100">
+           <h4 class="font-bold text-orange-800 mb-2 border-b border-orange-200 pb-2"><i class="fas fa-user-friends mr-2"></i> Identical Names <span class="bg-orange-200 text-orange-800 text-xs px-2 py-0.5 rounded-full ml-2">${dupes.length} groups</span></h4>
+           <p class="text-xs text-orange-600 mb-3 block">Multiple members share the exact same Name + Gotra.</p>
+           <ul class="space-y-4 max-h-60 overflow-y-auto pr-2">
+               ${dupes.map(group => `
+                   <li class="bg-white p-3 rounded text-sm shadow-sm border border-orange-100 flex flex-col gap-2">
+                       ${group.map(o => `
+                           <div class="flex justify-between items-center bg-gray-50 border border-gray-100 p-1.5 rounded">
+                               <span class="font-medium text-gray-800">${o.name} <span class="text-xs text-gray-500">(${o.gotra})</span> <span class="text-[10px] text-gray-400 block">${o.id}</span></span>
+                               <a href="/admin/members/${o.id}/edit" target="_blank" class="text-blue-600 hover:text-blue-800 text-xs font-bold bg-white px-2 py-1 rounded shadow-sm border border-gray-200">Edit</a>
+                           </div>
+                       `).join('')}
+                   </li>`).join('') || '<p class="text-sm text-green-600"><i class="fas fa-check-circle"></i> No identical names found.</p>'}
+           </ul>
+       </div>`;
+
+       html += '</div>';
+
+       if (data.orphans.length === 0 && dupes.length === 0) {
+           html = `<div class="text-center p-8 bg-green-50 rounded-xl border border-green-200">
+             <i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>
+             <h3 class="text-2xl font-bold text-green-800">Perfect Health!</h3>
+             <p class="text-green-600 mt-2">No structural errors or duplicate names detected in the database.</p>
+           </div>`;
+       }
+
+       document.getElementById('data-health-content').innerHTML = html;
+    } catch(e) {
+       document.getElementById('data-health-content').innerHTML = `<p class="text-red-500 text-center py-4">Error: ${e.message}</p>`;
+    }
+  }
+
+  async function recalculateGenerations() {
+    if (!confirm('\u0915्या आप सभी सदस्यों की पीढ़ी (generationLevel) पुनः गणना करना चाहते हैं?\n(Recalculate generations for all members from scratch?)')) return;
+    
+    const btn = document.querySelector('[onclick="recalculateGenerations()"]');
+    const origText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+    btn.disabled = true;
+    
+    try {
+      const res = await fetch('/admin/api/members/recalculate-generations', { method: 'POST' });
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        alert('Session expired! Kripya dobara login karein.\n(Session expired, please re-login.)');
+        window.location.href = '/admin/login';
+        return;
+      }
+      const data = await res.json();
+      if (data.ok) {
+        alert(data.message);
+      } else {
+        alert('Error: ' + (data.error || 'Failed'));
+      }
+    } catch(e) {
+      alert('Request failed: ' + e.message);
+    } finally {
+      btn.innerHTML = origText;
+      btn.disabled = false;
     }
   }
 
