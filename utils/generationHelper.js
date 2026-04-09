@@ -109,52 +109,96 @@ async function recalculateAllGenerations() {
   let errors = 0;
 
   try {
-    // Find root members (no father, no mother)
-    const roots = await Member.find({
-      father: null,
-      mother: null
-    }).select('_id').lean();
+    console.log('[Generation] Starting full recalculation...');
+    
+    // 1. Reset everyone to null first
+    await Member.updateMany({}, { generationLevel: null });
+    
+    // 2. Find "True Roots"
+    // Criteria: No parents AND (no spouse OR spouse has no parents either)
+    // This identifies the top-most couple(s) in the tree.
+    const allMembers = await Member.find({}).select('_id father mother spouse name').lean();
+    const memberMap = new Map(allMembers.map(m => [m._id.toString(), m]));
+    
+    const trueRoots = allMembers.filter(m => {
+      const hasNoParents = !m.father && !m.mother;
+      if (!hasNoParents) return false;
+      
+      if (!m.spouse) return true; // No parents, no spouse -> Root
+      
+      const spouse = memberMap.get(m.spouse.toString());
+      if (!spouse) return true; // Spouse not in DB -> Root
+      
+      const spouseHasNoParents = !spouse.father && !spouse.mother;
+      return spouseHasNoParents; // Both have no parents -> Top Couple Root
+    });
 
-    // Also find members whose father/mother reference is broken (not in DB)
-    const allIds = new Set((await Member.find().select('_id').lean()).map(m => m._id.toString()));
+    console.log(`[Generation] Found ${trueRoots.length} true ancestral roots.`);
 
-    // BFS from each root
-    for (const root of roots) {
-      const queue = [{ id: root._id.toString(), level: 0 }];
-      const visited = new Set();
+    const globalLevelMap = new Map();
+    const queue = [];
 
-      while (queue.length > 0) {
-        const { id, level } = queue.shift();
-        if (visited.has(id)) continue;
-        visited.add(id);
+    // Initialize queue with true roots
+    for (const root of trueRoots) {
+      queue.push({ id: root._id.toString(), level: 0 });
+      globalLevelMap.set(root._id.toString(), 0);
+    }
 
-        try {
-          await Member.findByIdAndUpdate(id, { generationLevel: level });
-          updated++;
+    // 3. Global BFS traversal
+    let processedCount = 0;
+    while (queue.length > 0) {
+      const { id, level } = queue.shift();
+      processedCount++;
 
-          // Same level for spouse
-          const m = await Member.findById(id).select('spouse').lean();
-          if (m && m.spouse) {
-            await Member.findByIdAndUpdate(m.spouse, { generationLevel: level });
-            visited.add(m.spouse.toString());
-            updated++;
+      try {
+        await Member.findByIdAndUpdate(id, { generationLevel: level });
+        updated++;
+
+        const m = memberMap.get(id);
+        
+        // Propagate to spouse
+        if (m.spouse) {
+          const spouseId = m.spouse.toString();
+          if (!globalLevelMap.has(spouseId)) {
+            await Member.findByIdAndUpdate(spouseId, { generationLevel: level });
+            globalLevelMap.set(spouseId, level);
+            // Spouses don't necessarily need to go into queue unless we want to find children via mother
+            queue.push({ id: spouseId, level: level });
           }
-
-          // Add children to queue
-          const children = await Member.find({
-            $or: [{ father: id }, { mother: id }]
-          }).select('_id').lean();
-
-          for (const child of children) {
-            if (!visited.has(child._id.toString())) {
-              queue.push({ id: child._id.toString(), level: level + 1 });
-            }
-          }
-        } catch (e) {
-          errors++;
         }
+
+        // Add children
+        const children = await Member.find({
+          $or: [{ father: id }, { mother: id }]
+        }).select('_id').lean();
+
+        for (const child of children) {
+          const childId = child._id.toString();
+          const childLevel = level + 1;
+          
+          if (!globalLevelMap.has(childId) || globalLevelMap.get(childId) > childLevel) {
+            globalLevelMap.set(childId, childLevel);
+            queue.push({ id: childId, level: childLevel });
+          }
+        }
+      } catch (e) {
+        errors++;
+      }
+      
+      if (processedCount % 50 === 0) console.log(`[Generation] Processed ${processedCount} members...`);
+    }
+
+    // 4. Fallback for disconnected fragments (if any left)
+    const survivors = await Member.find({ generationLevel: null }).select('_id name').lean();
+    if (survivors.length > 0) {
+      console.log(`[Generation] Resolving ${survivors.length} remaining members...`);
+      for (const s of survivors) {
+        const level = await resolveGenerationLevel(s._id);
+        await Member.findByIdAndUpdate(s._id, { generationLevel: level || 0 });
+        updated++;
       }
     }
+
   } catch (err) {
     console.error('[Generation] Full recalculate error:', err.message);
   }

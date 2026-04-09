@@ -36,134 +36,197 @@
         <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 md:p-8">
           <h2 class="text-xl font-bold text-saffron-700 border-b pb-3 mb-6">सदस्यता पंजीकरण फॉर्म / Membership Registration Form</h2>
 
-          <form action="/members/add" method="POST" class="space-y-5">
+          <form action="/members/add" method="POST" class="space-y-8">
 
-            <!-- Name -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">पहला नाम / First Name *</label>
-                <input type="text" name="name" required placeholder="जैसे: Ramesh Chandra"
-                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            <!-- Section 1: Personal Information -->
+            <div>
+              <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center">
+                <span class="w-8 h-px bg-gray-200 mr-2"></span> व्यक्तिगत जानकारी (Personal Info)
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+                <!-- Honorific -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">संबोधन (Title) *</label>
+                  <select name="honorific" id="honorific" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white"
+                    onchange="syncHonorific(this.value)">
+                    <option value="Shri">Shri (श्री)</option>
+                    <option value="Smt.">Smt. (श्रीमती)</option>
+                    <option value="Ms.">Ms. (कुमारी)</option>
+                    <option value="Late">Late (स्वर्गीय)</option>
+                    <option value="Dr.">Dr. (डॉ.)</option>
+                    <option value="Er.">Er. (अभि.)</option>
+                    <option value="Prof.">Prof. (प्रो.)</option>
+                  </select>
+                  <!-- Hidden input for isDeceased -->
+                  <input type="hidden" name="isDeceased" id="isDeceasedHidden" value="false">
+                </div>
+                <!-- First Name -->
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">पहला नाम / First Name *</label>
+                  <input type="text" name="name" required placeholder="जैसे: Ramesh Chandra"
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">अंतिम नाम / Surname *</label>
-                <select name="surname_select" required onchange="toggleSurnameInput(this)"
-                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
-                  <option value="">-- चुनें (Select) --</option>
-                  <% if (typeof surnames !== 'undefined') { %>
-                    <% surnames.forEach(s => { %>
-                      <option value="<%= s.surname %>"><%= s.surname %></option>
-                    <% }) %>
-                  <% } %>
-                  <option value="Others">Others (अन्य)</option>
-                </select>
-                <div id="surnameCustomDiv" style="display:none;" class="mt-2">
-                  <input type="text" id="surnameCustomInput" placeholder="अपना उपनाम लिखें / Enter Surname"
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                <!-- Surname -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">अंतिम नाम / Surname *</label>
+                  <select name="surname_select" required onchange="toggleSurnameInput(this)"
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
+                    <option value="">-- चुनें (Select) --</option>
+                    <% if (typeof surnames !== 'undefined') { %>
+                      <% surnames.forEach(s => { %>
+                        <option value="<%= s.surname %>"><%= s.surname %></option>
+                      <% }) %>
+                    <% } %>
+                    <option value="Others">Others (अन्य)</option>
+                  </select>
+                  <div id="surnameCustomDiv" style="display:none;" class="mt-2 text-wrap">
+                    <input type="text" id="surnameCustomInput" placeholder="अपना उपनाम लिखें / Enter Surname"
+                      class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-saffron-50">
+                  </div>
+                </div>
+                <!-- Gotra -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">गोत्र / Gotra *</label>
+                  <select id="gotraSelect" name="gotra_select" required onchange="toggleGotraInput(this)"
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
+                    <option value="">-- चुनें (Select) --</option>
+                    <option value="Kashyap">Kashyap (कश्यप)</option>
+                    <option value="Bhardwaj">Bhardwaj (भरद्वाज)</option>
+                    <option value="Gautam">Gautam (गौतम)</option>
+                    <option value="Vashishtha">Vashishtha (वसिष्ठ)</option>
+                    <option value="Angiras">Angiras (अंगिरस)</option>
+                    <option value="Atri">Atri (अत्रि)</option>
+                    <option value="Vishwamitra">Vishwamitra (विश्वामित्र)</option>
+                    <option value="Agastya">Agastya (अगस्त्य)</option>
+                    <option value="Shandilya">Shandilya (शाण्डिल्य)</option>
+                    <option value="Others">Others (अन्य)</option>
+                  </select>
+                  <div id="gotraCustomDiv" style="display:none;" class="mt-2">
+                    <input type="text" id="gotraCustomInput" placeholder="अपना गोत्र लिखें / Enter Gotra"
+                      class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-saffron-50">
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+                <!-- Gender -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">लिंग (Gender) *</label>
+                  <select name="gender" id="gender" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white"
+                    onchange="syncGender(this.value)">
+                    <option value="Male">Male (पुरुष)</option>
+                    <option value="Female">Female (महिला)</option>
+                    <option value="Other">Other (अन्य)</option>
+                  </select>
+                </div>
+                <!-- DOB -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">जन्म तिथि (DOB) *</label>
+                  <input type="date" name="dob" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                </div>
+                <!-- Blood Group -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">रक्त समूह (Blood Group)</label>
+                  <select name="bloodGroup" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
+                    <option value="">-- Choose (रक्त समूह) --</option>
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 2: Family Relationships -->
+            <div>
+              <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center">
+                <span class="w-8 h-px bg-gray-200 mr-2"></span> पारिवारिक संबंध (Family Relationships)
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                <!-- Father's Name -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">पिता का नाम / Father's Name *</label>
+                  <input type="text" name="fatherName" required placeholder="जैसे: Shri Ramlal Panda"
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                </div>
+                <!-- Mother's Name -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">माता का नाम / Mother's Name *</label>
+                  <input type="text" name="motherName" required placeholder="जैसे: Smt. Geeta Devi"
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                </div>
+                <!-- Spouse Name -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">जीवनसाथी का नाम / Spouse Name</label>
+                  <input type="text" name="spouseName" placeholder="जैसे: Smt. Sunita Devi"
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                </div>
+                <!-- Village -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">मूल गाँव / Village (Mool) *</label>
+                  <input type="text" name="village" required placeholder="जैसे: Pusaur, Khairmal..."
                     class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
                 </div>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <!-- Gotra -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">गोत्र / Gotra *</label>
-                <select id="gotraSelect" name="gotra" required onchange="toggleGotraInput(this)"
-                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
-                  <option value="">-- Select Gotra (गोत्र चुनें) --</option>
-                  <option value="Atri">Atri / Atreya (अत्रि / आत्रेय)</option>
-                  <option value="Upamanyu">Upamanyu (उपमन्यु)</option>
-                  <option value="Kapinjala">Kapinjala (कपिंजल)</option>
-                  <option value="Kashyapa">Kashyapa (कश्यप)</option>
-                  <option value="Kaundinya">Kaundinya (कौंडिन्य)</option>
-                  <option value="Kaushik">Kaushik (कौशिक)</option>
-                  <option value="Gargya">Gargya (गार्ग्य)</option>
-                  <option value="Gautama">Gautama (गौतम)</option>
-                  <option value="Jamadagnya">Jamadagnya (जामदग्न्य)</option>
-                  <option value="Parashara">Parashara (पराशर)</option>
-                  <option value="Bharadwaj">Bharadwaj (भरद्वाज)</option>
-                  <option value="Vatsa">Vatsa (वत्स)</option>
-                  <option value="Vashistha">Vashistha (वसिष्ठ)</option>
-                  <option value="Vishwamitra">Vishwamitra (विश्वामित्र)</option>
-                  <option value="Shandilya">Shandilya (शांडिल्य)</option>
-                  <option value="Harita">Harita (हरित)</option>
-                  <option value="Other">Other (अन्य)</option>
-                </select>
-                <div id="gotraCustomDiv" style="display:none;" class="mt-2">
-                  <input type="text" id="gotraCustomInput" placeholder="अपना गोत्र लिखें / Enter Gotra"
+            <!-- Section 3: Professional & Contact -->
+            <div>
+              <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center">
+                <span class="w-8 h-px bg-gray-200 mr-2"></span> व्यवसाय एवं संपर्क (Professional & Contact)
+              </h3>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                <!-- Qualification -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">शिक्षा (Qualification) *</label>
+                  <input type="text" name="education" required placeholder="जैसे: MA, B.Tech, 12th..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                </div>
+                <!-- Occupation -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">व्यवसाय / Occupation</label>
+                  <input type="text" name="occupation" placeholder="जैसे: Teacher, Farmer, Business..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                </div>
+                <!-- Contact -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">मोबाइल नंबर / Mobile Number *</label>
+                  <input type="tel" name="contactNumber" required placeholder="98765 43210"
+                    class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                </div>
+                <!-- Email -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">ईमेल / Email Address</label>
+                  <input type="email" name="email" placeholder="example@email.com"
                     class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
                 </div>
               </div>
 
-              <!-- Village -->
+              <!-- Address -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">मूल गाँव / Village (Mool) *</label>
-                <input type="text" name="village" required placeholder="जैसे: Pusaur, Khairmal..."
-                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+                <label class="block text-sm font-medium text-gray-700 mb-1">वर्तमान पता / Current Address</label>
+                <textarea name="address" rows="3" placeholder="मकान नंबर, गली, शहर..."
+                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500"></textarea>
               </div>
-
-              <!-- Father's Name -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">पिता का नाम / Father's Name</label>
-                <input type="text" name="fatherName" placeholder="जैसे: Shri Ramlal Panda"
-                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-              </div>
-
-              <!-- Mother's Name -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">माता का नाम / Mother's Name</label>
-                <input type="text" name="motherName" placeholder="जैसे: Smt. Geeta Devi"
-                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <!-- Contact -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">मोबाइल नंबर / Contact Number *</label>
-                <input type="tel" name="contactNumber" required placeholder="+91 XXXXX XXXXX"
-                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-              </div>
-
-              <!-- Spouse Name -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">जीवनसाथी का नाम / Spouse Name</label>
-                <input type="text" name="spouseName" placeholder="जैसे: Smt. Sunita Devi"
-                  class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-              </div>
-            </div>
-
-            <!-- Occupation -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">व्यवसाय / Occupation</label>
-              <input type="text" name="occupation" placeholder="जैसे: Teacher, Farmer, Business..."
-                class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-            </div>
-
-            <!-- Email -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ईमेल / Email Address</label>
-              <input type="email" name="email" placeholder="example@email.com"
-                class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-            </div>
-
-            <!-- Address -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">वर्तमान पता / Current Address</label>
-              <textarea name="address" rows="3" placeholder="मकान नंबर, गली, शहर..."
-                class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500"></textarea>
             </div>
 
             <div class="bg-saffron-50 border border-saffron-200 rounded p-4 text-sm text-saffron-800">
               <i class="fas fa-info-circle mr-1"></i>
               आपकी जानकारी समाज की समिति द्वारा सत्यापित की जाएगी और फिर डायरेक्टरी में जोड़ी जाएगी।<br>
-              <span class="text-saffron-700">Your information will be verified by the committee before being added to the directory.</span>
+              <span class="text-saffron-700 font-medium">Your information will be verified by the committee before being added to the directory.</span>
             </div>
 
-            <div class="flex justify-end gap-4 pt-2">
-              <a href="/" class="px-6 py-2 border border-gray-300 rounded text-gray-700 font-medium hover:bg-gray-50 transition-colors">रद्द करें / Cancel</a>
-              <button type="submit" class="px-8 py-2 bg-saffron-600 hover:bg-saffron-700 text-white rounded font-medium shadow-sm transition-colors">
-                <i class="fas fa-paper-plane mr-2"></i> पंजीकरण करें / Register
+            <div class="flex justify-end gap-4 pt-4 border-t border-gray-100">
+              <a href="/" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">रद्द करें / Cancel</a>
+              <button type="submit" class="px-8 py-2 bg-saffron-600 hover:bg-saffron-700 text-white rounded-lg font-bold shadow-lg shadow-saffron-200 transition-all active:scale-95">
+                <i class="fas fa-paper-plane mr-2"></i> पंजीकरण करें (Register)
               </button>
             </div>
           </form>
@@ -203,6 +266,38 @@
         customInput.required = false;
         customInput.name = '';
         select.name = 'surname_select';
+      }
+    }
+
+    // --- Smart Honorific Sync ---
+    function syncHonorific(val) {
+      const genderSel = document.getElementById('gender');
+      const isDeceasedInput = document.getElementById('isDeceasedHidden');
+
+      // Mortality sync
+      if (val === 'Late') {
+        if (isDeceasedInput) isDeceasedInput.value = 'true';
+      } else {
+        if (isDeceasedInput) isDeceasedInput.value = 'false';
+      }
+
+      // Gender sync
+      if (val === 'Shri') {
+        if (genderSel) genderSel.value = 'Male';
+      } else if (val === 'Smt.' || val === 'Ms.') {
+        if (genderSel) genderSel.value = 'Female';
+      }
+    }
+
+    // --- Gender changes can flip honorific ---
+    function syncGender(val) {
+      const honorificSel = document.getElementById('honorific');
+      if (!honorificSel) return;
+      const cur = honorificSel.value;
+      if (val === 'Male' && (cur === 'Smt.' || cur === 'Ms.')) {
+        honorificSel.value = 'Shri';
+      } else if (val === 'Female' && cur === 'Shri') {
+        honorificSel.value = 'Smt.';
       }
     }
   </script>

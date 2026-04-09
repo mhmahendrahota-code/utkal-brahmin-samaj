@@ -392,6 +392,15 @@
     // Get headers from all rows to be comprehensive, but limit to useful fields
     const allKeys = new Set(['_id']);
     const skipFields = ['__v', 'password', 'passwordHash', 'id'];
+
+    // Prioritize keys requested by user for members collection
+    const priorityKeys = colName === 'members' ? [
+      '_id', 'name', 'surname', 'gotra', 'gender', 'honorific', 
+      'isDeceased', 'isFamilyTreeOnly', 'isApproved', 'isCommitteeMember', 
+      'children', 'profileImage', 
+      'matrimonialProfile.isEligible', 'matrimonialProfile.isApproved', 
+      'createdAt', 'updatedAt'
+    ] : [];
     
     listRows.forEach(row => {
       try {
@@ -403,8 +412,10 @@
         console.warn("Invalid JSON in row", row.id, e);
       }
     });
-    
-    const headers = Array.from(allKeys).slice(0, 15); // Limit to 15 cols
+
+    // Merge priority keys with all other detected keys
+    const sortedKeys = [...new Set([...priorityKeys, ...Array.from(allKeys)])];
+    const headers = sortedKeys.slice(0, 20); // Limit to 20 cols
     
     // Render Header
     thead.innerHTML = '';
@@ -412,41 +423,41 @@
     // Row 1: Titles
     const htr = document.createElement('tr');
     htr.innerHTML = `
-      <th class="px-5 py-3 w-10"></th>
-      <th class="px-2 py-3 w-8 text-center"><i class="fas fa-edit text-gray-400"></i></th>
+      <th class="px-5 py-4 w-10"></th>
+      <th class="px-4 py-4 w-10 text-center"><i class="fas fa-edit text-gray-400"></i></th>
     `;
     headers.forEach(h => {
       const th = document.createElement('th');
-      th.className = 'px-4 py-3 cursor-default';
+      th.className = 'px-5 py-4 whitespace-nowrap cursor-default text-xs';
+      if (h === '_id') th.className += ' text-gray-400';
       th.textContent = h;
       htr.appendChild(th);
     });
-    htr.innerHTML += `<th class="px-5 py-3 text-right">Actions</th>`;
+    htr.innerHTML += `<th class="px-5 py-4 text-right whitespace-nowrap">Actions</th>`;
     thead.appendChild(htr);
 
-    // Row 2: Bulk Entry Row
     const btr = document.createElement('tr');
     btr.className = "bg-blue-50/50 border-b border-blue-100";
     btr.innerHTML = `
-      <td class="px-5 py-2 text-center" title="Bulk Update Column Controls">
-        <i class="fas fa-bolt text-blue-500 text-[10px]"></i>
+      <td class="px-5 py-3 text-center" title="Bulk Update Column Controls">
+        <i class="fas fa-bolt text-blue-500 text-xs"></i>
       </td>
       <td></td>
     `;
     headers.forEach(h => {
       const isId = h === '_id';
       const cell = document.createElement('td');
-      cell.className = "px-2 py-2";
+      cell.className = "px-3 py-2";
       if (isId) {
-        cell.innerHTML = `<span class="text-[9px] text-gray-400 italic px-2">READ ONLY</span>`;
+        cell.innerHTML = `<span class="text-[10px] text-gray-400 italic px-2 whitespace-nowrap">READ ONLY</span>`;
       } else {
         cell.innerHTML = `
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1.5 w-40 min-w-full">
             <input type="text" id="bulk-input-${colName}-${h}" placeholder="Bulk value..." 
-                   class="w-full text-[10px] px-2 py-1 rounded border border-blue-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+                   class="w-full text-xs px-2.5 py-1.5 rounded border border-blue-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
             <button onclick="applyColumnBulk('${h}', '${colName}')" 
-                    class="p-1 hover:bg-blue-200 text-blue-600 rounded transition-colors" title="Apply to all selected rows">
-              <i class="fas fa-check-double text-[10px]"></i>
+                    class="p-1.5 hover:bg-blue-200 text-blue-700 bg-blue-100 rounded transition-colors flex-shrink-0" title="Apply to all selected rows">
+              <i class="fas fa-check-double text-[11px]"></i>
             </button>
           </div>
         `;
@@ -471,17 +482,17 @@
       tr.dataset.collection = colName;
       
       // Checkbox cell
-      let html = `<td class="px-5 py-3" onclick="event.stopPropagation()">
+      let html = `<td class="px-5 py-4" onclick="event.stopPropagation()">
         <input type="checkbox" class="row-cb w-4 h-4 rounded accent-blue-600" 
                ${isSelected ? 'checked' : ''} data-id="${originalData._id}" data-col="${colName}"
                onchange="syncRowSelect(this)">
       </td>`;
 
       // Inline Save status cell
-      html += `<td class="px-2 py-3 text-center">
+      html += `<td class="px-2 py-4 text-center whitespace-nowrap">
         <button id="save-btn-${originalData._id}" onclick="saveInlineRow('${originalData._id}', '${colName}')" 
-                class="save-row-btn hidden p-1.5 bg-green-500 hover:bg-green-600 text-white rounded shadow-sm transition-all" title="Save changes">
-          <i class="fas fa-save text-[10px]"></i>
+                class="save-row-btn hidden p-2 px-3 bg-green-500 hover:bg-green-600 text-white rounded shadow-sm transition-all text-xs font-bold" title="Save changes">
+          <i class="fas fa-save mr-1"></i> Save
         </button>
         <i id="edit-icon-${originalData._id}" class="fas fa-pen-to-square text-blue-400 opacity-20 group-hover:opacity-100 transition-opacity"></i>
       </td>`;
@@ -493,18 +504,52 @@
         if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
         
         const type = typeof flatData[h];
+        const isBoolean = type === 'boolean' || h.startsWith('is') || h.includes('.is');
+        const isHonorific = h === 'honorific';
+        const isGender = h === 'gender';
         
-        html += `<td class="px-2 py-2">
-          <input type="${isId ? 'text' : 'text'}" 
-                 value="${String(val).replace(/"/g, '&quot;')}" 
-                 ${isId ? 'disabled' : ''}
-                 class="inline-input ${isId ? 'text-gray-400 cursor-not-allowed italic font-mono' : 'text-gray-700'}"
-                 data-field="${h}"
-                 data-original="${String(val).replace(/"/g, '&quot;')}"
-                 data-type="${type}"
-                 oninput="onCellInput(this, '${originalData._id}')"
-                 onkeydown="handleTableKey(event, this)">
-        </td>`;
+        html += `<td class="px-4 py-3 min-w-[200px]">`;
+        if (isId) {
+          html += `<input type="text" value="${val}" data-field="_id" disabled class="inline-input w-full text-gray-400 cursor-not-allowed italic font-mono px-3 py-1.5 bg-gray-50 rounded border border-transparent">`;
+        } else if (isBoolean) {
+          html += `<select class="inline-input w-full px-3 py-1.5 rounded border border-transparent hover:border-gray-300 focus:border-blue-500 cursor-pointer font-bold ${val === true ? 'text-green-600' : 'text-red-500'}" 
+                           data-field="${h}" data-original="${val}" data-type="boolean" 
+                           onchange="onCellInput(this, '${originalData._id}'); this.className= 'inline-input w-full px-3 py-1.5 rounded border border-transparent hover:border-gray-300 focus:border-blue-500 cursor-pointer font-bold ' + (this.value === 'true' ? 'text-green-600' : 'text-red-500');">
+                      <option value="true" ${val === true ? 'selected' : ''}>YES (हाँ)</option>
+                      <option value="false" ${val === false ? 'selected' : ''}>NO (नहीं)</option>
+                   </select>`;
+        } else if (isHonorific) {
+          const titles = ['Shri', 'Smt.', 'Ms.', 'Late', 'Dr.', 'Er.', 'Prof.'];
+          const labels = { 'Shri': 'श्री (Shri)', 'Smt.': 'श्रीमती (Smt.)', 'Ms.': 'कुमारी (Ms.)', 'Late': 'स्वर्गीय (Late)', 'Dr.': 'डॉ. (Dr.)', 'Er.': 'अभि. (Er.)', 'Prof.': 'प्रो. (Prof.)' };
+          html += `<select class="inline-input w-full px-3 py-1.5 rounded border border-transparent hover:border-gray-300 focus:border-blue-500 cursor-pointer" 
+                           data-field="${h}" data-original="${val}" data-type="string" 
+                           onchange="onCellInput(this, '${originalData._id}')">
+                      <option value="">-- None --</option>
+                      ${titles.map(t => `<option value="${t}" ${val === t ? 'selected' : ''}>${labels[t] || t}</option>`).join('')}
+                   </select>`;
+        } else if (isGender) {
+          html += `<select class="inline-input w-full px-3 py-1.5 rounded border border-transparent hover:border-gray-300 focus:border-blue-500 cursor-pointer" 
+                           data-field="${h}" data-original="${val}" data-type="string" 
+                           onchange="onCellInput(this, '${originalData._id}')">
+                      <option value="Male" ${val === 'Male' ? 'selected' : ''}>♂ Male (पुरुष)</option>
+                      <option value="Female" ${val === 'Female' ? 'selected' : ''}>♀ Female (महिला)</option>
+                      <option value="Other" ${val === 'Other' ? 'selected' : ''}>Other (अन्य)</option>
+                   </select>`;
+        } else {
+          // Determine rows based on length of value
+          const strVal = String(val);
+          const lines = Math.min(Math.max(strVal.split('').length / 30, 1), 4);
+          html += `<textarea 
+                         rows="${Math.ceil(lines)}"
+                         class="inline-input w-full px-3 py-2 rounded border border-transparent hover:border-gray-300 focus:border-blue-500 text-gray-800 resize-y min-h-[38px]"
+                         style="field-sizing: content; min-width:150px; line-height: 1.4;"
+                         data-field="${h}"
+                         data-original="${strVal.replace(/"/g, '&quot;')}"
+                         data-type="${type}"
+                         oninput="onCellInput(this, '${originalData._id}'); this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';"
+                         onkeydown="handleTableKey(event, this)">${strVal}</textarea>`;
+        }
+        html += `</td>`;
       });
       
       // Actions cell
@@ -531,6 +576,9 @@
     
     input.classList.toggle('changed', isChanged);
     
+    // Sync related fields automatically
+    syncRelatedCells(input, docId);
+    
     // Check if ANY cell in the row is changed
     const row = input.closest('tr');
     const changedFields = row.querySelectorAll('.inline-input.changed');
@@ -548,6 +596,65 @@
     }
   }
 
+  // Smart sync: when honorific/gender/isDeceased changes, auto-update related fields
+  function syncRelatedCells(changedInput, docId) {
+    const field = changedInput.dataset.field;
+    const val = changedInput.value;
+    const row = document.getElementById('table-row-' + docId);
+    if (!row) return;
+
+    function getCell(fieldName) {
+      return row.querySelector(`.inline-input[data-field="${fieldName}"]`);
+    }
+    function setCell(fieldName, newVal) {
+      const el = getCell(fieldName);
+      if (!el || el.value === newVal) return;
+      el.value = newVal;
+      const changed = el.dataset.original !== String(newVal);
+      el.classList.toggle('changed', changed);
+      // Update boolean color if needed
+      if (el.tagName === 'SELECT' && el.dataset.type === 'boolean') {
+        el.className = 'inline-input font-bold ' + (newVal === 'true' ? 'text-green-600' : 'text-red-500');
+        el.classList.toggle('changed', changed);
+      }
+    }
+
+    if (field === 'honorific') {
+      // Late ↔ isDeceased
+      if (val === 'Late') {
+        setCell('isDeceased', 'true');
+      } else {
+        // Only clear isDeceased if it was set because of Late
+        const deceasedEl = getCell('isDeceased');
+        if (deceasedEl && deceasedEl.value === 'true') setCell('isDeceased', 'false');
+      }
+      // Honorific → Gender
+      if (val === 'Shri') setCell('gender', 'Male');
+      else if (val === 'Smt.' || val === 'Ms.') setCell('gender', 'Female');
+
+    } else if (field === 'isDeceased') {
+      // isDeceased → set honorific to Late
+      if (val === 'true') {
+        setCell('honorific', 'Late');
+      } else {
+        // If honorific is Late, clear it
+        const hEl = getCell('honorific');
+        if (hEl && hEl.value === 'Late') setCell('honorific', '');
+      }
+
+    } else if (field === 'gender') {
+      // Gender → flip Shri/Smt only (not Dr/Er/Prof/Late)
+      const hEl = getCell('honorific');
+      if (!hEl) return;
+      const cur = hEl.value;
+      if (val === 'Male' && (cur === 'Smt.' || cur === 'Ms.')) {
+        setCell('honorific', 'Shri');
+      } else if (val === 'Female' && cur === 'Shri') {
+        setCell('honorific', 'Smt.');
+      }
+    }
+  }
+
   function handleTableKey(e, input) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -562,51 +669,68 @@
     const row = document.getElementById('table-row-' + docId);
     if (!row) return;
 
-    const inputs = row.querySelectorAll('.inline-input');
-    const updatedData = JSON.parse(document.getElementById('row-' + docId).dataset.json);
-    
-    inputs.forEach(input => {
+    // Collect ONLY changed fields (Delta Update)
+    const changedInputs = row.querySelectorAll('.inline-input.changed');
+    if (changedInputs.length === 0) return;
+
+    const delta = {};
+    changedInputs.forEach(input => {
       const field = input.dataset.field;
+      if (!field || field === '_id') return;
+
       const type = input.dataset.type;
       let val = input.value;
-      
-      if (field === '_id') return;
 
-      // Handle types
+      // Type cast values
       if (type === 'number') val = Number(val);
-      else if (type === 'boolean') val = (val.toLowerCase() === 'true' || val === '✅' || val === '1');
+      else if (type === 'boolean') val = (val.toLowerCase() === 'true');
       else if (type === 'object') {
-        try { val = JSON.parse(val); } catch(e) { /* keep as string if not valid JSON */ }
+        try { val = JSON.parse(val); } catch(e) { /* fallback to string */ }
       }
       
-      setNestedValue(updatedData, field, val);
+      delta[field] = val;
     });
 
-    const res = await fetch('/admin/db/update', { 
-      method:'POST', 
-      headers:{'Content-Type':'application/json'}, 
-      body: JSON.stringify({ collection: colName, id: docId, data: JSON.stringify(updatedData) }) 
-    });
-    
-    const result = await res.json();
-    if (result.ok) {
-      // Sync with List view
-      const lRow = document.getElementById('row-' + docId);
-      lRow.dataset.json = JSON.stringify(updatedData);
-      lRow.querySelector('.doc-json').textContent = JSON.stringify(updatedData, null, 2);
-      
-      // Reset UI
-      row.classList.remove('dirty');
-      document.getElementById('save-btn-' + docId).classList.add('hidden');
-      document.getElementById('edit-icon-' + docId).classList.remove('hidden');
-      inputs.forEach(input => {
-        input.classList.remove('changed');
-        input.dataset.original = input.value;
+    try {
+      const res = await fetch('/admin/db/update', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body: JSON.stringify({ collection: colName, id: docId, data: JSON.stringify(delta) }) 
       });
       
-      showToast('Row updated!', 'green');
-    } else {
-      alert('Save failed: ' + result.error);
+      const result = await res.json();
+      if (result.ok) {
+        // Update both Table row and List row data to maintain state
+        const lRow = document.getElementById('row-' + docId);
+        const originalData = JSON.parse(lRow.dataset.json);
+        
+        // Merge delta into the original data local state
+        for (let path in delta) {
+          setNestedValue(originalData, path, delta[path]);
+        }
+        
+        const finalJson = JSON.stringify(originalData);
+        lRow.dataset.json = finalJson;
+        row.dataset.json = finalJson;
+        lRow.querySelector('.doc-json').textContent = JSON.stringify(originalData, null, 2);
+        
+        // Reset the inputs
+        changedInputs.forEach(input => {
+          input.classList.remove('changed');
+          input.dataset.original = input.value;
+        });
+        
+        row.classList.remove('dirty');
+        document.getElementById('save-btn-' + docId).classList.add('hidden');
+        document.getElementById('edit-icon-' + docId).classList.remove('hidden');
+        
+        showToast('Saved successfully! (बदलाव सहेजे गए)', 'green');
+      } else {
+        alert('Save failed: ' + result.error);
+      }
+    } catch (err) {
+      console.error('Save error:', err);
+      alert('Network error while saving.');
     }
   }
 

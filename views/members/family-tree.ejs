@@ -46,6 +46,9 @@
 
         <!-- Expand / Collapse All Buttons -->
         <div class="flex gap-2">
+          <button id="btn-stats" title="View Statistics" class="flex items-center gap-1.5 px-3 py-2 bg-indigo-700 hover:bg-indigo-800 text-white text-sm font-bold rounded-lg shadow-lg border border-indigo-800 transition-all active:scale-95">
+            <i class="fas fa-chart-pie text-xs"></i> आंकड़े (Stats)
+          </button>
           <button id="btn-export" title="Download Tree Image" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg shadow transition-all">
             <i class="fas fa-camera text-xs"></i> सेव करें (Save)
           </button>
@@ -65,6 +68,46 @@
            data-is-admin="<%= typeof isAdminView !== 'undefined' && isAdminView %>"
            data-inline-data='<%- typeof inlineTreeData !== "undefined" ? inlineTreeData : "null" %>'></div>
       
+      <!-- Quick Stats Widget -->
+      <div id="stats-widget" class="absolute top-6 left-6 w-64 bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-indigo-200 hidden p-4 z-[45] transition-all duration-300">
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="text-sm font-black text-indigo-900 uppercase tracking-wider flex items-center gap-2">
+            <i class="fas fa-chart-bar text-indigo-500"></i> वंशावली आंकड़े
+          </h4>
+          <button onclick="toggleStats()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100">
+            <p class="text-[11px] text-indigo-700 uppercase font-black tracking-tight">कुल सदस्य</p>
+            <p id="stat-total" class="text-xl font-black text-indigo-900">-</p>
+          </div>
+          <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-100">
+            <p class="text-[11px] text-amber-700 uppercase font-black tracking-tight">मृतक सदस्य</p>
+            <p id="stat-deceased" class="text-xl font-black text-amber-900">-</p>
+          </div>
+          <div class="bg-blue-50 p-2.5 rounded-lg border border-blue-100">
+            <p class="text-[11px] text-blue-700 uppercase font-black tracking-tight text-center">पुरुष (M)</p>
+            <p id="stat-male" class="text-xl font-black text-blue-900 text-center">-</p>
+          </div>
+          <div class="bg-pink-50 p-2.5 rounded-lg border border-pink-100">
+            <p class="text-[11px] text-pink-700 uppercase font-black tracking-tight text-center">महिला (F)</p>
+            <p id="stat-female" class="text-xl font-black text-pink-900 text-center">-</p>
+          </div>
+        </div>
+
+        <div class="mt-4 space-y-2.5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-gray-500 font-medium">कुल शादियाँ (Marriages):</span>
+            <span id="stat-marriages" class="font-bold text-gray-800">-</span>
+          </div>
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-gray-500 font-medium">कुल पीढ़ियाँ (Gens):</span>
+            <span id="stat-generations" class="font-bold text-indigo-600">-</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Minimap Overlay -->
       <div class="absolute bottom-6 left-6 w-48 h-36 bg-white/95 backdrop-blur-md rounded-lg shadow-xl border border-gray-200 hidden sm:flex flex-col overflow-hidden z-[40]">
         <div class="bg-gray-100 text-[10px] font-bold text-gray-500 text-center py-1.5 uppercase tracking-widest border-b border-gray-200">मिनीमैप (Minimap)</div>
@@ -430,6 +473,49 @@
     let currentMode = 'full';
     let rawData = [];
 
+    // Stats Widget Logic
+    window.toggleStats = function() {
+      const widget = document.getElementById('stats-widget');
+      widget.classList.toggle('hidden');
+    };
+    
+    document.getElementById('btn-stats').addEventListener('click', toggleStats);
+
+    function updateStatsWidget(data) {
+      if (!data || data.length === 0) return;
+      
+      const total = data.length;
+      const male = data.filter(d => d.gender === 'Male').length;
+      const female = data.filter(d => d.gender === 'Female').length;
+      const deceased = data.filter(d => d.tags && d.tags.includes('deceased')).length;
+      
+      // Marriage count from spouse links
+      // We only count unique pairs. If A has spouse B, and B has spouse A, they are one marriage.
+      const spouses = data.filter(d => d.stpid);
+      const uniqueSpouses = new Set();
+      let marriages = 0;
+      spouses.forEach(s => {
+        const pair = [s.id, s.stpid].sort().join('-');
+        if (!uniqueSpouses.has(pair)) {
+          uniqueSpouses.add(pair);
+          marriages++;
+        }
+      });
+
+      // Generation count
+      const genRange = data.map(d => d.generationLevel).filter(g => g !== null && g !== undefined);
+      const minGen = genRange.length > 0 ? Math.min(...genRange) : 0;
+      const maxGen = genRange.length > 0 ? Math.max(...genRange) : 0;
+      const genCount = genRange.length > 0 ? (maxGen - minGen + 1) : 0;
+
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-male').textContent = male;
+      document.getElementById('stat-female').textContent = female;
+      document.getElementById('stat-deceased').textContent = deceased;
+      document.getElementById('stat-marriages').textContent = marriages;
+      document.getElementById('stat-generations').textContent = genCount + ` (${minGen} to ${maxGen})`;
+    }
+
     // Configuration
     const nodeWidth = 280;
     const nodeHeight = 100;
@@ -511,6 +597,7 @@
         if (!forceApi && INLINE_TREE_DATA && memberId === 'all' && !gotraValue) {
           rawData = INLINE_TREE_DATA;
           initDynamicTree(rawData);
+          updateStatsWidget(rawData);
           loading.style.display = 'none';
           return;
         }
@@ -523,6 +610,7 @@
         rawData = await response.json();
         
         initDynamicTree(rawData);
+        updateStatsWidget(rawData);
         loading.style.display = 'none';
       } catch (err) {
         console.error(err);

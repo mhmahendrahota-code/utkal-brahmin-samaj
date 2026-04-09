@@ -19,6 +19,7 @@ const memberSchema = new mongoose.Schema({
   email: { type: String },
   address: { type: String },
   profileImage: { type: String, default: '/images/default-avatar.png' },
+  bloodGroup: { type: String, enum: ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], default: '' },
   isApproved: { type: Boolean, default: false },
   isCommitteeMember: { type: Boolean, default: false },
   isFamilyTreeOnly: { type: Boolean, default: false }, // Hide from main directory

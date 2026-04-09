@@ -2,8 +2,8 @@
 
 <section class="bg-saffron-900 py-12 text-white">
   <div class="container mx-auto px-4 text-center">
-    <h1 class="text-3xl md:text-5xl font-bold mb-4 font-display">Matrimonial Profiles</h1>
-    <p class="text-saffron-100 max-w-2xl mx-auto">Find a suitable match within our Utkal Brahmin community.</p>
+    <h1 class="text-3xl md:text-5xl font-bold mb-4 font-display">वैवाहिक प्रोफाइल (Matrimonial Profiles)</h1>
+    <p class="text-saffron-100 max-w-2xl mx-auto">हमारे उत्कल ब्राह्मण समाज के भीतर एक उपयुक्त जोड़ी खोजें। (Find a suitable match within our community.)</p>
   </div>
 </section>
 
@@ -11,10 +11,10 @@
   <div class="container mx-auto px-4 max-w-5xl">
     
     <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-      <p class="text-gray-600">Find eligible brides and grooms from our community.</p>
+      <p class="text-gray-600">समाज के योग्य वर-वधू खोजें। (Find eligible brides and grooms.)</p>
       <div class="flex gap-4">
         <a href="/members/matrimonial/submit" class="bg-white border-2 border-saffron-600 text-saffron-600 hover:bg-saffron-50 px-6 py-2 rounded-full font-bold shadow-sm transition-colors">
-          <i class="fas fa-plus mr-2"></i> Submit Profile
+          <i class="fas fa-plus mr-2"></i> प्रोफाइल भेजें (Submit Profile)
         </a>
       </div>
     </div>
@@ -23,25 +23,25 @@
     <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-8">
       <form action="/members/matrimonial" method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
         <div>
-          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Exclude Gotra (Prevent same Gotra)</label>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">गोत्र छोड़ें (Exclude Gotra - Non-Kashyap etc.)</label>
           <select name="excludeGotra" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-blue-500 text-sm">
-            <option value="">Any Gotra</option>
+            <option value="">कोई भी गोत्र (Any Gotra)</option>
             <% if (typeof availableGotras !== 'undefined' && availableGotras.length > 0) { %>
               <% availableGotras.forEach(function(gotra) { %>
                 <option value="<%= gotra %>" <%= typeof searchFilters !== 'undefined' && searchFilters.excludeGotra === gotra ? 'selected' : '' %>><%= gotra %></option>
               <% }); %>
             <% } else { %>
-              <option disabled>No approved profiles yet</option>
+              <option disabled>अभी कोई प्रोफ़ाइल नहीं है</option>
             <% } %>
           </select>
         </div>
         <div>
-          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Education Keyword</label>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">शिक्षा (Education Keyword)</label>
           <input type="text" name="education" value="<%= typeof searchFilters !== 'undefined' ? searchFilters.education : '' %>" placeholder="e.g. B.Tech, Master" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-blue-500 text-sm">
         </div>
         <div>
           <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-sm transition-colors">
-            <i class="fas fa-search mr-2"></i> Find Matches
+            <i class="fas fa-search mr-2"></i> मिलान खोजें (Find Matches)
           </button>
         </div>
       </form>
@@ -65,17 +65,17 @@
             </div>
             
             <div class="space-y-2 text-sm text-gray-600 mb-6">
-              <p><span class="font-medium text-gray-800">Age:</span> 
+              <p><span class="font-medium text-gray-800">आयु (Age):</span> 
                 <%= profile.matrimonialProfile.dateOfBirth ? Math.floor((new Date() - new Date(profile.matrimonialProfile.dateOfBirth).getTime()) / 3.15576e+10) + ' years' : 'N/A' %>
               </p>
-              <p><span class="font-medium text-gray-800">Education:</span> <%= profile.matrimonialProfile.education || 'N/A' %></p>
-              <p><span class="font-medium text-gray-800">Occupation:</span> <%= profile.occupation || 'N/A' %></p>
-              <p><span class="font-medium text-gray-800">Height:</span> <%= profile.matrimonialProfile.height || 'N/A' %></p>
-              <p><span class="font-medium text-gray-800">Village:</span> <%= profile.village %></p>
+              <p><span class="font-medium text-gray-800">शिक्षा (Education):</span> <%= profile.matrimonialProfile.education || 'N/A' %></p>
+              <p><span class="font-medium text-gray-800">व्यवसाय (Work):</span> <%= profile.occupation || 'N/A' %></p>
+              <p><span class="font-medium text-gray-800">कद (Height):</span> <%= profile.matrimonialProfile.height || 'N/A' %></p>
+              <p><span class="font-medium text-gray-800">गाँव (Village):</span> <%= profile.village %></p>
             </div>
             
             <button onclick="alert('Contact the administrative office or <%= profile.name %> directly at <%= profile.contactNumber %> to express interest.')" class="w-full bg-saffron-50 hover:bg-saffron-100 text-saffron-700 font-medium py-2 rounded border border-saffron-200 transition-colors">
-              <i class="fas fa-heart mr-2"></i> Express Interest
+              <i class="fas fa-heart mr-2"></i> रुचि दिखाएं (Express Interest)
             </button>
           </div>
         <% }) %>
@@ -83,10 +83,10 @@
     <% } else { %>
       <div class="bg-white rounded-lg shadow-sm p-12 text-center border border-gray-100">
         <i class="fas fa-rings text-5xl text-saffron-300 mb-4"></i>
-        <h3 class="text-xl font-medium text-gray-700">No Matrimonial Profiles Found</h3>
-        <p class="text-gray-500 mt-2">Be the first to submit a profile for yourself or a family member.</p>
+        <h3 class="text-xl font-medium text-gray-700">कोई वैवाहिक प्रोफाइल नहीं मिला (No Profiles Found)</h3>
+        <p class="text-gray-500 mt-2">अपने या अपने परिवार के सदस्य के लिए प्रोफाइल भेजने वाले पहले व्यक्ति बनें। (Be the first to submit a profile.)</p>
         <a href="/members/matrimonial/submit" class="inline-block mt-6 bg-saffron-600 hover:bg-saffron-700 text-white px-6 py-3 rounded-full font-medium transition-colors">
-          Submit Matrimonial Profile
+          वैवाहिक प्रोफाइल भेजें (Submit Profile)
         </a>
       </div>
     <% } %>

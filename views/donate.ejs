@@ -3,9 +3,8 @@
   <!-- Page Header -->
   <section class="bg-saffron-900 py-12 text-white">
     <div class="container mx-auto px-4 text-center">
-      <h1 class="text-3xl md:text-5xl font-bold mb-4 font-display">Contribute to the Samaj</h1>
-      <p class="text-saffron-100 max-w-2xl mx-auto">Your generous donations help us build the Samaj Bhawan and support
-        community welfare.</p>
+      <h1 class="text-3xl md:text-5xl font-bold mb-4 font-display">समाज को सहयोग दें (Contribute to the Samaj)</h1>
+      <p class="text-saffron-100 max-w-2xl mx-auto">आपका उदार दान हमें समाज भवन निर्माण और सामुदायिक कल्याण में मदद करता है। (Your generous donations help us build the Samaj Bhawan and support community welfare.)</p>
     </div>
   </section>
 
@@ -16,23 +15,21 @@
 
         <!-- Donation Info -->
         <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-100 h-full">
-          <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Support the Samaj Bhawan Initiative</h2>
+          <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">समाज भवन पहल (Samaj Bhawan Initiative)</h2>
           <p class="text-gray-600 mb-8 leading-relaxed">
-            The Utkal Brahmin Samaj is actively constructing a community hall (Samaj Bhawan) in Pusaur. This building
-            will serve as a central hub for weddings, thread ceremonies (Upanayana), festivals, and community meetings.
-            We warmly appeal to all capable members to contribute generously to this noble cause.
+            उत्कल ब्राह्मण समाज पुसौर में एक सामुदायिक भवन (समाज भवन) का निर्माण कर रहा है। यह भवन शादियों, उपनयन संस्कारों, उत्सवों और सामुदायिक बैठकों के लिए एक केंद्रीय केंद्र के रूप में कार्य करेगा। हम सभी सक्षम सदस्यों से इस नेक काम के लिए उदारतापूर्वक योगदान देने की अपील करते हैं।
           </p>
 
           <!-- Live Progress Bar -->
           <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
             <div class="flex justify-between items-end mb-2">
               <div>
-                <span class="text-sm font-bold text-gray-500 uppercase tracking-wider">Raised So Far</span>
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">प्राप्त राशि (Raised So Far)</span>
                 <div class="text-2xl font-bold text-saffron-600">₹<%= totalRaised.toLocaleString('en-IN') %>
                 </div>
               </div>
               <div class="text-right">
-                <span class="text-sm font-bold text-gray-500 uppercase tracking-wider">Goal</span>
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">लक्ष्य (Goal)</span>
                 <div class="text-lg font-bold text-gray-800">₹<%= targetGoal.toLocaleString('en-IN') %>
                 </div>
               </div>
@@ -42,10 +39,10 @@
                 <%- `style="width: ${Math.min(Math.round((totalRaised / targetGoal) * 100), 100)}%;"` %>></div>
             </div>
             <p class="text-right text-xs font-bold text-gray-500">
-              <%= Math.round((totalRaised / targetGoal) * 100) %>% Completed
+              <%= Math.round((totalRaised / targetGoal) * 100) %>% पूर्ण (Completed)
             </p>
           </div>
-          <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">Bank Account Details</h2>
+          <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">बैंक खाता विवरण (Bank Details)</h2>
 
           <div class="space-y-6">
             <div class="flex items-start">
@@ -53,8 +50,8 @@
                 <i class="fas fa-university text-xl"></i>
               </div>
               <div>
-                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Account Name</p>
-                <p class="text-lg font-bold text-gray-900">Pusaur Utkal Brahmin Samaj Trust</p>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">खाता धारक (Account Name)</p>
+                <p class="text-md font-bold text-gray-900"><%= siteSettings.accountName %></p>
               </div>
             </div>
 
@@ -63,9 +60,9 @@
                 <i class="fas fa-money-check text-xl"></i>
               </div>
               <div>
-                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Account Number</p>
-                <p class="text-lg font-bold text-gray-900 tracking-wider">3142 5678 9012 3456</p>
-                <p class="text-sm text-gray-600">State Bank of India</p>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">खाता संख्या (Account Number)</p>
+                <p class="text-lg font-bold text-gray-900 tracking-wider"><%= siteSettings.accountNumber %></p>
+                <p class="text-sm text-gray-600 font-medium"><%= siteSettings.bankName %></p>
               </div>
             </div>
 
@@ -74,16 +71,16 @@
                 <i class="fas fa-code-branch text-xl"></i>
               </div>
               <div>
-                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">IFSC Code</p>
-                <p class="text-lg font-bold text-gray-900 tracking-wider">SBIN0001234</p>
-                <p class="text-sm text-gray-600">Branch: Pusaur Main</p>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">IFSC कोड & शाखा (Branch)</p>
+                <p class="text-lg font-bold text-gray-900 tracking-wider"><%= siteSettings.ifscCode %></p>
+                <p class="text-sm text-gray-600 font-medium"><%= siteSettings.branchName %></p>
               </div>
             </div>
           </div>
 
           <div class="mt-8 p-4 bg-saffron-50 rounded-lg border border-saffron-200">
-            <h3 class="font-bold text-saffron-900 mb-2">Notice:</h3>
-            <p class="text-sm text-saffron-800">After making a direct bank transfer, please inform the treasurer at <%= locals.siteSettings ? siteSettings.contactPhone : '+91 98765 43210' %> with your transaction reference number to receive your digital receipt.</p>
+            <h3 class="font-bold text-saffron-900 mb-2">सूचना (Notice):</h3>
+            <p class="text-sm text-saffron-800 leading-relaxed">प्रत्यक्ष बैंक हस्तांतरण करने के बाद, कृपया लेनदेन संदर्भ संख्या के साथ कोषाध्यक्ष को <%= siteSettings.contactPhone %> पर सूचित करें ताकि आपकी डिजिटल रसीद प्राप्त हो सके। (After transfer, inform treasurer at <%= siteSettings.contactPhone %> for receipt.)</p>
           </div>
         </div>
 

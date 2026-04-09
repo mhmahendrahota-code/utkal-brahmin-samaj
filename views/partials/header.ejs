@@ -115,21 +115,21 @@
       <!-- Desktop Menu -->
       <div class="hidden md:flex space-x-6 font-medium text-gray-700">
         <a href="/"
-          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Home</a>
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">होम (Home)</a>
         <a href="/members"
-          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Directory</a>
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">निर्देशिका (Directory)</a>
         <a href="/surnames"
-          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Surnames</a>
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">उपनाम (Surnames)</a>
         <a href="/events"
-          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Events</a>
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">कार्यक्रम (Events)</a>
         <a href="/members/matrimonial"
-          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Matrimonial</a>
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">वैवाहिक (Matrimonial)</a>
         <a href="/gallery"
-          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Gallery</a>
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">गैलरी (Gallery)</a>
         <a href="/documents"
-          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">ई-लाइब्रेरी</a>
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">ई-लाइब्रेरी (Library)</a>
         <a href="/donate"
-          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">Donate</a>
+          class="hover:text-saffron-500 transition-colors border-b-2 border-transparent hover:border-saffron-500">सहयोग (Donate)</a>
       </div>
 
       <div class="flex items-center space-x-3">
@@ -156,12 +156,12 @@
           <% if (locals.isAdmin) { %>
             <a href="/admin/logout"
               class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-full font-medium transition-colors shadow-md">
-              <i class="fas fa-sign-out-alt mr-2"></i>Logout
+              <i class="fas fa-sign-out-alt mr-2"></i>लॉगआउट (Logout)
             </a>
             <% } else { %>
               <a href="/admin/login"
                 class="bg-saffron-500 hover:bg-saffron-600 text-white px-5 py-2 rounded-full font-medium transition-colors shadow-md">
-                <i class="fas fa-user-lock mr-2"></i>Admin
+                <i class="fas fa-user-lock mr-2"></i>एडमिन (Admin)
               </a>
               <% } %>
         </div>
@@ -175,15 +175,15 @@
 
     <!-- Mobile Menu (Hidden by default) -->
     <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 px-4 py-2 shadow-inner">
-      <a href="/" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Home</a>
-      <a href="/members" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Directory</a>
-      <a href="/surnames" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Surnames</a>
-      <a href="/events" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Events</a>
+      <a href="/" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">होम (Home)</a>
+      <a href="/members" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">निर्देशिका (Directory)</a>
+      <a href="/surnames" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">उपनाम (Surnames)</a>
+      <a href="/events" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">कार्यक्रम (Events)</a>
       <a href="/members/matrimonial"
-        class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Matrimonial</a>
-      <a href="/gallery" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Gallery</a>
-      <a href="/documents" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">ई-लाइब्रेरी (Docs)</a>
-      <a href="/donate" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">Donate</a>
+        class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">वैवाहिक (Matrimonial)</a>
+      <a href="/gallery" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">गैलरी (Gallery)</a>
+      <a href="/documents" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">ई-लाइब्रेरी (Library)</a>
+      <a href="/donate" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">सहयोग (Donate)</a>
       <% if (locals.isAdmin) { %>
         <a href="/admin" class="block py-2 text-saffron-600 font-medium mt-2"><i
             class="fas fa-cogs mr-2"></i>Dashboard</a>

@@ -129,17 +129,37 @@ router.get('/add', async (req, res) => {
 
 router.post('/add', async (req, res) => {
   try {
+    const { 
+      honorific, name, surname_select, surname_other, gotra_select, gotra_custom,
+      gender, dob, bloodGroup, village, fatherName, motherName, spouseName,
+      education, occupation, contactNumber, email, address 
+    } = req.body;
+
+    const finalSurname = surname_select === 'Others' ? surname_other : surname_select;
+    const finalGotra = gotra_select === 'Others' ? gotra_custom : gotra_select;
+
     const newMember = new Member({
-      name: req.body.name,
-      surname: req.body.surname_select === 'Others' ? req.body.surname_other : req.body.surname_select,
-      gotra: req.body.gotra,
-      village: req.body.village,
-      occupation: req.body.occupation,
-      contactNumber: req.body.contactNumber,
-      email: req.body.email,
-      address: req.body.address,
+      honorific: honorific || '',
+      name: name,
+      gender: gender,
+      surname: finalSurname,
+      gotra: finalGotra,
+      village: village,
+      fatherName: fatherName,
+      motherName: motherName,
+      spouseName: spouseName,
+      occupation: occupation,
+      contactNumber: contactNumber,
+      email: email,
+      address: address,
+      bloodGroup: bloodGroup || '',
+      matrimonialProfile: {
+        dateOfBirth: dob ? new Date(dob) : null,
+        education: education || ''
+      },
       isApproved: false // Pending admin review
     });
+
     await newMember.save();
     res.render('members/register', { title: 'समाज में जुड़ें - Join the Samaj', success: true, error: null });
   } catch (err) {
@@ -171,8 +191,10 @@ router.get('/community-tree', async (req, res) => {
         address: m.address || '',
         gotra: m.gotra || '',
         surname: m.surname || '',
+        gender: m.gender || 'Male',
         deathDate: (m.deathDate && m.deathDate.toISOString) ? m.deathDate.toISOString().split('T')[0] : (m.deathDate || ''),
         generation: 0, // In community view, D3 hierarchy depth is used
+        generationLevel: m.generationLevel, 
         tags: []
       };
       if (m.isDeceased) node.tags.push('deceased');

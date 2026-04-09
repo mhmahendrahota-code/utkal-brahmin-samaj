@@ -3,8 +3,8 @@
   <!-- Page Header -->
   <section class="bg-saffron-900 py-12 text-white">
     <div class="container mx-auto px-4 text-center">
-      <h1 class="text-3xl md:text-5xl font-bold mb-4 font-display">Member Directory</h1>
-      <p class="text-saffron-100 max-w-2xl mx-auto">Connect with members of the Pusaur Utkal Brahmin Samaj community.
+      <h1 class="text-3xl md:text-5xl font-bold mb-4 font-display">सदस्य निर्देशिका (Member Directory)</h1>
+      <p class="text-saffron-100 max-w-2xl mx-auto">पुसौर उत्कल ब्राह्मण समाज के सदस्यों के साथ जुड़ें। (Connect with our community members.)
       </p>
     </div>
   </section>
@@ -17,7 +17,7 @@
       <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-8 max-w-4xl mx-auto">
         <form action="/members" method="GET" class="flex flex-col md:flex-row gap-4">
           <div class="flex-grow">
-            <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search Name / Gotra</label>
+            <label for="search" class="block text-sm font-medium text-gray-700 mb-1">नाम / गोत्र खोजें (Search Name/Gotra)</label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <i class="fas fa-search text-gray-400"></i>
@@ -27,9 +27,9 @@
                 class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-saffron-500 focus:border-saffron-500 bg-gray-50 text-gray-900">
             </div>
           </div>
-
+ 
           <div class="md:w-1/3">
-            <label for="village" class="block text-sm font-medium text-gray-700 mb-1">Filter by Village</label>
+            <label for="village" class="block text-sm font-medium text-gray-700 mb-1">गाँव (Filter Village)</label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <i class="fas fa-map-marker-alt text-gray-400"></i>
@@ -38,11 +38,11 @@
                 class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-saffron-500 focus:border-saffron-500 bg-gray-50 text-gray-900">
             </div>
           </div>
-
+ 
           <div class="flex items-end">
             <button type="submit"
               class="w-full md:w-auto bg-saffron-600 hover:bg-saffron-700 text-white font-medium py-2 px-6 rounded-md transition-colors shadow-sm">
-              Search
+              खोजें (Search)
             </button>
           </div>
         </form>
@@ -51,9 +51,9 @@
       <!-- Results count & actions -->
       <div class="flex justify-between items-center mb-6 max-w-5xl mx-auto">
         <h2 class="text-xl font-bold text-gray-800">
-          Found <%= members ? members.length : 0 %> Members
+          कुल <%= members ? members.length : 0 %> सदस्य मिले (Found <%= members ? members.length : 0 %> members)
             <% if(searchQuery || villageQuery) { %>
-              <a href="/members" class="text-sm font-normal text-saffron-600 ml-3 hover:underline">(Clear filters)</a>
+              <a href="/members" class="text-sm font-normal text-saffron-600 ml-3 hover:underline">(फ़िल्टर हटाएँ / Clear filters)</a>
               <% } %>
         </h2>
       </div>
@@ -87,18 +87,18 @@
                 <div class="space-y-2 text-sm flex-grow mb-4">
                   <p class="flex items-center text-gray-600">
                     <i class="fas fa-om w-5 text-saffron-500"></i>
-                    <span class="font-medium mr-2">Gotra:</span>
+                    <span class="font-medium mr-2">गोत्र (Gotra):</span>
                     <%= member.gotra %>
                   </p>
                   <p class="flex items-center text-gray-600">
                     <i class="fas fa-map-marker-alt w-5 text-saffron-500"></i>
-                    <span class="font-medium mr-2">Village:</span>
+                    <span class="font-medium mr-2">गाँव (Village):</span>
                     <%= member.village %>
                   </p>
                   <% if (member.occupation) { %>
                     <p class="flex items-center text-gray-600">
                       <i class="fas fa-briefcase w-5 text-saffron-500"></i>
-                      <span class="font-medium mr-2">Work:</span>
+                      <span class="font-medium mr-2">व्यवसाय (Work):</span>
                       <%= member.occupation %>
                     </p>
                     <% } %>
@@ -107,7 +107,7 @@
                 <div class="pt-4 border-t border-gray-100 mt-auto">
                   <a href="/members/<%= member._id %>"
                     class="w-full bg-gray-50 hover:bg-saffron-50 text-saffron-700 font-medium py-2 rounded border border-gray-200 hover:border-saffron-300 transition-colors text-sm text-center block">
-                    <i class="fas fa-address-card mr-2"></i> View Full Profile
+                    <i class="fas fa-address-card mr-2"></i> पूरा प्रोफाइल (View Profile)
                   </a>
                 </div>
               </div>

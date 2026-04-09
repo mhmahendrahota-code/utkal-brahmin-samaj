@@ -30,16 +30,17 @@
             <div>
               <label class="block text-sm font-bold text-gray-700 mb-2">पूर्ण नाम * (Full Name)</label>
               <div class="flex gap-2">
-                <select name="honorific"
-                  class="w-24 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500">
-                  <option value="" <%=typeof member !=='undefined' && member.honorific==='' ? 'selected' : '' %>>--
-                  </option>
-                  <option value="Late" <%=typeof member !=='undefined' && member.honorific==='Late' ? 'selected' : '' %>
-                    >Late (स्व.)</option>
-                  <option value="Shri" <%=typeof member !=='undefined' && member.honorific==='Shri' ? 'selected' : '' %>
-                    >Shri (श्री)</option>
-                  <option value="Smt" <%=typeof member !=='undefined' && member.honorific==='Smt' ? 'selected' : '' %>
-                    >Smt (श्रीमती)</option>
+                <select name="honorific" id="honorific"
+                  class="w-32 px-3 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500"
+                  onchange="syncHonorific(this.value)">
+                  <option value="" <%=typeof member !=='undefined' && member.honorific==='' ? 'selected' : '' %>>-- Title --</option>
+                  <option value="Shri" <%=typeof member !=='undefined' && member.honorific==='Shri' ? 'selected' : '' %>>Shri (श्री)</option>
+                  <option value="Smt." <%=typeof member !=='undefined' && (member.honorific==='Smt.' || member.honorific==='Smt') ? 'selected' : '' %>>Smt. (श्रीमती)</option>
+                  <option value="Ms." <%=typeof member !=='undefined' && member.honorific==='Ms.' ? 'selected' : '' %>>Ms. (कुमारी)</option>
+                  <option value="Late" <%=typeof member !=='undefined' && member.honorific==='Late' ? 'selected' : '' %>>Late (स्वर्गीय)</option>
+                  <option value="Dr." <%=typeof member !=='undefined' && member.honorific==='Dr.' ? 'selected' : '' %>>Dr. (डॉ.)</option>
+                  <option value="Er." <%=typeof member !=='undefined' && member.honorific==='Er.' ? 'selected' : '' %>>Er. (अभि.)</option>
+                  <option value="Prof." <%=typeof member !=='undefined' && member.honorific==='Prof.' ? 'selected' : '' %>>Prof. (प्रो.)</option>
                 </select>
                 <input type="text" name="name"
                   class="flex-grow px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500"
@@ -111,6 +112,41 @@
                 </div>
             </div>
 
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">लिंग * (Gender)</label>
+              <select name="gender" id="gender" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500" required
+                onchange="syncGender(this.value)">
+                <option value="Male" <%= typeof member !== 'undefined' && member.gender === 'Male' ? 'selected' : '' %>>Male (पुरुष)</option>
+                <option value="Female" <%= typeof member !== 'undefined' && member.gender === 'Female' ? 'selected' : '' %>>Female (महिला)</option>
+                <option value="Other" <%= typeof member !== 'undefined' && member.gender === 'Other' ? 'selected' : '' %>>Other (अन्य)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">जन्म तिथि (Date of Birth)</label>
+              <input type="date" name="dob"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500"
+                value="<%= typeof member !== 'undefined' && member.matrimonialProfile && member.matrimonialProfile.dateOfBirth ? member.matrimonialProfile.dateOfBirth.toISOString().split('T')[0] : '' %>">
+            </div>
+
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">रक्त समूह (Blood Group)</label>
+              <select name="bloodGroup" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500">
+                <option value="">-- Choose --</option>
+                <% ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].forEach(bg => { %>
+                  <option value="<%= bg %>" <%= typeof member !== 'undefined' && member.bloodGroup === bg ? 'selected' : '' %>><%= bg %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">शिक्षा (Qualification)</label>
+              <input type="text" name="education"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-saffron-500"
+                value="<%= typeof member !== 'undefined' && member.matrimonialProfile ? (member.matrimonialProfile.education || '') : '' %>"
+                placeholder="e.g. B.Tech, MA, 12th">
+            </div>
+
             <script>
               function toggleOtherGotra(select) {
                 const otherDiv = document.getElementById('otherGotraDiv');
@@ -125,13 +161,49 @@
                 }
               }
 
-              function toggleDeathDate() {
-                const isDeceased = document.getElementById('isDeceased').checked;
-                const section = document.getElementById('deathDateSection');
-                if (isDeceased) {
-                  section.classList.remove('hidden');
+              // Sync logic: Honorific → Gender + isDeceased
+              function syncHonorific(val) {
+                const genderSel = document.getElementById('gender');
+                const deceasedCb = document.getElementById('isDeceased');
+                const deathSection = document.getElementById('deathDateSection');
+
+                if (val === 'Late') {
+                  if (deceasedCb) { deceasedCb.checked = true; }
+                  if (deathSection) { deathSection.classList.remove('hidden'); }
                 } else {
-                  section.classList.add('hidden');
+                  if (deceasedCb) { deceasedCb.checked = false; }
+                  if (deathSection) { deathSection.classList.add('hidden'); }
+                }
+
+                if (val === 'Shri') {
+                  if (genderSel) genderSel.value = 'Male';
+                } else if (val === 'Smt.' || val === 'Ms.') {
+                  if (genderSel) genderSel.value = 'Female';
+                }
+              }
+
+              // Sync logic: Gender → Honorific
+              function syncGender(val) {
+                const honorificSel = document.getElementById('honorific');
+                if (!honorificSel) return;
+                const cur = honorificSel.value;
+                if (val === 'Male' && (cur === 'Smt.' || cur === 'Ms.')) {
+                  honorificSel.value = 'Shri';
+                } else if (val === 'Female' && cur === 'Shri') {
+                  honorificSel.value = 'Smt.';
+                }
+              }
+
+              function toggleDeathDate() {
+                const deceasedCb = document.getElementById('isDeceased');
+                const section = document.getElementById('deathDateSection');
+                const honorificSel = document.getElementById('honorific');
+                const isDeceased = deceasedCb && deceasedCb.checked;
+                if (section) {
+                  isDeceased ? section.classList.remove('hidden') : section.classList.add('hidden');
+                }
+                if (honorificSel && isDeceased && honorificSel.value !== 'Late') {
+                  honorificSel.value = 'Late';
                 }
               }
 
@@ -274,9 +346,9 @@
                       <% } %>
               </select>
               <div class="mt-3">
-                <label class="block text-[10px] font-bold text-gray-500 uppercase">या पिता का नाम लिखें (Or type Father's Name)</label>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase">मैन्युअल नाम (Manual Name - Fallback if not in list)</label>
                 <input type="text" name="fatherName" 
-                  class="w-full px-3 py-1.5 text-sm rounded border border-gray-200 focus:ring-1 focus:ring-saffron-500 bg-gray-50"
+                  class="w-full px-3 py-1.5 text-sm rounded border border-gray-200 focus:ring-1 focus:ring-saffron-500 bg-gray-50 text-gray-700"
                   value="<%= typeof member !== 'undefined' ? (member.fatherName || '') : '' %>" 
                   placeholder="Enter father's name manually...">
               </div>
@@ -297,9 +369,9 @@
                       <% } %>
               </select>
               <div class="mt-3">
-                <label class="block text-[10px] font-bold text-gray-500 uppercase">या माता का नाम लिखें (Or type Mother's Name)</label>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase">मैन्युअल नाम (Manual Name - Fallback if not in list)</label>
                 <input type="text" name="motherName" 
-                  class="w-full px-3 py-1.5 text-sm rounded border border-gray-200 focus:ring-1 focus:ring-saffron-500 bg-gray-50"
+                  class="w-full px-3 py-1.5 text-sm rounded border border-gray-200 focus:ring-1 focus:ring-saffron-500 bg-gray-50 text-gray-700"
                   value="<%= typeof member !== 'undefined' ? (member.motherName || '') : '' %>" 
                   placeholder="Enter mother's name manually...">
               </div>
@@ -321,9 +393,9 @@
               </select>
               
               <div class="mt-4 pt-4 border-t border-gray-100">
-                <label class="block text-xs font-bold text-saffron-600 mb-1 uppercase">या जीवनसाथी का नाम लिखें (Or type Spouse Name)</label>
+                <label class="block text-xs font-bold text-saffron-600 mb-1 uppercase">मैन्युअल नाम (Manual Spouse Name - Fallback)</label>
                 <input type="text" name="spouseName" 
-                  class="w-full px-4 py-2 rounded-lg border border-saffron-300 focus:ring-2 focus:ring-saffron-500 bg-saffron-50"
+                  class="w-full px-4 py-2 rounded-lg border border-saffron-300 focus:ring-2 focus:ring-saffron-500 bg-saffron-50 text-gray-700 font-medium"
                   value="<%= typeof member !== 'undefined' ? (member.spouseName || '') : '' %>" 
                   placeholder="Enter spouse name manually...">
                 <p class="text-[10px] text-gray-400 mt-1 italic">उपयोग करें यदि जीवनसाथी सदस्य नहीं है (Use if spouse is not a registered member)</p>
@@ -372,6 +444,7 @@
                   member.isFamilyTreeOnly ? 'checked' : '' %>>
                 <label for="isFamilyTreeOnly" class="ml-3 text-sm font-bold text-gray-700">केवल पारिवारिक वृक्ष के लिए
                   (Is Family Tree Only? - Hide from main directory)</label>
+              </div>
               </div>
             </div>
           </div>

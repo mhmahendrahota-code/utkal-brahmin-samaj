@@ -579,13 +579,30 @@ function resolveModel(collection) {
 router.post('/db/update', isAdmin, async (req, res) => {
   try {
     const { collection, id, data } = req.body;
+    if (!collection || !id || !data) {
+      return res.status(400).json({ ok: false, error: 'Missing required fields (collection, id, or data)' });
+    }
+    
     const parsed = JSON.parse(data);
-    delete parsed._id; delete parsed.__v; delete parsed.password; delete parsed.passwordHash;
+    
+    // Safety: Remove protected fields from the update payload
+    delete parsed._id; 
+    delete parsed.__v; 
+    delete parsed.password; 
+    delete parsed.passwordHash;
+    
     const Model = resolveModel(collection);
-    await Model.findByIdAndUpdate(id, { $set: parsed }, { new: true });
+    
+    // Map any dot-notation keys directly to $set for deep updates
+    const updateResult = await Model.findByIdAndUpdate(id, { $set: parsed }, { new: true, runValidators: true });
+    
+    if (!updateResult) {
+      return res.status(404).json({ ok: false, error: 'Document not found' });
+    }
+    
     res.json({ ok: true });
   } catch (err) {
-    console.error('DB Update error:', err);
+    console.error(`[DB Update Error] Collection: ${req.body.collection}, ID: ${req.body.id}:`, err);
     res.status(400).json({ ok: false, error: err.message });
   }
 });
@@ -1217,6 +1234,7 @@ router.post('/members/add', isAdmin, async (req, res) => {
     const newMember = new Member({
       honorific: req.body.honorific || '',
       name: req.body.name,
+      gender: req.body.gender,
       surname: surname,
       gotra: gotra,
       village: req.body.village,
@@ -1224,6 +1242,7 @@ router.post('/members/add', isAdmin, async (req, res) => {
       contactNumber: req.body.contactNumber,
       email: req.body.email,
       address: req.body.address,
+      bloodGroup: req.body.bloodGroup || '',
       isCommitteeMember: req.body.isCommitteeMember === 'on',
       isDeceased: req.body.isDeceased === 'on',
       isFamilyTreeOnly: req.body.isFamilyTreeOnly === 'on',
@@ -1234,6 +1253,10 @@ router.post('/members/add', isAdmin, async (req, res) => {
       motherName: req.body.motherName || null,
       spouse: req.body.spouse || null,
       spouseName: req.body.spouseName || null,
+      matrimonialProfile: {
+        dateOfBirth: req.body.dob ? new Date(req.body.dob) : null,
+        education: req.body.education || ''
+      },
       isApproved: true // Admin added members are auto-approved
     });
 
@@ -1550,6 +1573,7 @@ router.post('/members/:id/edit', isAdmin, async (req, res) => {
     const updateData = {
       honorific: req.body.honorific || '',
       name: req.body.name,
+      gender: req.body.gender,
       surname: surname,
       gotra: gotra,
       village: req.body.village,
@@ -1557,6 +1581,7 @@ router.post('/members/:id/edit', isAdmin, async (req, res) => {
       contactNumber: req.body.contactNumber,
       email: req.body.email,
       address: req.body.address,
+      bloodGroup: req.body.bloodGroup || '',
       isCommitteeMember: req.body.isCommitteeMember === 'on',
       isDeceased: req.body.isDeceased === 'on',
       isFamilyTreeOnly: req.body.isFamilyTreeOnly === 'on',
@@ -1566,12 +1591,30 @@ router.post('/members/:id/edit', isAdmin, async (req, res) => {
       mother: req.body.mother || null,
       motherName: req.body.motherName || null,
       spouse: req.body.spouse || null,
-      spouseName: req.body.spouseName || null
+      spouseName: req.body.spouseName || null,
+      matrimonialProfile: {
+        dateOfBirth: req.body.dob ? new Date(req.body.dob) : null,
+        education: req.body.education || ''
+      }
     };
 
     if (!updateData.father) updateData.father = null;
     if (!updateData.mother) updateData.mother = null;
     if (!updateData.spouse) updateData.spouse = null;
+
+    // Sync manual names with selected member IDs to reduce redundancy and data drift
+    if (updateData.father) {
+      const f = await Member.findById(updateData.father).select('name').lean();
+      if (f) updateData.fatherName = f.name;
+    }
+    if (updateData.mother) {
+      const m = await Member.findById(updateData.mother).select('name').lean();
+      if (m) updateData.motherName = m.name;
+    }
+    if (updateData.spouse) {
+      const s = await Member.findById(updateData.spouse).select('name').lean();
+      if (s) updateData.spouseName = s.name;
+    }
 
     const oldMember = await Member.findById(req.params.id);
     const updatedMember = await Member.findByIdAndUpdate(req.params.id, updateData, { new: true });
@@ -2121,9 +2164,9 @@ const Settings = require('../models/Settings');
 
 router.get('/settings', isAdmin, async (req, res) => {
   try {
-    let siteSettings = await Settings.findById('1');
+    let siteSettings = await Settings.findById('site_settings');
     if (!siteSettings) {
-      siteSettings = new Settings({ _id: '1' });
+      siteSettings = new Settings({ _id: 'site_settings' });
       await siteSettings.save();
     }
     res.render('admin/settings', { title: 'Global Settings', siteSettings });
@@ -2135,11 +2178,9 @@ router.get('/settings', isAdmin, async (req, res) => {
 
 router.post('/settings', isAdmin, async (req, res) => {
   try {
-    let siteSettings = await Settings.findById('1');
+    let siteSettings = await Settings.findById('site_settings');
     if (!siteSettings) {
-      siteSettings = new Settings({ _id: '1' });
-    } else {
-      siteSettings = new Settings(siteSettings);
+      siteSettings = new Settings({ _id: 'site_settings' });
     }
 
     siteSettings.siteTitle = req.body.siteTitle;
@@ -2150,8 +2191,15 @@ router.post('/settings', isAdmin, async (req, res) => {
     siteSettings.contactPhone = req.body.contactPhone;
     siteSettings.facebookUrl = req.body.facebookUrl;
     siteSettings.whatsappGroupUrl = req.body.whatsappGroupUrl;
-    siteSettings.lastUpdated = new Date();
+    
+    // Bank Details
+    siteSettings.accountName = req.body.accountName;
+    siteSettings.accountNumber = req.body.accountNumber;
+    siteSettings.bankName = req.body.bankName;
+    siteSettings.ifscCode = req.body.ifscCode;
+    siteSettings.branchName = req.body.branchName;
 
+    siteSettings.lastUpdated = new Date();
     await siteSettings.save();
 
     // Inject into app context so public routes reflect changes immediately
