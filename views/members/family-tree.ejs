@@ -993,27 +993,55 @@
             const originalHTML = this.innerHTML;
             this.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Saving...';
             
-            // reset zoom momentarily for clean export
+            // 1. Get the actual content size
+            const bbox = g.node().getBBox();
+            const padding = 60; // Extra padding for the export
+            
+            // 2. Save current state
             const currentTransform = d3.zoomTransform(svg.node());
-            svg.call(zoom.transform, d3.zoomIdentity);
+            const treeDiv = document.getElementById('tree');
+            const originalStyle = treeDiv.getAttribute('style');
+            
+            // 3. Temporarily expand SVG and translate content to (padding, padding)
+            // Move tree so it starts at (padding, padding)
+            svg.call(zoom.transform, d3.zoomIdentity.translate(-bbox.x + padding, -bbox.y + padding).scale(1));
+            
+            // Set SVG and container size to fit all content precisely
+            const exportWidth = bbox.width + padding * 2;
+            const exportHeight = bbox.height + padding * 2;
+            
+            treeDiv.style.width = exportWidth + 'px';
+            treeDiv.style.height = exportHeight + 'px';
+            treeDiv.style.overflow = 'visible';
             
             setTimeout(() => {
-                html2canvas(document.getElementById('tree'), {
-                    background: '#f8fafc',
-                    scale: 2
+                html2canvas(treeDiv, {
+                    backgroundColor: '#f8fafc',
+                    scale: 2, // 2x resolution for printing
+                    width: exportWidth,
+                    height: exportHeight,
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true
                 }).then(canvas => {
                     const link = document.createElement('a');
-                    link.download = 'Family-Tree.png';
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    link.download = `Family-Tree-${timestamp}.png`;
                     link.href = canvas.toDataURL('image/png');
                     link.click();
-                    this.innerHTML = originalHTML;
-                    // Restore zoom
+                    
+                    // 4. Restore original state
+                    treeDiv.setAttribute('style', originalStyle);
                     svg.call(zoom.transform, currentTransform);
+                    this.innerHTML = originalHTML;
                 }).catch(err => {
                     console.error("Export failed", err);
+                    treeDiv.setAttribute('style', originalStyle);
+                    svg.call(zoom.transform, currentTransform);
                     this.innerHTML = originalHTML;
+                    alert("Export failed. Please try again.");
                 });
-            }, 500);
+            }, 800); // Wait a bit longer for transition to settle
         });
     }
 
