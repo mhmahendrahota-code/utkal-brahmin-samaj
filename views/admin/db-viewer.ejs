@@ -219,18 +219,28 @@
     </div>
     <div class="px-6 py-5 space-y-4">
       <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-        <i class="fas fa-exclamation-triangle mr-1"></i> This will <strong>overwrite</strong> the field value on all selected documents. Use with care.
+        <i class="fas fa-exclamation-triangle mr-1"></i> This will <strong>overwrite</strong> the field values on all selected documents. Use with care.
       </p>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Field Name</label>
-        <input id="bulk-field" type="text" placeholder="e.g. isApproved or gotra"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+      
+      <div id="bulk-fields-container" class="space-y-3">
+        <!-- Field rows will be added here -->
+        <div class="bulk-field-row flex gap-2 items-end">
+          <div class="flex-1">
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Field Name</label>
+            <input type="text" placeholder="e.g. isApproved" class="bulk-field-name w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          </div>
+          <div class="flex-1">
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">New Value (JSON)</label>
+            <input type="text" placeholder='e.g. true' class="bulk-field-value w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          </div>
+          <button onclick="this.closest('.bulk-field-row').remove()" class="p-2.5 text-red-400 hover:text-red-600 transition-colors"><i class="fas fa-times"></i></button>
+        </div>
       </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">New Value <span class="text-gray-400 font-normal">(JSON — strings need quotes)</span></label>
-        <input id="bulk-value" type="text" placeholder='e.g. true or "Kashyap" or 0'
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-400 focus:outline-none">
-      </div>
+
+      <button onclick="addBulkFieldRow()" class="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1.5">
+        <i class="fas fa-plus-circle"></i> ADD ANOTHER FIELD
+      </button>
+
       <p id="bulk-edit-error" class="text-xs text-red-500 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
     </div>
     <div class="px-6 pb-5 flex gap-3 justify-end border-t border-gray-100 pt-4">
@@ -885,26 +895,84 @@
     const cbs = getSelectedCbs();
     if (!cbs.length) return;
     document.getElementById('bulk-edit-count').textContent = cbs.length + ' document' + (cbs.length>1?'s':'');
-    document.getElementById('bulk-field').value = '';
-    document.getElementById('bulk-value').value = '';
+    
+    // Reset container with one empty row
+    const container = document.getElementById('bulk-fields-container');
+    container.innerHTML = '';
+    addBulkFieldRow();
+
     document.getElementById('bulk-edit-error').classList.add('hidden');
     document.getElementById('bulk-edit-modal').classList.remove('hidden');
   }
+
+  function addBulkFieldRow() {
+    const container = document.getElementById('bulk-fields-container');
+    const div = document.createElement('div');
+    div.className = 'bulk-field-row flex gap-2 items-end';
+    div.innerHTML = `
+      <div class="flex-1">
+        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Field Name</label>
+        <input type="text" placeholder="e.g. isApproved" class="bulk-field-name w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+      </div>
+      <div class="flex-1">
+        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">New Value (JSON)</label>
+        <input type="text" placeholder='e.g. true' class="bulk-field-value w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-400 focus:outline-none">
+      </div>
+      <button onclick="if(document.querySelectorAll('.bulk-field-row').length > 1) this.closest('.bulk-field-row').remove()" class="p-2.5 text-gray-300 hover:text-red-500 transition-colors"><i class="fas fa-times"></i></button>
+    `;
+    container.appendChild(div);
+  }
+
   async function saveBulkEdit() {
-    const cbs   = getSelectedCbs();
-    const ids   = cbs.map(cb => cb.dataset.id);
-    const col   = cbs[0]?.dataset.col;
-    const field = document.getElementById('bulk-field').value.trim();
-    const value = document.getElementById('bulk-value').value.trim();
-    if (!field) { const el=document.getElementById('bulk-edit-error'); el.querySelector('span').textContent='Field name is required'; el.classList.remove('hidden'); return; }
-    const res = await fetch('/admin/db/bulk-update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ collection: col, ids, field, value }) });
+    const cbs = getSelectedCbs();
+    const ids = cbs.map(cb => cb.dataset.id);
+    const col = cbs[0]?.dataset.col;
+    const errorEl = document.getElementById('bulk-edit-error');
+    
+    // Gather updates
+    const updates = {};
+    const rows = document.querySelectorAll('.bulk-field-row');
+    let hasError = false;
+
+    rows.forEach(row => {
+      const field = row.querySelector('.bulk-field-name').value.trim();
+      const valueRaw = row.querySelector('.bulk-field-value').value.trim();
+      
+      if (!field) return; // Skip empty rows
+
+      try {
+        let parsedValue;
+        try { parsedValue = JSON.parse(valueRaw); } catch { parsedValue = valueRaw; }
+        updates[field] = parsedValue;
+      } catch (e) {
+        hasError = true;
+        errorEl.querySelector('span').textContent = `Invalid value for field "${field}"`;
+        errorEl.classList.remove('hidden');
+      }
+    });
+
+    if (hasError) return;
+    if (Object.keys(updates).length === 0) {
+      errorEl.querySelector('span').textContent = 'Please specify at least one field to update';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    const res = await fetch('/admin/db/bulk-update', { 
+      method:'POST', 
+      headers:{'Content-Type':'application/json'}, 
+      body: JSON.stringify({ collection: col, ids, updates }) 
+    });
+    
     const result = await res.json();
     if (result.ok) {
       closeModal('bulk-edit-modal');
       showToast(`Updated ${result.modified} document(s)!`, 'blue');
-      clearSelection();
+      // Update local storage/UI if needed, but a reload is safer for bulk
+      setTimeout(() => location.reload(), 1000);
     } else {
-      const el=document.getElementById('bulk-edit-error'); el.querySelector('span').textContent='Server: '+result.error; el.classList.remove('hidden');
+      errorEl.querySelector('span').textContent = 'Server: ' + result.error;
+      errorEl.classList.remove('hidden');
     }
   }
 

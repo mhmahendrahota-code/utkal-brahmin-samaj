@@ -60,7 +60,10 @@
     </div>
 
     <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden relative" style="height: 750px;">
-      <div id="tree" style="width: 100%; height: 100%;"></div>
+      <div id="tree" style="width: 100%; height: 100%;"
+           data-member-id="<%= memberId %>"
+           data-is-admin="<%= typeof isAdminView !== 'undefined' && isAdminView %>"
+           data-inline-data='<%- typeof inlineTreeData !== "undefined" ? inlineTreeData : "null" %>'></div>
       
       <!-- Minimap Overlay -->
       <div class="absolute bottom-6 left-6 w-48 h-36 bg-white/95 backdrop-blur-md rounded-lg shadow-xl border border-gray-200 hidden sm:flex flex-col overflow-hidden z-[40]">
@@ -393,15 +396,18 @@
       document.getElementById('drawer-death-container').classList.add('hidden');
     }
     
-    <% if (typeof isAdminView !== 'undefined' && isAdminView) { %>
+    const treeEl = document.getElementById('tree');
+    const isAdmin = treeEl.dataset.isAdmin === 'true';
+
+    if (isAdmin) {
       document.getElementById('drawer-link').href = '/admin/members/' + data.id + '/edit';
       const addRelBtn = document.getElementById('drawer-add-relative');
       if (addRelBtn) {
         addRelBtn.href = '/admin/members/add?parentId=' + data.id + '&parentName=' + encodeURIComponent(data.name || '');
       }
-    <% } else { %>
+    } else {
       document.getElementById('drawer-link').href = '/members/' + data.id;
-    <% } %>
+    }
   }
 
   function closeDrawer() {
@@ -416,11 +422,11 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    const memberId = '<%= memberId %>';
+    const treeContainer = document.getElementById('tree');
+    const memberId = treeContainer.dataset.memberId;
     const loading = document.getElementById('loading');
     const btnImmediate = document.getElementById('view-immediate');
     const btnFull = document.getElementById('view-full');
-    const treeContainer = document.getElementById('tree');
     let currentMode = 'full';
     let rawData = [];
 
@@ -481,7 +487,7 @@
     minimapViewport.call(drag);
 
     // Server-embedded tree data for instant first load (community tree only)
-    const INLINE_TREE_DATA = <%- typeof inlineTreeData !== 'undefined' ? inlineTreeData : 'null' %>;
+    const INLINE_TREE_DATA = JSON.parse(treeContainer.dataset.inlineData || 'null');
 
     async function loadTree(targetMode, forceApi) {
       loading.style.display = 'flex';

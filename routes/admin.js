@@ -430,6 +430,34 @@ router.get('/family-tree', isAdmin, async (req, res) => {
   }
 });
 
+// Admin Family Tree Table List View
+router.get('/family-tree/list', isAdmin, async (req, res) => {
+  try {
+    const members = await Member.find({
+      $or: [
+        { isFamilyTreeOnly: true },
+        { father: { $exists: true, $ne: null } },
+        { mother: { $exists: true, $ne: null } },
+        { spouse: { $exists: true, $ne: null } },
+        { children: { $exists: true, $ne: [] } },
+        { generationLevel: { $exists: true, $ne: null } }
+      ]
+    })
+    .populate('father')
+    .populate('mother')
+    .populate('spouse')
+    .sort({ generationLevel: 1, name: 1 });
+
+    res.render('admin/family-tree-list', { 
+      title: 'Family Tree Member List', 
+      members 
+    });
+  } catch (err) {
+    console.error('Error loading family tree list:', err);
+    res.status(500).send('Error loading family tree list');
+  }
+});
+
 // Data Health Dashboard API
 router.get('/api/data-health', isAdmin, async (req, res) => {
   try {
@@ -575,17 +603,30 @@ router.post('/db/delete', isAdmin, async (req, res) => {
   }
 });
 
-// DB Explorer – Bulk update: set field=value on selected docs
+// DB Explorer – Bulk update: set multiple fields on selected docs
 router.post('/db/bulk-update', isAdmin, async (req, res) => {
   try {
-    const { collection, ids, field, value } = req.body;
+    const { collection, ids, field, value, updates } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ ok: false, error: 'No IDs provided' });
-    if (!field || ['_id', '__v', 'password', 'passwordHash'].includes(field))
-      return res.status(400).json({ ok: false, error: 'Cannot update protected field: ' + field });
-    let parsedValue;
-    try { parsedValue = JSON.parse(value); } catch { parsedValue = value; }
+    
+    let finalUpdates = updates || {};
+    if (!updates && field) {
+      let parsedValue;
+      try { parsedValue = JSON.parse(value); } catch { parsedValue = value; }
+      finalUpdates[field] = parsedValue;
+    }
+
+    if (Object.keys(finalUpdates).length === 0) return res.status(400).json({ ok: false, error: 'No updates provided' });
+
+    const protectedFields = ['_id', '__v', 'password', 'passwordHash'];
+    for (const key of Object.keys(finalUpdates)) {
+      if (protectedFields.includes(key)) {
+        return res.status(400).json({ ok: false, error: 'Cannot update protected field: ' + key });
+      }
+    }
+
     const Model = resolveModel(collection);
-    const result = await Model.updateMany({ _id: { $in: ids } }, { $set: { [field]: parsedValue } });
+    const result = await Model.updateMany({ _id: { $in: ids } }, { $set: finalUpdates });
     res.json({ ok: true, modified: result.modifiedCount });
   } catch (err) {
     console.error('DB Bulk Update error:', err);

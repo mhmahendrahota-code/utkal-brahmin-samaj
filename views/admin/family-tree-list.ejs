@@ -1,0 +1,140 @@
+<%- include('partials/admin-header') %>
+
+<section class="py-12 bg-gray-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-6xl">
+    
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">
+          <a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a> 
+          Family Tree Member List
+        </h1>
+        <p class="text-sm text-gray-500 mt-1">Total tree members: <strong><%= members.length %></strong></p>
+      </div>
+      <div class="flex gap-2">
+        <a href="/admin/family-tree" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center">
+          <i class="fas fa-sitemap mr-2"></i> Graphical Tree
+        </a>
+        <a href="/admin/members" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-colors inline-flex items-center">
+          <i class="fas fa-users mr-2"></i> All Members
+        </a>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div class="p-4 border-b border-gray-200">
+        <div class="relative max-w-md">
+          <input type="text" id="member-search" placeholder="Search by name, gotra, village..." 
+                 class="w-full pl-10 pr-4 py-2 rounded border border-gray-300 text-sm focus:ring-saffron-500 focus:border-saffron-500">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i class="fas fa-search text-gray-400"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse" id="members-table">
+          <thead>
+            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+              <th class="px-6 py-4 font-medium">Name</th>
+              <th class="px-6 py-4 font-medium">Gotra / Village</th>
+              <th class="px-4 py-4 font-medium text-center">Gen</th>
+              <th class="px-6 py-4 font-medium">Father</th>
+              <th class="px-6 py-4 font-medium">Mother</th>
+              <th class="px-6 py-4 font-medium">Spouse</th>
+              <th class="px-6 py-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm" id="members-tbody">
+            <% members.forEach(member => { %>
+              <tr class="hover:bg-gray-50 text-gray-700 member-row h-16" 
+                  data-name="<%= (member.name + ' ' + (member.surname || '')).toLowerCase() %>"
+                  data-gotra="<%= (member.gotra || '').toLowerCase() %>"
+                  data-village="<%= (member.village || '').toLowerCase() %>">
+                <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-saffron-100 text-saffron-600 flex items-center justify-center mr-3 font-bold flex-shrink-0">
+                      <%= member.name.charAt(0) %>
+                    </div>
+                    <div>
+                      <span><%= member.name %></span>
+                      <% if (member.surname) { %><span class="text-saffron-700 font-bold ml-1"><%= member.surname %></span><% } %>
+                      <% if (member.isFamilyTreeOnly) { %>
+                        <span class="ml-2 text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded uppercase font-bold">Tree Only</span>
+                      <% } %>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-gray-900"><%= member.gotra || '—' %></div>
+                  <div class="text-xs text-gray-400"><%= member.village || '—' %></div>
+                </td>
+                <td class="px-4 py-4 text-center">
+                  <% if (member.generationLevel !== null && member.generationLevel !== undefined) { %>
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold
+                      <%= member.generationLevel === 0 ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 
+                         member.generationLevel <= 2 ? 'bg-blue-50 text-blue-700' : 
+                         member.generationLevel <= 4 ? 'bg-green-50 text-green-700' : 
+                         'bg-gray-100 text-gray-600' %>">
+                      <%= member.generationLevel %>
+                    </span>
+                  <% } else { %><span class="text-gray-300">—</span><% } %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <% if (member.father) { %>
+                    <a href="/admin/members/<%= member.father._id %>/edit" class="text-blue-600 hover:underline">
+                      <%= member.father.name %>
+                    </a>
+                  <% } else if (member.fatherName) { %>
+                    <span class="text-gray-500 italic"><%= member.fatherName %></span>
+                  <% } else { %><span class="text-gray-300">—</span><% } %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <% if (member.mother) { %>
+                    <a href="/admin/members/<%= member.mother._id %>/edit" class="text-purple-600 hover:underline">
+                      <%= member.mother.name %>
+                    </a>
+                  <% } else if (member.motherName) { %>
+                    <span class="text-gray-500 italic"><%= member.motherName %></span>
+                  <% } else { %><span class="text-gray-300">—</span><% } %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <% if (member.spouse) { %>
+                    <a href="/admin/members/<%= member.spouse._id %>/edit" class="text-pink-600 hover:underline">
+                      <%= member.spouse.name %>
+                    </a>
+                  <% } else if (member.spouseName) { %>
+                    <span class="text-gray-500 italic"><%= member.spouseName %></span>
+                  <% } else { %><span class="text-gray-300">—</span><% } %>
+                </td>
+                <td class="px-6 py-4 text-right whitespace-nowrap">
+                  <a href="/admin/family-tree?id=<%= member._id %>" class="text-indigo-500 hover:text-indigo-700 mx-1" title="View in Tree"><i class="fas fa-sitemap"></i></a>
+                  <a href="/admin/members/<%= member._id %>/edit" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit"><i class="fas fa-edit"></i></a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Simple Search Filter
+  const searchInput = document.getElementById('member-search');
+  const rows = document.querySelectorAll('.member-row');
+
+  searchInput.addEventListener('input', () => {
+    const term = searchInput.value.toLowerCase().trim();
+    rows.forEach(row => {
+      const match = !term || 
+        row.dataset.name.includes(term) || 
+        row.dataset.gotra.includes(term) || 
+        row.dataset.village.includes(term);
+      row.style.display = match ? '' : 'none';
+    });
+  });
+</script>
+
+<%- include('partials/admin-footer') %>
