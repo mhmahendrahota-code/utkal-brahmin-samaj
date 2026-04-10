@@ -1,10 +1,10 @@
 <!-- Chatbot Floating Button -->
-<button id="chatbot-toggle-btn" style="right: 15px; bottom: 15px;" class="fixed z-[9999] bg-saffron-600 hover:bg-saffron-700 text-white w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 focus:outline-none">
+<button id="chatbot-toggle-btn" style="right: 15px; bottom: 15px; z-index: 9999;" class="fixed bg-saffron-600 hover:bg-saffron-700 text-white w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 focus:outline-none">
   <i class="fas fa-robot text-xl sm:text-2xl"></i>
 </button>
 
 <!-- Chatbot Window -->
-<div id="chatbot-window" style="right: 15px; bottom: 75px;" class="fixed w-[calc(100vw-30px)] sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden z-[9999] flex flex-col transition-all duration-300 transform scale-0 origin-bottom-right drop-shadow-2xl border border-gray-100 hidden">
+<div id="chatbot-window" style="right: 15px; bottom: 75px; z-index: 9999;" class="fixed w-[calc(100vw-30px)] sm:w-[380px] h-[500px] max-h-[80vh] bg-white rounded-2xl shadow-3xl overflow-hidden flex flex-col transition-all duration-300 transform scale-0 origin-bottom-right border border-gray-200 hidden">
   
   <!-- Header -->
   <div class="bg-saffron-600 p-4 text-white flex justify-between items-center shadow-md">
@@ -23,7 +23,7 @@
   </div>
 
   <!-- Chat Messages Area -->
-  <div id="chatbot-messages" class="flex-grow p-4 h-[60vh] sm:h-96 max-h-[500px] overflow-y-auto bg-gray-50 flex flex-col gap-3 scroll-smooth">
+  <div id="chatbot-messages" class="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3 scroll-smooth">
     <!-- Initial Greeting -->
     <div class="flex items-end gap-2 max-w-[90%]">
       <div class="w-6 h-6 rounded-full bg-saffron-100 flex-shrink-0 flex items-center justify-center text-saffron-600 text-xs shadow-sm">

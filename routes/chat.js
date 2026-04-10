@@ -38,11 +38,11 @@ router.post('/', async (req, res) => {
     if (!cachedContextParts || (NOW - lastContextFetch) > 30 * 60 * 1000) {
       const memberCount = await Member.countDocuments({ isDeceased: { $ne: true }, isFamilyTreeOnly: { $ne: true } });
       const gotras = await Member.distinct('gotra', { gotra: { $ne: null, $ne: '' } });
-      const activeAnnouncements = await Announcement.find({ 
-        isActive: true, 
-        $or: [{ expiryDate: null }, { expiryDate: { $gt: new Date() } }] 
+      const activeAnnouncements = await Announcement.find({
+        isActive: true,
+        $or: [{ expiryDate: null }, { expiryDate: { $gt: new Date() } }]
       }).sort({ createdAt: -1 }).limit(3);
-      
+
       cachedContextParts = {
         count: memberCount,
         gotras: gotras.join(', ') || 'Various',
@@ -72,10 +72,10 @@ Rules for you:
     // 7. Establish Chat Session using Native Settings
     let chatHistory = [];
     if (Array.isArray(previousHistory)) {
-        chatHistory = previousHistory.map(h => ({
-            role: h.role === 'ai' ? 'model' : 'user',
-            parts: [{ text: h.text || '' }]
-        }));
+      chatHistory = previousHistory.map(h => ({
+        role: h.role === 'ai' ? 'model' : 'user',
+        parts: [{ text: h.text || '' }]
+      }));
     }
 
     const chat = model.startChat({
@@ -94,7 +94,10 @@ Rules for you:
     if (err.message && err.message.includes('API key not valid')) {
       return res.status(500).json({ error: 'Invalid Google Gemini API Key. Please verify it in Settings.' });
     }
-    res.status(500).json({ error: 'Sorry, I am having trouble connecting right now. Please try again later. (' + err.message + ')' });
+    if (err.message && (err.message.includes('503 Service Unavailable') || err.message.includes('Quota exceeded') || err.message.includes('429'))) {
+      return res.status(503).json({ error: 'क्षमा करें, आपने थोड़ी देर में बहुत सारे मैसेज भेज दिए हैं (Quota Limit) या  AI का सर्वर बिज़ी है। कृपया 1-2 मिनट बाद कोशिश करें।' });
+    }
+    res.status(500).json({ error: 'सर्वर से कनेक्ट करने में समस्या आ रही है। कृपया थोड़ी देर बाद फिर से प्रयास करें।' });
   }
 });
 
