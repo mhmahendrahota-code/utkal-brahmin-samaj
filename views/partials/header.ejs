@@ -96,6 +96,10 @@
         <span><i class="fas fa-envelope mr-1"></i> contact@pusaursamaj.org</span>
       </div>
       <div class="flex space-x-4 items-center">
+        <!-- PWA Install Link (Desktop/Top) -->
+        <button onclick="installPWA()" id="pwa-top-install" class="hidden text-white hover:text-saffron-300 font-bold transition-colors items-center gap-1 border-r border-white/20 pr-4 mr-2">
+          <i class="fas fa-download text-xs"></i> ऐप इंस्टॉल (App)
+        </button>
         <a href="#" class="hover:text-saffron-500 transition-colors hidden sm:inline"><i
             class="fab fa-facebook"></i></a>
         <a href="#" class="hover:text-saffron-500 transition-colors hidden sm:inline"><i class="fab fa-youtube"></i></a>
@@ -183,6 +187,9 @@
 
     <!-- Mobile Menu (Hidden by default) -->
     <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 px-4 py-2 shadow-inner">
+      <button onclick="installPWA()" id="pwa-mobile-menu-item" class="hidden w-full text-left py-3 px-4 bg-saffron-50 text-saffron-700 font-black rounded-xl border border-saffron-200 mb-2 animate-pulse">
+        <i class="fas fa-mobile-alt mr-2"></i> मोबाइल ऐप (Install App) 📲
+      </button>
       <a href="/" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">होम (Home)</a>
       <a href="/members" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">निर्देशिका (Directory)</a>
       <a href="/surnames" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">उपनाम (Surnames)</a>
@@ -246,40 +253,79 @@
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       _deferredPrompt = e;
+      
+      // Show all install triggers
       const banner = document.getElementById('pwa-install-banner');
+      const topBtn = document.getElementById('pwa-top-install');
+      const mobileItem = document.getElementById('pwa-mobile-menu-item');
+      const heroBtn = document.getElementById('pwa-hero-install');
+
       if (banner && !localStorage.getItem('pwa-dismissed')) {
         banner.classList.remove('hidden');
       }
+      if (topBtn) topBtn.classList.remove('hidden', 'md:hidden');
+      if (mobileItem) mobileItem.classList.remove('hidden');
+      if (heroBtn) heroBtn.classList.remove('hidden');
     });
+
+    // Also check if app is already installed
+    window.addEventListener('appinstalled', () => {
+      console.log('[PWA] App installed successfully');
+      hideAllInstallTriggers();
+    });
+
+    function hideAllInstallTriggers() {
+      ['pwa-install-banner', 'pwa-top-install', 'pwa-mobile-menu-item', 'pwa-hero-install'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+    }
+
     function installPWA() {
       if (_deferredPrompt) {
         _deferredPrompt.prompt();
         _deferredPrompt.userChoice.then(choice => {
           if (choice.outcome === 'accepted') {
-            document.getElementById('pwa-install-banner').classList.add('hidden');
+            hideAllInstallTriggers();
           }
           _deferredPrompt = null;
         });
+      } else {
+        // Fallback or Guide for iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+          alert('iPhone/iOS के लिए: Safari खोलें, "Share" बटन दबाएं, फिर "Add to Home Screen" चुनें।');
+        } else {
+          alert('कृपया ब्राउज़र मेनू से "Install App" चुनें।');
+        }
       }
     }
     function dismissPWA() {
       document.getElementById('pwa-install-banner').classList.add('hidden');
       localStorage.setItem('pwa-dismissed', '1');
+      // Reset dismissal after 7 days
+      setTimeout(() => localStorage.removeItem('pwa-dismissed'), 7 * 24 * 60 * 60 * 1000);
     }
   </script>
 
-  <!-- PWA Install Banner -->
-  <div id="pwa-install-banner" class="hidden fixed bottom-20 left-3 right-3 sm:left-auto sm:right-6 sm:w-80 bg-white border border-amber-200 rounded-2xl shadow-2xl p-4 z-[9998] flex items-center gap-3">
-    <div class="w-10 h-10 bg-saffron-100 rounded-xl flex items-center justify-center flex-shrink-0">
-      <span class="text-xl">ଓ</span>
+  <!-- PWA Install Banner (Enhanced) -->
+  <div id="pwa-install-banner" class="hidden fixed bottom-24 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 bg-white border border-saffron-200 rounded-3xl shadow-[0_20px_50px_rgba(217,119,6,0.15)] p-5 z-[9999] flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-5 duration-500">
+    <div class="flex items-center gap-4">
+      <div class="w-14 h-14 bg-gradient-to-br from-saffron-400 to-saffron-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-saffron-200 ring-4 ring-saffron-50">
+        <span class="text-3xl text-white font-black">ଓ</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-base font-black text-gray-900 leading-tight mb-0.5">Mobile App 📲</p>
+        <p class="text-xs text-gray-400 font-medium">Behtar anubhav ke liye UBS App install karein.</p>
+      </div>
+      <button onclick="dismissPWA()" class="text-gray-300 hover:text-gray-500 p-1">
+        <i class="fas fa-times text-lg"></i>
+      </button>
     </div>
-    <div class="flex-1 min-w-0">
-      <p class="text-xs font-bold text-gray-800">ऐप इंस्टॉल करें 📲</p>
-      <p class="text-[10px] text-gray-500">UBS Pusaur को अपने फोन में add करें</p>
-    </div>
-    <div class="flex flex-col gap-1">
-      <button onclick="installPWA()" class="text-[10px] font-bold bg-saffron-600 text-white px-3 py-1 rounded-full hover:bg-saffron-700 whitespace-nowrap">Install</button>
-      <button onclick="dismissPWA()" class="text-[10px] text-gray-400 hover:text-gray-600">No thanks</button>
+    <div class="flex gap-2">
+      <button onclick="installPWA()" class="flex-1 bg-saffron-600 hover:bg-saffron-700 text-white font-black py-3 rounded-2xl transition-all shadow-md active:scale-95 text-sm uppercase tracking-widest">
+        Install Now
+      </button>
     </div>
   </div>
 

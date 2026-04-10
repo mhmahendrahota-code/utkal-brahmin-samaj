@@ -55,14 +55,35 @@
         </ul>
       </div>
 
-      <!-- Jai Jagannath -->
-      <div class="flex flex-col items-center justify-center bg-white/5 rounded-lg p-4 border border-white/10">
-        <!-- Using a simple text for Jai Jagannath or an icon -->
-        <h4 class="text-2xl font-bold text-saffron-500 mb-2">जय जगन्नाथ</h4>
-        <p class="text-center text-xs text-gray-300">
-          May Lord Jagannath bless our community with peace, prosperity, and unity.
-        </p>
+      <!-- Mobile App -->
+      <div class="col-span-1 border-t md:border-t-0 pt-6 md:pt-0 border-white/10">
+        <h4 class="text-lg font-bold mb-4 text-saffron-500 border-b border-saffron-500/30 pb-2 inline-block">Mobile App 📲</h4>
+        <p class="text-gray-300 text-xs mb-4">Behtar anubhav ke liye hamara mobile app install karein.</p>
+        <div class="flex flex-col gap-2">
+          <button onclick="installPWA()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl flex items-center gap-3 transition-colors border border-white/10 group">
+            <i class="fab fa-google-play text-xl text-saffron-500"></i>
+            <div class="text-left">
+              <p class="text-[8px] uppercase font-bold text-gray-400">Install from</p>
+              <p class="text-xs font-bold">Android (PWA)</p>
+            </div>
+          </button>
+          <button onclick="installPWA()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl flex items-center gap-3 transition-colors border border-white/10 group">
+            <i class="fab fa-apple text-xl text-gray-200"></i>
+            <div class="text-left">
+              <p class="text-[8px] uppercase font-bold text-gray-400">Install from</p>
+              <p class="text-xs font-bold">iOS / Safari</p>
+            </div>
+          </button>
+        </div>
       </div>
+    </div>
+
+    <!-- Jai Jagannath -->
+    <div class="flex flex-col items-center justify-center bg-white/5 rounded-2xl p-6 border border-white/10 mb-8 max-w-2xl mx-auto">
+      <h4 class="text-2xl font-black text-saffron-500 mb-2 tracking-widest uppercase">जय जगन्नाथ</h4>
+      <p class="text-center text-xs text-gray-300 italic">
+        "May Lord Jagannath bless our community with peace, prosperity, and unity."
+      </p>
     </div>
 
     <div class="pt-6 border-t border-white/20 text-center text-sm text-gray-400">
