@@ -93,6 +93,7 @@ const indexRoutes = require('./routes/index');
 const memberRoutes = require('./routes/members');
 const eventRoutes = require('./routes/events');
 const adminRoutes = require('./routes/admin');
+const chatRoutes = require('./routes/chat');
 
 // Health Check Route
 app.get('/health', (req, res) => {
@@ -114,6 +115,7 @@ app.get('/health', (req, res) => {
 app.use('/admin', adminRoutes);
 app.use('/members', memberRoutes);
 app.use('/events', eventRoutes);
+app.use('/api/chat', chatRoutes);
 app.use('/', indexRoutes);
 
 // Error Handler (must be at the end of middleware chain)

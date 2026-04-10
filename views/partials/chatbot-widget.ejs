@@ -1,0 +1,184 @@
+<!-- Chatbot Floating Button -->
+<button id="chatbot-toggle-btn" style="right: 24px; bottom: 24px;" class="fixed z-[9999] bg-saffron-600 hover:bg-saffron-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 focus:outline-none">
+  <i class="fas fa-robot text-2xl"></i>
+</button>
+
+<!-- Chatbot Window -->
+<div id="chatbot-window" style="right: 24px; bottom: 90px;" class="fixed w-[calc(100vw-3rem)] sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden z-[9999] flex flex-col transition-all duration-300 transform scale-0 origin-bottom-right drop-shadow-2xl border border-gray-100 hidden">
+  
+  <!-- Header -->
+  <div class="bg-saffron-600 p-4 text-white flex justify-between items-center shadow-md">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
+        <i class="fas fa-robot"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-sm">पार्थ (Parth AI) <i class="fas fa-feather text-amber-300 ml-1 text-[10px]"></i></h3>
+        <p class="text-[10px] text-saffron-100"><i class="fas fa-circle text-green-400 text-[8px] mr-1"></i> आपका मित्र (Online)</p>
+      </div>
+    </div>
+    <button id="chatbot-close-btn" class="text-white hover:text-saffron-200 transition-colors focus:outline-none">
+      <i class="fas fa-times text-lg"></i>
+    </button>
+  </div>
+
+  <!-- Chat Messages Area -->
+  <div id="chatbot-messages" class="flex-grow p-4 h-[60vh] sm:h-96 max-h-[500px] overflow-y-auto bg-gray-50 flex flex-col gap-3 scroll-smooth">
+    <!-- Initial Greeting -->
+    <div class="flex items-end gap-2 max-w-[90%]">
+      <div class="w-6 h-6 rounded-full bg-saffron-100 flex-shrink-0 flex items-center justify-center text-saffron-600 text-xs shadow-sm">
+        <i class="fas fa-robot"></i>
+      </div>
+      <div class="bg-white px-4 py-2 rounded-2xl rounded-bl-sm shadow-sm text-sm border border-gray-100 text-gray-700">
+        जय जगन्नाथ! 🙏<br>मैं <strong>पार्थ (Parth)</strong> हूँ — उत्कल ब्राह्मण समाज का AI असिस्टेंट।<br>बताइए, आज मैं समाज से जुड़ी आपकी क्या सहायता कर सकता हूँ?
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Indicator (Hidden initially) -->
+  <div id="chatbot-loading" class="hidden px-4 pb-2 bg-gray-50 flex items-center gap-2 max-w-[85%]">
+    <div class="w-6 h-6 rounded-full bg-saffron-100 flex-shrink-0 flex items-center justify-center text-saffron-600 text-[10px] shadow-sm">
+      <i class="fas fa-robot"></i>
+    </div>
+    <div class="bg-white px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm text-sm border border-gray-100 flex justify-center items-center gap-1">
+      <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+      <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+      <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+    </div>
+  </div>
+
+  <!-- Input Area -->
+  <div class="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
+    <input type="text" id="chatbot-input" placeholder="अपना सवाल यहाँ लिखें..." class="flex-grow bg-gray-50 border border-gray-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-saffron-500 focus:bg-white text-sm transition-all shadow-inner">
+    <button id="chatbot-send-btn" class="bg-saffron-600 hover:bg-saffron-700 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105 focus:outline-none disabled:opacity-50 disabled:scale-100">
+      <i class="fas fa-paper-plane text-xs ml-[-2px]"></i>
+    </button>
+  </div>
+  <!-- Watermark -->
+  <div class="text-center pb-2 bg-white">
+    <p class="text-[9px] text-gray-400 flex items-center justify-center gap-1 font-medium"><i class="fas fa-code text-saffron-500"></i> Designed by Mahendra K Hota</p>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('chatbot-toggle-btn');
+    const closeBtn = document.getElementById('chatbot-close-btn');
+    const windowEl = document.getElementById('chatbot-window');
+    const inputEl = document.getElementById('chatbot-input');
+    const sendBtn = document.getElementById('chatbot-send-btn');
+    const messagesEl = document.getElementById('chatbot-messages');
+    const loadingEl = document.getElementById('chatbot-loading');
+
+    let chatHistory = [];
+
+    // Toggle Chat Window
+    function toggleChat() {
+      if (windowEl.classList.contains('hidden')) {
+        windowEl.classList.remove('hidden');
+        // slight delay to allow default display frame before transforming
+        setTimeout(() => {
+          windowEl.classList.remove('scale-0');
+          windowEl.classList.add('scale-100');
+          inputEl.focus();
+        }, 10);
+      } else {
+        windowEl.classList.remove('scale-100');
+        windowEl.classList.add('scale-0');
+        setTimeout(() => windowEl.classList.add('hidden'), 300);
+      }
+    }
+
+    toggleBtn.addEventListener('click', toggleChat);
+    closeBtn.addEventListener('click', toggleChat);
+
+    // Escape to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !windowEl.classList.contains('hidden')) toggleChat();
+    });
+
+    // Formatting for markdown-like bot logic
+    function parseBotReply(text) {
+      let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      html = html.replace(/\n\n/g, '<br><br>');
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+
+    // Add Message to UI
+    function addMessage(text, role) {
+      const wrapper = document.createElement('div');
+      wrapper.className = `flex gap-2 max-w-[90%] ${role === 'user' ? 'self-end flex-row-reverse' : 'items-end'}`;
+
+      let iconHtml = '';
+      if (role === 'ai') {
+        iconHtml = `
+          <div class="w-6 h-6 rounded-full bg-saffron-100 flex-shrink-0 flex items-center justify-center text-saffron-600 text-xs shadow-sm">
+            <i class="fas fa-robot"></i>
+          </div>`;
+      }
+
+      const bubbleHtml = `
+        <div class="px-4 py-2 text-sm shadow-sm border ${
+          role === 'user' 
+          ? 'bg-saffron-600 text-white rounded-2xl rounded-br-sm border-saffron-700' 
+          : 'bg-white text-gray-700 rounded-2xl rounded-bl-sm border-gray-100'
+        }">
+          ${role === 'ai' ? parseBotReply(text) : text.replace(/</g, "&lt;")}
+        </div>`;
+
+      wrapper.innerHTML = role === 'ai' ? iconHtml + bubbleHtml : bubbleHtml;
+      messagesEl.appendChild(wrapper);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // Handle Send
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      inputEl.value = '';
+      sendBtn.disabled = true;
+      addMessage(text, 'user');
+      
+      loadingEl.classList.remove('hidden');
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, previousHistory: chatHistory })
+        });
+        
+        const data = await response.json();
+        
+        loadingEl.classList.add('hidden');
+        sendBtn.disabled = false;
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Server error');
+        }
+
+        addMessage(data.reply, 'ai');
+        
+        // Update history for context continuity
+        chatHistory.push({ role: 'user', text: text });
+        chatHistory.push({ role: 'ai', text: data.reply });
+
+      } catch (err) {
+        loadingEl.classList.add('hidden');
+        sendBtn.disabled = false;
+        
+        // Show error safely
+        addMessage(`*Error:* ${err.message}`, 'ai');
+      }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  });
+</script>

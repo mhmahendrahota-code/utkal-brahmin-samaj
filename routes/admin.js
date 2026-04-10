@@ -2198,6 +2198,8 @@ router.post('/settings', isAdmin, async (req, res) => {
     siteSettings.bankName = req.body.bankName;
     siteSettings.ifscCode = req.body.ifscCode;
     siteSettings.branchName = req.body.branchName;
+    siteSettings.isChatbotEnabled = req.body.isChatbotEnabled === 'true' || req.body.isChatbotEnabled === 'on';
+    siteSettings.geminiApiKey = req.body.geminiApiKey;
 
     siteSettings.lastUpdated = new Date();
     await siteSettings.save();

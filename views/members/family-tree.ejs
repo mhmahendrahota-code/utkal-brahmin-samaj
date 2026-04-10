@@ -14,7 +14,14 @@
                   <%= memberId==='all' ? 'वापस होम पेज पर (Back to Home)' : 'वापस प्रोफाइल पर (Back to Profile)' %>
                 </a>
                 <div class="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-                  <h1 class="text-2xl font-bold text-gray-800 flex-grow md:flex-grow-0">पारिवारिक वंशावली (Family Tree)
+                  <h1 id="family-tree-title" class="text-2xl font-bold text-gray-800 flex-grow md:flex-grow-0">
+                    <% if (memberId === 'all') { %>
+                      सम्पूर्ण समाज वंशावली (Community Family Tree)
+                    <% } else if (typeof memberName !== 'undefined') { %>
+                      <%= memberName %> का परिवार (Family Tree)
+                    <% } else { %>
+                      पारिवारिक वंशावली (Family Tree)
+                    <% } %>
                   </h1>
 
                   <% if (memberId==='all' ) { %>
@@ -1234,7 +1241,20 @@
               if (btnFull) btnFull.addEventListener('click', () => loadTree('full'));
 
               const gotraFilter = document.getElementById('gotra-filter');
-              if (gotraFilter) gotraFilter.addEventListener('change', () => loadTree('full', true));
+              if (gotraFilter) {
+                gotraFilter.addEventListener('change', () => {
+                  loadTree('full', true);
+                  // Update title if viewing Community tree
+                  const titleEl = document.getElementById('family-tree-title');
+                  if (titleEl) {
+                    if (gotraFilter.value) {
+                      titleEl.textContent = gotraFilter.value + ' परिवार (Family Tree)';
+                    } else {
+                      titleEl.textContent = 'सम्पूर्ण समाज वंशावली (Community Family Tree)';
+                    }
+                  }
+                });
+              }
 
               // --- Expand All / Collapse All ---
               function expandAll(node) {
@@ -1298,7 +1318,14 @@
                     }).then(canvas => {
                       const link = document.createElement('a');
                       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                      link.download = `Family-Tree-${timestamp}.png`;
+                      const gotraSelect = document.getElementById('gotra-filter');
+                      let prefix = 'Family-Tree';
+                      if ('<%= memberId %>' === 'all') {
+                        prefix = gotraSelect && gotraSelect.value ? gotraSelect.value.replace(/[^a-zA-Z0-9]/g, '-') + '-Lineage' : 'Community-Family-Tree';
+                      } else {
+                        prefix = '<%= typeof memberName !== "undefined" ? memberName.replace(/[^a-zA-Z0-9]/g, "-") + "-Family-Tree" : "Family-Tree" %>';
+                      }
+                      link.download = `${prefix}-${timestamp}.png`;
                       link.href = canvas.toDataURL('image/png');
                       link.click();
 

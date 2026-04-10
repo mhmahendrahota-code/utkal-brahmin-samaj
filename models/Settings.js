@@ -16,6 +16,8 @@ const settingsSchema = new mongoose.Schema({
   bankName: { type: String, default: 'State Bank of India' },
   ifscCode: { type: String, default: 'SBIN0001234' },
   branchName: { type: String, default: 'Pusaur Main' },
+  isChatbotEnabled: { type: Boolean, default: true },
+  geminiApiKey: { type: String, default: '' },
   lastUpdated: { type: Date, default: Date.now }
 }, { _id: false, timestamps: false });
 

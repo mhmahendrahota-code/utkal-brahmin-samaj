@@ -75,6 +75,10 @@
   </div>
 </footer>
 
+<% if (locals.siteSettings && siteSettings.isChatbotEnabled !== false) { %>
+  <%- include('chatbot-widget') %>
+<% } %>
+
 </body>
 
 </html>

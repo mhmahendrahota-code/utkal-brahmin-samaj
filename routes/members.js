@@ -237,6 +237,7 @@ router.get('/family-tree/:id', async (req, res) => {
     res.render('members/family-tree', { 
       title: `Family Tree - ${member.name}`, 
       memberId: req.params.id,
+      memberName: member.name,
       availableGotras: availableGotras.sort()
     });
   } catch (err) {

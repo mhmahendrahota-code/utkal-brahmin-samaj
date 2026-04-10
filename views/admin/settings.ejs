@@ -27,7 +27,6 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">Donation Goal Target (₹)</label>
           <input type="number" name="donationTarget" value="<%= siteSettings ? siteSettings.donationTarget : 500000 %>" required min="10000" class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
         </div>
-      </div>
     </div>
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
@@ -102,6 +101,29 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Group URL</label>
           <input type="text" name="whatsappGroupUrl" value="<%= siteSettings ? siteSettings.whatsappGroupUrl : '' %>" class="w-full border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 px-3 py-2 border shadow-sm">
         </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- AI Assistant Settings -->
+    <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden mb-8">
+      <div class="bg-indigo-50 border-b border-indigo-100 px-6 py-4">
+        <h2 class="text-lg font-bold text-indigo-800 flex items-center">
+          <i class="fas fa-robot mr-2"></i> AI Assistant Setup
+        </h2>
+      </div>
+      <div class="p-6">
+        <div class="flex items-center mb-4">
+          <input type="checkbox" id="isChatbotEnabled" name="isChatbotEnabled" <%= locals.siteSettings && siteSettings.isChatbotEnabled ? 'checked' : '' %> class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+          <label for="isChatbotEnabled" class="ml-3 block text-sm font-medium text-gray-700">
+            Enable community AI Assistant (Google Gemini Powered)
+          </label>
+        </div>
+        <div class="mb-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label>
+          <input type="password" name="geminiApiKey" value="<%= siteSettings ? siteSettings.geminiApiKey : '' %>" placeholder="AIza... (Leave blank to use server .env)" class="w-full md:w-2/3 border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500 px-3 py-2 border shadow-sm font-mono text-sm">
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Get a free API key from <a href="https://aistudio.google.com/" target="_blank" class="text-indigo-600 hover:underline">Google AI Studio</a>. If left blank, it will try to use the key from your server's .env file.</p>
       </div>
     </div>
 
