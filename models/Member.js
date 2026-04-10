@@ -3,9 +3,17 @@ const mongoose = require('mongoose');
 const matrimonialProfileSchema = new mongoose.Schema({
   isEligible: { type: Boolean, default: false },
   isApproved: { type: Boolean, default: false },
+  isMatrimonialRequest: { type: Boolean, default: false }, // Specific submission
   dateOfBirth: { type: Date },
   education: { type: String },
-  height: { type: String }
+  educationLevel: { type: String },
+  height: { type: String },
+  annualIncome: { type: String },
+  expectations: { type: String },
+  fatherOccupation: { type: String },
+  brothers: { type: Number, default: 0 },
+  sisters: { type: Number, default: 0 },
+  bio: { type: String }
 }, { _id: false });
 
 const memberSchema = new mongoose.Schema({

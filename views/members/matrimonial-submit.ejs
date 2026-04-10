@@ -1,148 +1,553 @@
 <%- include('../partials/header') %>
 
-<section class="py-12 bg-gray-50 flex-grow">
-  <div class="container mx-auto px-4 max-w-4xl">
-    
+<style>
+  .step-content { display: none; animation: slideIn 0.3s ease; }
+  .step-content.active { display: block; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+  .step-circle {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    transition: all 0.3s;
+  }
+  .step-circle.done { background: #16a34a; color: white; }
+  .step-circle.active { background: #d97706; color: white; box-shadow: 0 0 0 4px rgba(217,119,6,0.2); }
+  .step-circle.pending { background: #e5e7eb; color: #9ca3af; }
+  .step-line { flex: 1; height: 2px; background: #e5e7eb; margin: 0 4px; transition: background 0.3s; }
+  .step-line.done { background: #16a34a; }
+  .form-input {
+    width: 100%; padding: 10px 14px;
+    border: 1.5px solid #d1d5db; border-radius: 8px;
+    font-size: 14px; outline: none; transition: all 0.2s;
+    background: #f9fafb;
+  }
+  .form-input:focus { border-color: #d97706; box-shadow: 0 0 0 3px rgba(217,119,6,0.1); background: white; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-required { color: #ef4444; }
+  .progress-bar-fill { transition: width 0.6s ease; }
+</style>
+
+<section class="py-10 bg-gradient-to-br from-amber-50 via-orange-50 to-saffron-50 flex-grow">
+  <div class="container mx-auto px-4 max-w-3xl">
+
+    <!-- Header -->
     <div class="text-center mb-8">
-      <h1 class="text-3xl font-bold text-gray-800">Submit Matrimonial Profile</h1>
-      <p class="text-gray-500 mt-2">Create a profile for eligible candidates within the Utkal Brahmin Samaj.</p>
-      <div class="mt-4 inline-block bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-4 py-2 rounded-lg">
-        <i class="fas fa-info-circle mr-2"></i> Your profile will remain hidden until verified and approved by the Samaj Committee.
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-saffron-100 rounded-full mb-4 shadow-md">
+        <i class="fas fa-heart text-saffron-600 text-2xl"></i>
+      </div>
+      <h1 class="text-3xl font-bold text-gray-800">वैवाहिक प्रोफाइल सबमिट करें</h1>
+      <p class="text-gray-500 mt-2 text-sm">Submit Matrimonial Profile — Utkal Brahmin Samaj</p>
+      <div class="mt-3 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs px-4 py-2 rounded-full">
+        <i class="fas fa-shield-alt text-amber-500"></i>
+        आपकी प्रोफाइल Committee अनुमोदन के बाद ही दिखेगी — Your profile will be private until approved.
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8">
-      <form action="/members/matrimonial/submit" method="POST">
-        
-        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Candidate Details</h3>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-            <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500" placeholder="e.g., Ramesh">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Surname *</label>
-            <select name="surname_select" required onchange="toggleSurnameInput(this)"
-              class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white">
-              <option value="">-- Choose (चुनें) --</option>
-              <% if (typeof surnames !== 'undefined') { %>
-                <% surnames.forEach(s => { %>
-                  <option value="<%= s.surname %>"><%= s.surname %></option>
-                <% }) %>
-              <% } %>
-              <option value="Others">Others (अन्य)</option>
-            </select>
-            <div id="surnameCustomDiv" style="display:none;" class="mt-2 text-sm">
-              <input type="text" id="surnameCustomInput" placeholder="अपना उपनाम लिखें / Enter Surname"
-                class="w-full px-4 py-2 border border-blue-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-blue-50">
-            </div>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Gotra *</label>
-            <select id="gotraSelect" name="gotra" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 bg-white" onchange="toggleGotraInput(this)">
-              <option value="">-- Select Gotra (गोत्र चुनें) --</option>
-              <option value="Atri">Atri / Atreya (अत्रि / आत्रेय)</option>
-              <option value="Upamanyu">Upamanyu (उपमन्यु)</option>
-              <option value="Kapinjala">Kapinjala (कपिंजल)</option>
-              <option value="Kashyapa">Kashyapa (कश्यप)</option>
-              <option value="Kaundinya">Kaundinya (कौंडिन्य)</option>
-              <option value="Kaushik">Kaushik (कौशिक)</option>
-              <option value="Gargya">Gargya (गार्ग्य)</option>
-              <option value="Gautama">Gautama (गौतम)</option>
-              <option value="Jamadagnya">Jamadagnya (जामदग्न्य)</option>
-              <option value="Parashara">Parashara (पराशर)</option>
-              <option value="Bharadwaj">Bharadwaj (भरद्वाज)</option>
-              <option value="Vatsa">Vatsa (वत्स)</option>
-              <option value="Vashistha">Vashistha (वसिष्ठ)</option>
-              <option value="Vishwamitra">Vishwamitra (विश्वामित्र)</option>
-              <option value="Shandilya">Shandilya (शांडिल्य)</option>
-              <option value="Harita">Harita (हरित)</option>
-              <option value="Other">Other (अन्य)</option>
-            </select>
-            <div id="gotraCustomDiv" style="display:none;" class="mt-2">
-              <input type="text" id="gotraCustomInput" placeholder="अपना गोत्र लिखें / Enter your Gotra" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-            </div>
-            <script>
-              function toggleGotraInput(select) {
-                const customDiv = document.getElementById('gotraCustomDiv');
-                const customInput = document.getElementById('gotraCustomInput');
-                if (select.value === 'Other') {
-                  customDiv.style.display = 'block';
-                  customInput.required = true;
-                  customInput.name = 'gotra';
-                  select.name = '_gotraSelect';
-                  customInput.focus();
-                } else {
-                  customDiv.style.display = 'none';
-                  customInput.required = false;
-                  customInput.name = '';
-                  select.name = 'gotra';
-                }
-              }
-
-              function toggleSurnameInput(select) {
-                const customDiv = document.getElementById('surnameCustomDiv');
-                const customInput = document.getElementById('surnameCustomInput');
-                if (select.value === 'Others') {
-                  customDiv.style.display = 'block';
-                  customInput.required = true;
-                  customInput.name = 'surname_other';
-                  select.name = 'surname_select';
-                  customInput.focus();
-                } else {
-                  customDiv.style.display = 'none';
-                  customInput.required = false;
-                  customInput.name = '';
-                  select.name = 'surname_select';
-                }
-              }
-            </script>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
-            <input type="date" name="dateOfBirth" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 text-gray-700">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Height</label>
-            <input type="text" name="height" placeholder="e.g., 5' 8&quot;" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500 text-gray-700">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Highest Education *</label>
-            <input type="text" name="education" required placeholder="e.g., B.Tech, MBA" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Occupation & Income</label>
-            <input type="text" name="occupation" placeholder="e.g., Software Engineer, ₹12LPA" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-          </div>
+    <!-- Progress Bar -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
+      <div class="flex items-center gap-1">
+        <div class="flex flex-col items-center gap-1 min-w-[60px]">
+          <div class="step-circle active" id="sc1">1</div>
+          <span class="text-[10px] font-semibold text-gray-500 text-center">व्यक्तिगत</span>
         </div>
-
-        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Family & Contact Info</h3>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Mool Village *</label>
-            <input type="text" name="village" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number (For Matches) *</label>
-            <input type="tel" name="contactNumber" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Current Residential Address</label>
-            <textarea name="address" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500"></textarea>
-          </div>
+        <div class="step-line" id="sl1"></div>
+        <div class="flex flex-col items-center gap-1 min-w-[60px]">
+          <div class="step-circle pending" id="sc2">2</div>
+          <span class="text-[10px] font-semibold text-gray-400 text-center">शिक्षा/कार्य</span>
         </div>
-
-        <div class="flex justify-center pt-6">
-          <button type="submit" class="px-10 py-3 bg-saffron-600 hover:bg-saffron-700 text-white rounded-full font-bold shadow-md transition-transform transform hover:-translate-y-1">
-            <i class="fas fa-paper-plane mr-2"></i> Submit Profile for Review
-          </button>
+        <div class="step-line" id="sl2"></div>
+        <div class="flex flex-col items-center gap-1 min-w-[60px]">
+          <div class="step-circle pending" id="sc3">3</div>
+          <span class="text-[10px] font-semibold text-gray-400 text-center">परिवार</span>
         </div>
-
-      </form>
+        <div class="step-line" id="sl3"></div>
+        <div class="flex flex-col items-center gap-1 min-w-[60px]">
+          <div class="step-circle pending" id="sc4">4</div>
+          <span class="text-[10px] font-semibold text-gray-400 text-center">संपर्क</span>
+        </div>
+      </div>
+      <!-- Completion Progress -->
+      <div class="mt-3">
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-[10px] text-gray-400 font-medium">Profile Completeness</span>
+          <span class="text-[10px] font-bold text-saffron-600" id="completeness-pct">0%</span>
+        </div>
+        <div class="w-full bg-gray-100 rounded-full h-1.5">
+          <div class="progress-bar-fill bg-saffron-500 h-1.5 rounded-full" id="completeness-bar" style="width:0%"></div>
+        </div>
+      </div>
     </div>
+
+    <!-- FORM -->
+    <form action="/members/matrimonial/submit" method="POST" id="matrimonialForm" onsubmit="return validateFinal()" enctype="multipart/form-data">
+      <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+
+        <!-- ── STEP 1: Personal Info ── -->
+        <div class="step-content active" id="step1">
+          <div class="bg-saffron-600 px-6 py-4">
+            <h2 class="text-white font-bold text-lg flex items-center gap-2">
+              <i class="fas fa-user-circle"></i> व्यक्तिगत जानकारी (Personal Details)
+            </h2>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Gender -->
+            <div class="form-group md:col-span-2">
+              <label class="form-label">लिंग (Gender) <span class="field-required">*</span></label>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
+                  <input type="radio" name="gender" value="Male" required class="accent-blue-600"> 
+                  <span class="text-sm font-medium text-blue-700"><i class="fas fa-mars mr-1"></i> पुरुष (Male)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-pink-50 border border-pink-200 px-4 py-2 rounded-lg hover:bg-pink-100 transition-colors">
+                  <input type="radio" name="gender" value="Female" class="accent-pink-600">
+                  <span class="text-sm font-medium text-pink-700"><i class="fas fa-venus mr-1"></i> महिला (Female)</span>
+                </label>
+              </div>
+            </div>
+            <!-- Name -->
+            <div class="form-group">
+              <label class="form-label" for="fname">पहला नाम (First Name) <span class="field-required">*</span></label>
+              <input type="text" id="fname" name="name" required class="form-input" placeholder="e.g., Ramesh / रमेश" oninput="updateProgress()">
+            </div>
+            <!-- Surname -->
+            <div class="form-group">
+              <label class="form-label">उपनाम (Surname) <span class="field-required">*</span></label>
+              <select name="surname_select" required onchange="toggleSurnameInput(this); updateProgress();" class="form-input bg-white">
+                <option value="">-- चुनें (Choose) --</option>
+                <% if (typeof surnames !== 'undefined') { %>
+                  <% surnames.forEach(s => { %>
+                    <option value="<%= s.surname %>"><%= s.surname %></option>
+                  <% }) %>
+                <% } %>
+                <option value="Others">अन्य (Others)</option>
+              </select>
+              <div id="surnameCustomDiv" style="display:none;" class="mt-2">
+                <input type="text" id="surnameCustomInput" placeholder="अपना उपनाम लिखें"
+                  class="form-input bg-blue-50 border-blue-300" oninput="updateProgress()">
+              </div>
+            </div>
+            <!-- Gotra -->
+            <div class="form-group">
+              <label class="form-label" for="gotraSelect">गोत्र (Gotra) <span class="field-required">*</span></label>
+              <select id="gotraSelect" name="gotra" required class="form-input bg-white" onchange="toggleGotraInput(this); updateProgress();">
+                <option value="">-- गोत्र चुनें --</option>
+                <option value="Atri">Atri / Atreya (अत्रि)</option>
+                <option value="Upamanyu">Upamanyu (उपमन्यु)</option>
+                <option value="Kapinjala">Kapinjala (कपिंजल)</option>
+                <option value="Kashyapa">Kashyapa (कश्यप)</option>
+                <option value="Kaundinya">Kaundinya (कौंडिन्य)</option>
+                <option value="Kaushik">Kaushik (कौशिक)</option>
+                <option value="Gargya">Gargya (गार्ग्य)</option>
+                <option value="Gautama">Gautama (गौतम)</option>
+                <option value="Jamadagnya">Jamadagnya (जामदग्न्य)</option>
+                <option value="Parashara">Parashara (पराशर)</option>
+                <option value="Bharadwaj">Bharadwaj (भरद्वाज)</option>
+                <option value="Vatsa">Vatsa (वत्स)</option>
+                <option value="Vashistha">Vashistha (वसिष्ठ)</option>
+                <option value="Vishwamitra">Vishwamitra (विश्वामित्र)</option>
+                <option value="Shandilya">Shandilya (शांडिल्य)</option>
+                <option value="Harita">Harita (हरित)</option>
+                <option value="Other">Other (अन्य)</option>
+              </select>
+              <div id="gotraCustomDiv" style="display:none;" class="mt-2">
+                <input type="text" id="gotraCustomInput" placeholder="अपना गोत्र लिखें" class="form-input" oninput="updateProgress()">
+              </div>
+            </div>
+            <!-- DOB + Age Calculator -->
+            <div class="form-group">
+              <label class="form-label" for="dob">जन्म तिथि (Date of Birth) <span class="field-required">*</span></label>
+              <input type="date" id="dob" name="dateOfBirth" required class="form-input" onchange="calcAge(); updateProgress();"
+                     max="<%= new Date(Date.now() - 18*365*24*3600*1000).toISOString().slice(0,10) %>">
+              <span id="ageDisplay" class="text-xs text-green-600 font-semibold mt-1 hidden">
+                <i class="fas fa-birthday-cake mr-1"></i> <span id="ageText"></span> वर्ष आयु
+              </span>
+            </div>
+            <!-- Height -->
+            <div class="form-group">
+              <label class="form-label" for="height">ऊँचाई (Height)</label>
+              <div class="flex gap-2">
+                <select id="htFt" class="form-input bg-white" onchange="buildHeight(); updateProgress();">
+                  <option value="">Ft</option>
+                  <% for(let i=4;i<=7;i++){ %><option value="<%= i %>"><%= i %> ft</option><% } %>
+                </select>
+                <select id="htIn" class="form-input bg-white" onchange="buildHeight(); updateProgress();">
+                  <option value="0">0 in</option>
+                  <% for(let i=1;i<=11;i++){ %><option value="<%= i %>"><%= i %> in</option><% } %>
+                </select>
+                <input type="hidden" name="height" id="heightHidden">
+              </div>
+            </div>
+            <!-- Blood Group -->
+            <div class="form-group">
+              <label class="form-label">रक्त समूह (Blood Group)</label>
+              <select name="bloodGroup" class="form-input bg-white" onchange="updateProgress()">
+                <option value="">-- Select --</option>
+                <% ['A+','A-','B+','B-','AB+','AB-','O+','O-'].forEach(bg => { %>
+                  <option value="<%= bg %>"><%= bg %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+          <div class="px-6 pb-5 flex justify-end">
+            <button type="button" onclick="gotoStep(2)" class="px-7 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold rounded-full shadow transition-transform hover:-translate-y-0.5">
+              अगला (Next) <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── STEP 2: Education & Occupation ── -->
+        <div class="step-content" id="step2">
+          <div class="bg-blue-600 px-6 py-4">
+            <h2 class="text-white font-bold text-lg flex items-center gap-2">
+              <i class="fas fa-graduation-cap"></i> शिक्षा एवं व्यवसाय (Education & Occupation)
+            </h2>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="form-group">
+              <label class="form-label">उच्चतम शिक्षा (Highest Education) <span class="field-required">*</span></label>
+              <select name="educationLevel" class="form-input bg-white" onchange="updateProgress()">
+                <option value="">-- चुनें --</option>
+                <option value="Below 10th">Below 10th</option>
+                <option value="10th Pass">10th Pass</option>
+                <option value="12th Pass">12th Pass (Intermediate)</option>
+                <option value="Diploma">Diploma / ITI</option>
+                <option value="B.A. / B.Com / B.Sc">B.A. / B.Com / B.Sc</option>
+                <option value="B.Tech / B.E.">B.Tech / B.E.</option>
+                <option value="BCA / MCA">BCA / MCA</option>
+                <option value="M.A. / M.Com / M.Sc">M.A. / M.Com / M.Sc</option>
+                <option value="M.Tech / M.E.">M.Tech / M.E.</option>
+                <option value="MBA">MBA</option>
+                <option value="MBBS / MD">MBBS / MD (Doctor)</option>
+                <option value="LLB / LLM">LLB / LLM (Advocate)</option>
+                <option value="Ph.D">Ph.D</option>
+                <option value="Other">Other (अन्य)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">विस्तृत शिक्षा (Education Details)</label>
+              <input type="text" name="education" class="form-input" placeholder="e.g., B.Tech CSE — IIT Raipur" oninput="updateProgress()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">नौकरी / व्यवसाय (Occupation)</label>
+              <input type="text" name="occupation" class="form-input" placeholder="e.g., Software Engineer, Govt. Teacher" oninput="updateProgress()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">वार्षिक आय (Annual Income)</label>
+              <select name="annualIncome" class="form-input bg-white" onchange="updateProgress()">
+                <option value="">-- चुनें --</option>
+                <option value="Below 3 LPA">Below ₹3 LPA</option>
+                <option value="3-5 LPA">₹3 – 5 LPA</option>
+                <option value="5-8 LPA">₹5 – 8 LPA</option>
+                <option value="8-12 LPA">₹8 – 12 LPA</option>
+                <option value="12-20 LPA">₹12 – 20 LPA</option>
+                <option value="Above 20 LPA">Above ₹20 LPA</option>
+                <option value="Not Disclosed">Not Disclosed</option>
+              </select>
+            </div>
+            <div class="form-group md:col-span-2">
+              <label class="form-label">माँगे (Expectations from Partner)</label>
+              <textarea name="expectations" rows="3" class="form-input" placeholder="e.g., अच्छे संस्कार, पढ़ी-लिखी / Good values, educated..." oninput="updateProgress()"></textarea>
+            </div>
+          </div>
+          <div class="px-6 pb-5 flex justify-between">
+            <button type="button" onclick="gotoStep(1)" class="px-7 py-2.5 border border-gray-300 text-gray-600 font-bold rounded-full hover:bg-gray-50 transition-colors">
+              <i class="fas fa-arrow-left mr-2"></i> पिछला (Back)
+            </button>
+            <button type="button" onclick="gotoStep(3)" class="px-7 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full shadow transition-transform hover:-translate-y-0.5">
+              अगला (Next) <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── STEP 3: Family Info ── -->
+        <div class="step-content" id="step3">
+          <div class="bg-green-700 px-6 py-4">
+            <h2 class="text-white font-bold text-lg flex items-center gap-2">
+              <i class="fas fa-home"></i> पारिवारिक जानकारी (Family Information)
+            </h2>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="form-group">
+              <label class="form-label">मूल ग्राम (Native Village) <span class="field-required">*</span></label>
+              <input type="text" name="village" required class="form-input" placeholder="e.g., पुसौर / Pusaur" oninput="updateProgress()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">पिता का नाम (Father's Name)</label>
+              <input type="text" name="fatherName" class="form-input" placeholder="e.g., श्री Rajesh Mishra" oninput="updateProgress()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">पिता का व्यवसाय (Father's Occupation)</label>
+              <input type="text" name="fatherOccupation" class="form-input" placeholder="e.g., Retired Govt. Employee" oninput="updateProgress()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">भाई / बहन (Siblings)</label>
+              <div class="flex gap-2">
+                <select name="brothers" class="form-input bg-white" onchange="updateProgress()">
+                  <option value="">भाई (Brothers)</option>
+                  <% for(let i=0;i<=5;i++){ %><option value="<%= i %>"><%= i %> भाई</option><% } %>
+                </select>
+                <select name="sisters" class="form-input bg-white" onchange="updateProgress()">
+                  <option value="">बहन (Sisters)</option>
+                  <% for(let i=0;i<=5;i++){ %><option value="<%= i %>"><%= i %> बहन</option><% } %>
+                </select>
+              </div>
+            </div>
+            <div class="form-group md:col-span-2">
+              <label class="form-label">वर्तमान पता (Current Address)</label>
+              <textarea name="address" rows="2" class="form-input" placeholder="वर्तमान निवास का पूरा पता..." oninput="updateProgress()"></textarea>
+            </div>
+            <div class="form-group md:col-span-2">
+              <label class="form-label">विशेष जानकारी / About Candidate</label>
+              <textarea name="bio" rows="3" class="form-input" placeholder="उम्मीदवार के बारे में कोई विशेष जानकारी, रुचि, स्वभाव..." oninput="updateProgress()"></textarea>
+            </div>
+          </div>
+          <div class="px-6 pb-5 flex justify-between">
+            <button type="button" onclick="gotoStep(2)" class="px-7 py-2.5 border border-gray-300 text-gray-600 font-bold rounded-full hover:bg-gray-50 transition-colors">
+              <i class="fas fa-arrow-left mr-2"></i> पिछला (Back)
+            </button>
+            <button type="button" onclick="gotoStep(4)" class="px-7 py-2.5 bg-saffron-600 hover:bg-saffron-700 text-white font-bold rounded-full shadow transition-transform hover:-translate-y-0.5">
+              अगला (Next) <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── STEP 4: Contact & Submit ── -->
+        <div class="step-content" id="step4">
+          <div class="bg-purple-700 px-6 py-4">
+            <h2 class="text-white font-bold text-lg flex items-center gap-2">
+              <i class="fas fa-phone-alt"></i> संपर्क जानकारी (Contact Details)
+            </h2>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="form-group">
+              <label class="form-label">संपर्क नंबर (Contact Number) <span class="field-required">*</span></label>
+              <div class="flex gap-2">
+                <span class="flex items-center px-3 bg-gray-100 border border-gray-300 rounded-l-lg text-sm text-gray-600 border-r-0 rounded-r-none -mr-px">+91</span>
+                <input type="tel" name="contactNumber" required class="form-input rounded-l-none" style="border-left: none;" 
+                       pattern="[6-9][0-9]{9}" maxlength="10" placeholder="Mobile Number" oninput="validatePhone(this); updateProgress();">
+              </div>
+              <span class="text-[10px] text-gray-400">केवल Match होने पर ही Contact किया जाएगा — Only for matrimonial contact</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ईमेल (Email) <span class="text-gray-400 font-normal">(Optional)</span></label>
+              <input type="email" name="email" class="form-input" placeholder="email@example.com" oninput="updateProgress()">
+            </div>
+            <div class="form-group md:col-span-2">
+              <label class="form-label">प्रोफ़ाइल फोटो (Profile Photo) <span class="text-gray-400 font-normal">(Optional)</span></label>
+              <div class="flex items-center gap-4 p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl hover:border-saffron-400 transition-colors group">
+                <div class="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-300">
+                  <img id="photoPreview" src="/images/default-avatar.png" class="w-full h-full object-cover hidden">
+                  <i id="photoIcon" class="fas fa-camera text-2xl text-gray-400"></i>
+                </div>
+                <div class="flex-1">
+                  <input type="file" name="profileImageFile" id="profileImageFile" accept="image/*" class="hidden" onchange="previewImage(this); updateProgress();">
+                  <label for="profileImageFile" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 transition-shadow shadow-sm">
+                    <i class="fas fa-upload text-saffron-600"></i> फ़ोटो चुनें (Choose Photo)
+                  </label>
+                  <p class="text-[10px] text-gray-400 mt-2">JPG, PNG या WebP स्वीकार्य (Max 5MB). यह फोटो प्रोफाइल पर दिखाई देगी।</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Privacy Notice  -->
+            <div class="md:col-span-2 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+              <i class="fas fa-lock text-blue-500 mr-2"></i>
+              <strong>गोपनीयता (Privacy):</strong> आपकी संपर्क जानकारी सार्वजनिक नहीं होगी। केवल Committee द्वारा अनुमोदित उम्मीदवारों तक ही पहुँचाई जाएगी।
+            </div>
+            <!-- Consent Checkbox -->
+            <div class="md:col-span-2">
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input type="checkbox" id="consentCheck" required class="mt-0.5 w-5 h-5 rounded accent-saffron-600 flex-shrink-0">
+                <span class="text-sm text-gray-700">
+                  मैं प्रमाणित करता/करती हूँ कि दी गई जानकारी सत्य है और मैं समाज की शर्तें स्वीकार करता/करती हूँ।
+                  <br><span class="text-xs text-gray-400">I confirm all details are accurate and I accept the community terms.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Summary Preview -->
+          <div class="mx-6 mb-5 bg-gray-50 rounded-xl border border-gray-200 p-4">
+            <h4 class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-1"><i class="fas fa-eye text-saffron-500"></i> Profile Summary Preview</h4>
+            <div id="summaryGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-gray-700"></div>
+          </div>
+
+          <div class="px-6 pb-6 flex justify-between items-center">
+            <button type="button" onclick="gotoStep(3)" class="px-7 py-2.5 border border-gray-300 text-gray-600 font-bold rounded-full hover:bg-gray-50 transition-colors">
+              <i class="fas fa-arrow-left mr-2"></i> पिछला (Back)
+            </button>
+            <button type="submit" id="submitBtn" class="px-10 py-3 bg-saffron-600 hover:bg-saffron-700 text-white rounded-full font-bold shadow-lg transition-transform hover:-translate-y-0.5 flex items-center gap-2">
+              <i class="fas fa-paper-plane"></i> Submit Profile
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </form>
   </div>
 </section>
+
+<script>
+  let currentStep = 1;
+  const totalSteps = 4;
+
+  function gotoStep(n) {
+    // Validate before advancing
+    if (n > currentStep && !validateStep(currentStep)) return;
+    
+    document.getElementById('step' + currentStep).classList.remove('active');
+    // Mark previous as done
+    if (n > currentStep) {
+      document.getElementById('sc' + currentStep).classList.remove('active');
+      document.getElementById('sc' + currentStep).classList.add('done');
+      document.getElementById('sc' + currentStep).innerHTML = '<i class="fas fa-check text-xs"></i>';
+      if (currentStep < totalSteps) document.getElementById('sl' + currentStep).classList.add('done');
+    } else {
+      // Going back — re-open previous
+      document.getElementById('sc' + currentStep).classList.remove('done', 'active');
+      document.getElementById('sc' + currentStep).classList.add('pending');
+      document.getElementById('sc' + currentStep).textContent = currentStep;
+    }
+    currentStep = n;
+    document.getElementById('step' + currentStep).classList.add('active');
+    document.getElementById('sc' + currentStep).classList.remove('pending', 'done');
+    document.getElementById('sc' + currentStep).classList.add('active');
+    document.getElementById('sc' + currentStep).textContent = currentStep;
+    
+    if (n === 4) buildSummary();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function validateStep(step) {
+    if (step === 1) {
+      const gender = document.querySelector('input[name="gender"]:checked');
+      const name = document.getElementById('fname').value.trim();
+      const gotra = document.getElementById('gotraSelect').value;
+      const dob = document.getElementById('dob').value;
+      if (!gender) { alert('कृपया लिंग (Gender) चुनें।'); return false; }
+      if (!name) { alert('कृपया नाम दर्ज करें।'); return false; }
+      if (!gotra) { alert('कृपया गोत्र (Gotra) चुनें।'); return false; }
+      if (!dob) { alert('कृपया जन्म तिथि (DOB) दर्ज करें।'); return false; }
+    }
+    if (step === 3) {
+      const village = document.querySelector('[name="village"]').value.trim();
+      if (!village) { alert('कृपया मूल ग्राम (Village) दर्ज करें।'); return false; }
+    }
+    return true;
+  }
+
+  function validateFinal() {
+    const consent = document.getElementById('consentCheck').checked;
+    if (!consent) { alert('कृपया consent checkbox को tick करें।'); return false; }
+    const phone = document.querySelector('[name="contactNumber"]').value.trim();
+    if (!/^[6-9][0-9]{9}$/.test(phone)) { alert('कृपया Valid 10-digit Mobile Number दर्ज करें।'); return false; }
+    return true;
+  }
+
+  function calcAge() {
+    const dob = new Date(document.getElementById('dob').value);
+    if (isNaN(dob)) return;
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    if (age >= 18 && age <= 80) {
+      document.getElementById('ageText').textContent = age;
+      document.getElementById('ageDisplay').classList.remove('hidden');
+    }
+  }
+
+  function buildHeight() {
+    const ft = document.getElementById('htFt').value;
+    const inp = document.getElementById('htIn').value;
+    if (ft) document.getElementById('heightHidden').value = ft + "' " + inp + '"';
+  }
+
+  function validatePhone(input) {
+    const val = input.value.replace(/\D/g, '');
+    input.value = val.slice(0, 10);
+    const isValid = /^[6-9][0-9]{9}$/.test(val);
+    input.style.borderColor = val.length === 10 ? (isValid ? '#16a34a' : '#ef4444') : '';
+  }
+
+  function toggleGotraInput(select) {
+    const customDiv = document.getElementById('gotraCustomDiv');
+    const customInput = document.getElementById('gotraCustomInput');
+    if (select.value === 'Other') {
+      customDiv.style.display = 'block'; customInput.required = true;
+      customInput.name = 'gotra'; select.name = '_gotraSelect'; customInput.focus();
+    } else {
+      customDiv.style.display = 'none'; customInput.required = false;
+      customInput.name = ''; select.name = 'gotra';
+    }
+  }
+
+  function toggleSurnameInput(select) {
+    const customDiv = document.getElementById('surnameCustomDiv');
+    const customInput = document.getElementById('surnameCustomInput');
+    if (select.value === 'Others') {
+      customDiv.style.display = 'block'; customInput.required = true;
+      customInput.name = 'surname_other'; select.name = 'surname_select'; customInput.focus();
+    } else {
+      customDiv.style.display = 'none'; customInput.required = false;
+      customInput.name = ''; select.name = 'surname_select';
+    }
+  }
+
+  // Track completeness of critical fields
+  const criticalFields = ['fname','dob','gotraSelect','contactNumber','educationLevel','village_field'];
+  function updateProgress() {
+    const fields = [
+      document.getElementById('fname')?.value.trim(),
+      document.getElementById('dob')?.value,
+      document.getElementById('gotraSelect')?.value,
+      document.querySelector('[name="contactNumber"]')?.value.trim(),
+      document.querySelector('[name="educationLevel"]')?.value,
+      document.querySelector('[name="village"]')?.value.trim(),
+      document.querySelector('input[name="gender"]:checked')?.value,
+      document.querySelector('[name="education"]')?.value.trim(),
+    ];
+    const filled = fields.filter(v => v && v !== '').length;
+    const pct = Math.round((filled / fields.length) * 100);
+    document.getElementById('completeness-bar').style.width = pct + '%';
+    document.getElementById('completeness-pct').textContent = pct + '%';
+  }
+
+  function buildSummary() {
+    const data = {
+      'नाम': document.getElementById('fname')?.value || '—',
+      'लिंग': document.querySelector('input[name="gender"]:checked')?.value || '—',
+      'गोत्र': document.getElementById('gotraSelect')?.value || '—',
+      'उम्र': document.getElementById('ageText')?.textContent ? document.getElementById('ageText').textContent + ' वर्ष' : '—',
+      'शिक्षा': document.querySelector('[name="educationLevel"]')?.value || '—',
+      'व्यवसाय': document.querySelector('[name="occupation"]')?.value || '—',
+      'आय': document.querySelector('[name="annualIncome"]')?.value || '—',
+      'ग्राम': document.querySelector('[name="village"]')?.value || '—',
+    };
+    const grid = document.getElementById('summaryGrid');
+    grid.innerHTML = Object.entries(data).map(([k,v]) => 
+      `<div class="bg-white rounded-lg p-2 border border-gray-100"><span class="text-gray-400 block">${k}</span><strong>${v}</strong></div>`
+    ).join('');
+  }
+
+  function previewImage(input) {
+    const preview = document.getElementById('photoPreview');
+    const icon = document.getElementById('photoIcon');
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.src = e.target.result;
+        preview.classList.remove('hidden');
+        icon.classList.add('hidden');
+      }
+      reader.readAsDataURL(input.files[0]);
+    } else {
+      preview.classList.add('hidden');
+      icon.classList.remove('hidden');
+    }
+  }
+</script>
 
 <%- include('../partials/footer') %>

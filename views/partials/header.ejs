@@ -11,6 +11,14 @@
   <!-- Local Compiled Tailwind CSS -->
   <link href="/css/style.css" rel="stylesheet">
 
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#d97706">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="UBS Pusaur">
+
   <!-- Google Fonts -->
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap"
@@ -205,13 +213,10 @@
     // Cookie-based Google Translate (most reliable method)
     function changeGoogleLanguage(langValue) {
       var hostname = window.location.hostname;
-      // Remove old googtrans cookies on both domain variants
       document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + hostname;
       document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + hostname;
-
       if (langValue !== 'en') {
-        // Use /auto/ as source so Google detects Hindi/English/Odia automatically
         var cookieVal = '/auto/' + langValue;
         document.cookie = 'googtrans=' + cookieVal + '; path=/;';
         document.cookie = 'googtrans=' + cookieVal + '; path=/; domain=' + hostname;
@@ -219,8 +224,6 @@
       }
       window.location.reload();
     }
-
-    // On page load, sync the dropdown to match current cookie language
     window.addEventListener('load', function () {
       var cookieMatch = document.cookie.match(/googtrans=\/(?:auto|en)\/([^;]+)/);
       if (cookieMatch) {
@@ -228,7 +231,57 @@
         if (sel) sel.value = cookieMatch[1];
       }
     });
+
+    // ── PWA Service Worker Registration ──
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
+          .catch(err => console.warn('[PWA] SW registration failed:', err));
+      });
+    }
+
+    // ── PWA Install Banner ──
+    let _deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      _deferredPrompt = e;
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner && !localStorage.getItem('pwa-dismissed')) {
+        banner.classList.remove('hidden');
+      }
+    });
+    function installPWA() {
+      if (_deferredPrompt) {
+        _deferredPrompt.prompt();
+        _deferredPrompt.userChoice.then(choice => {
+          if (choice.outcome === 'accepted') {
+            document.getElementById('pwa-install-banner').classList.add('hidden');
+          }
+          _deferredPrompt = null;
+        });
+      }
+    }
+    function dismissPWA() {
+      document.getElementById('pwa-install-banner').classList.add('hidden');
+      localStorage.setItem('pwa-dismissed', '1');
+    }
   </script>
+
+  <!-- PWA Install Banner -->
+  <div id="pwa-install-banner" class="hidden fixed bottom-20 left-3 right-3 sm:left-auto sm:right-6 sm:w-80 bg-white border border-amber-200 rounded-2xl shadow-2xl p-4 z-[9998] flex items-center gap-3">
+    <div class="w-10 h-10 bg-saffron-100 rounded-xl flex items-center justify-center flex-shrink-0">
+      <span class="text-xl">ଓ</span>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-xs font-bold text-gray-800">ऐप इंस्टॉल करें 📲</p>
+      <p class="text-[10px] text-gray-500">UBS Pusaur को अपने फोन में add करें</p>
+    </div>
+    <div class="flex flex-col gap-1">
+      <button onclick="installPWA()" class="text-[10px] font-bold bg-saffron-600 text-white px-3 py-1 rounded-full hover:bg-saffron-700 whitespace-nowrap">Install</button>
+      <button onclick="dismissPWA()" class="text-[10px] text-gray-400 hover:text-gray-600">No thanks</button>
+    </div>
+  </div>
 
   <!-- News Ticker -->
   <div class="bg-saffron-100 border-b border-saffron-500 text-saffron-900 py-2 overflow-hidden flex whitespace-nowrap">

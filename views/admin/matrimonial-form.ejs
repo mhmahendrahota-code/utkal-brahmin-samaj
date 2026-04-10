@@ -36,17 +36,62 @@
           </div>
         </div>
 
-        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Career & Contact Information</h3>
+        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Career & Statistics</h3>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Education</label>
-            <input type="text" name="education" value="<%= profile.matrimonialProfile && profile.matrimonialProfile.education ? profile.matrimonialProfile.education : '' %>" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Education Level</label>
+            <select name="educationLevel" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+              <option value="">-- Select --</option>
+              <% ['Below 10th', '10th Pass', '12th Pass', 'Graduate', 'Post Graduate', 'PhD', 'Doctor', 'Engineer', 'Other'].forEach(lvl => { %>
+                <option value="<%= lvl %>" <%= profile.matrimonialProfile && profile.matrimonialProfile.educationLevel === lvl ? 'selected' : '' %>><%= lvl %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Education Details</label>
+            <input type="text" name="education" value="<%= profile.matrimonialProfile && profile.matrimonialProfile.education ? profile.matrimonialProfile.education : '' %>" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500" placeholder="e.g. B.Tech, MA">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Occupation</label>
             <input type="text" name="occupation" value="<%= profile.occupation %>" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
           </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Annual Income</label>
+            <input type="text" name="annualIncome" value="<%= profile.matrimonialProfile && profile.matrimonialProfile.annualIncome ? profile.matrimonialProfile.annualIncome : '' %>" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+        </div>
+
+        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Family & Expectations</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Father's Occupation</label>
+            <input type="text" name="fatherOccupation" value="<%= profile.matrimonialProfile && profile.matrimonialProfile.fatherOccupation ? profile.matrimonialProfile.fatherOccupation : '' %>" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Brothers</label>
+              <input type="number" name="brothers" value="<%= profile.matrimonialProfile && profile.matrimonialProfile.brothers ? profile.matrimonialProfile.brothers : 0 %>" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Sisters</label>
+              <input type="number" name="sisters" value="<%= profile.matrimonialProfile && profile.matrimonialProfile.sisters ? profile.matrimonialProfile.sisters : 0 %>" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">
+            </div>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Partner Expectations</label>
+            <textarea name="expectations" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500"><%= profile.matrimonialProfile && profile.matrimonialProfile.expectations ? profile.matrimonialProfile.expectations : '' %></textarea>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Bio / About</label>
+            <textarea name="bio" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500"><%= profile.matrimonialProfile && profile.matrimonialProfile.bio ? profile.matrimonialProfile.bio : '' %></textarea>
+          </div>
+        </div>
+
+        <h3 class="text-lg font-bold text-saffron-700 border-b pb-2 mb-6">Contact Information</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number *</label>
             <input type="tel" name="contactNumber" value="<%= profile.contactNumber %>" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-saffron-500 focus:border-saffron-500">

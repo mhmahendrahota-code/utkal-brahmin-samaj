@@ -1,0 +1,27 @@
+<<<<
+      matrimonialProfile: {
+        isEligible: true,
+        isApproved: false,
+        dateOfBirth: req.body.dateOfBirth,
+        education: req.body.educationLevel
+          ? `${req.body.educationLevel}${req.body.education ? ' — ' + req.body.education : ''}`
+          : (req.body.education || ''),
+        height: req.body.height || ''
+      }
+====
+      matrimonialProfile: {
+        isEligible: true,
+        isApproved: false,
+        isMatrimonialRequest: true,
+        dateOfBirth: req.body.dateOfBirth,
+        educationLevel: req.body.educationLevel,
+        education: req.body.education || '',
+        height: req.body.height || '',
+        annualIncome: req.body.annualIncome || '',
+        expectations: req.body.expectations || '',
+        fatherOccupation: req.body.fatherOccupation || '',
+        brothers: parseInt(req.body.brothers) || 0,
+        sisters: parseInt(req.body.sisters) || 0,
+        bio: req.body.bio || ''
+      }
+>>>>

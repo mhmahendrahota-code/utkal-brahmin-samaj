@@ -1,0 +1,40 @@
+{
+  "name": "Utkal Brahmin Samaj — Pusaur",
+  "short_name": "UBS Pusaur",
+  "description": "पुसौर उत्कल ब्राह्मण समाज का आधिकारिक डिजिटल पोर्टल — जय जगन्नाथ!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffbf0",
+  "theme_color": "#d97706",
+  "orientation": "portrait-primary",
+  "lang": "hi",
+  "categories": ["social", "lifestyle"],
+  "icons": [
+    {
+      "src": "/images/jagannath_bg.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/jagannath_bg.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "सदस्य निर्देशिका",
+      "short_name": "Directory",
+      "url": "/members",
+      "icons": [{ "src": "/images/default-avatar.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "वंशावली देखें",
+      "short_name": "Family Tree",
+      "url": "/members/community-tree",
+      "icons": [{ "src": "/images/default-avatar.png", "sizes": "192x192" }]
+    }
+  ]
+}

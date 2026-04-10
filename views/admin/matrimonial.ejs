@@ -3,96 +3,212 @@
 <section class="py-12 bg-gray-50 flex-grow">
   <div class="container mx-auto px-4 max-w-6xl">
     
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800"><a href="/admin" class="text-gray-400 hover:text-saffron-500 mr-2"><i class="fas fa-arrow-left text-lg"></i></a> Manage Matrimonial Profiles</h1>
+        <h1 class="text-3xl font-extrabold text-gray-900 flex items-center">
+          <a href="/admin" class="text-gray-400 hover:text-saffron-500 transition-colors mr-3"><i class="fas fa-arrow-left text-2xl"></i></a>
+          Matrimonial Submissions
+        </h1>
+        <p class="text-gray-500 mt-1">Manage and approve specific matrimonial registration requests</p>
       </div>
-      <div>
-        <a href="/admin/matrimonial/export" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded shadow-sm text-sm font-medium inline-flex items-center transition-colors">
+      <div class="flex items-center gap-3">
+        <a href="/admin/matrimonial/export" class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2.5 rounded-xl shadow-sm text-sm font-semibold inline-flex items-center transition-all hover:shadow">
           <i class="fas fa-file-download mr-2 text-saffron-600"></i> Export CSV
         </a>
       </div>
     </div>
 
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Requests</span>
+          <div class="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <i class="fas fa-users text-sm"></i>
+          </div>
+        </div>
+        <div class="text-2xl font-black text-gray-800"><%= stats.total %></div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Review</span>
+          <div class="h-8 w-8 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center">
+            <i class="fas fa-clock text-sm"></i>
+          </div>
+        </div>
+        <div class="text-2xl font-black text-yellow-600"><%= stats.pending %></div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Male</span>
+          <div class="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <i class="fas fa-mars text-sm"></i>
+          </div>
+        </div>
+        <div class="text-2xl font-black text-blue-600"><%= stats.male %></div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Female</span>
+          <div class="h-8 w-8 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center">
+            <i class="fas fa-venus text-sm"></i>
+          </div>
+        </div>
+        <div class="text-2xl font-black text-pink-600"><%= stats.female %></div>
+      </div>
+    </div>
+
     <!-- Search and Filters -->
-    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
-      <form action="/admin/matrimonial" method="GET" class="flex flex-col md:flex-row gap-4">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+      <form action="/admin/matrimonial" method="GET" class="flex flex-col lg:flex-row gap-4">
         <div class="flex-grow relative">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <i class="fas fa-search text-gray-400"></i>
           </div>
-          <input type="text" name="search" value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>" placeholder="Search by name, gotra, or village..." class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-saffron-500 focus:border-saffron-500 text-sm">
+          <input type="text" name="search" value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>" placeholder="Search by name, gotra, or village..." class="block w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-saffron-500 focus:border-saffron-500 text-sm transition-all bg-gray-50 focus:bg-white">
         </div>
-        <div class="md:w-48">
-          <select name="status" class="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 rounded-md focus:ring-saffron-500 focus:border-saffron-500 bg-white">
-            <option value="">All Statuses</option>
-            <option value="pending" <%= typeof statusQuery !== 'undefined' && statusQuery === 'pending' ? 'selected' : '' %>>Pending Review</option>
-            <option value="approved" <%= typeof statusQuery !== 'undefined' && statusQuery === 'approved' ? 'selected' : '' %>>Approved</option>
-          </select>
-        </div>
-        <div>
-          <button type="submit" class="w-full md:w-auto bg-saffron-600 hover:bg-saffron-700 text-white font-medium py-2 px-6 rounded-md transition-colors shadow-sm text-sm">Filter</button>
-          <% if ((typeof searchQuery !== 'undefined' && searchQuery) || (typeof statusQuery !== 'undefined' && statusQuery)) { %>
-            <a href="/admin/matrimonial" class="w-full md:w-auto text-gray-500 hover:text-gray-700 font-medium py-2 px-4 rounded-md text-sm text-center inline-block mt-2 md:mt-0">Clear</a>
-          <% } %>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <div class="w-full sm:w-44">
+            <select name="status" class="block w-full pl-4 pr-10 py-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-saffron-500 bg-gray-50 focus:bg-white transition-all">
+              <option value="">All Statuses</option>
+              <option value="pending" <%= typeof statusQuery !== 'undefined' && statusQuery === 'pending' ? 'selected' : '' %>>Pending Review</option>
+              <option value="approved" <%= typeof statusQuery !== 'undefined' && statusQuery === 'approved' ? 'selected' : '' %>>Approved</option>
+            </select>
+          </div>
+          <div class="w-full sm:w-44">
+            <select name="gender" class="block w-full pl-4 pr-10 py-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-saffron-500 bg-gray-50 focus:bg-white transition-all">
+              <option value="">All Genders</option>
+              <option value="Male" <%= typeof genderQuery !== 'undefined' && genderQuery === 'Male' ? 'selected' : '' %>>Male</option>
+              <option value="Female" <%= typeof genderQuery !== 'undefined' && genderQuery === 'Female' ? 'selected' : '' %>>Female</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" class="flex-grow sm:flex-grow-0 bg-saffron-600 hover:bg-saffron-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 text-sm">Filter</button>
+            <% if (searchQuery || statusQuery || genderQuery) { %>
+              <a href="/admin/matrimonial" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 px-5 rounded-xl transition-all text-sm flex items-center justify-center">
+                <i class="fas fa-redo"></i>
+              </a>
+            <% } %>
+          </div>
         </div>
       </form>
     </div>
 
-    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+    <!-- Bulk Actions Toolbar (HIDDEN BY DEFAULT) -->
+    <div id="bulkActions" class="hidden mb-4 bg-indigo-600 text-white p-4 rounded-xl shadow-lg flex flex-col sm:flex-row justify-between items-center gap-4 animate-bounce-subtle">
+      <div class="flex items-center gap-3">
+        <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"><span id="selectedCount">0</span> Selected</span>
+        <p class="text-sm font-medium">Perform bulk actions on selected profiles</p>
+      </div>
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <button onclick="handleBulkAction('approve')" class="flex-grow sm:flex-grow-0 bg-white text-indigo-700 hover:bg-indigo-50 px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition-all">
+          <i class="fas fa-check-circle mr-1"></i> Approve
+        </button>
+        <button onclick="handleBulkAction('reject')" class="flex-grow sm:flex-grow-0 bg-white/20 hover:bg-white/30 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all border border-white/30">
+          <i class="fas fa-times-circle mr-1"></i> Reject
+        </button>
+        <button onclick="handleBulkAction('delete')" class="flex-grow sm:flex-grow-0 bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition-all">
+          <i class="fas fa-trash-alt mr-1"></i> Delete
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
-              <th class="px-6 py-4 font-medium">Candidate Name</th>
-              <th class="px-6 py-4 font-medium">Gotra & Village</th>
-              <th class="px-6 py-4 font-medium">Education/Job</th>
-              <th class="px-6 py-4 font-medium">Status</th>
-              <th class="px-6 py-4 font-medium text-right">Actions</th>
+            <tr class="bg-gray-50 text-gray-500 text-[10px] uppercase font-bold tracking-widest border-b border-gray-100">
+              <th class="px-6 py-4 w-10 text-center">
+                <input type="checkbox" id="selectAll" class="rounded text-saffron-600 focus:ring-saffron-500 cursor-pointer">
+              </th>
+              <th class="px-6 py-4">Candidate & Gender</th>
+              <th class="px-6 py-4">Gotra & Village</th>
+              <th class="px-6 py-4">Education/Work</th>
+              <th class="px-6 py-4">Status</th>
+              <th class="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 text-sm">
+          <tbody class="divide-y divide-gray-50 text-sm">
             <% if (profiles && profiles.length > 0) { %>
               <% profiles.forEach(profile => { %>
-                <tr class="hover:bg-gray-50 text-gray-700">
-                  <td class="px-6 py-4 font-medium text-gray-900 border-l-4 <%= profile.matrimonialProfile.isApproved ? 'border-l-green-500' : 'border-l-yellow-500' %>">
+                <tr class="hover:bg-amber-50/30 transition-colors group">
+                  <td class="px-6 py-4 text-center">
+                    <input type="checkbox" name="profileCheckbox" value="<%= profile._id %>" class="profile-checkbox rounded text-saffron-600 focus:ring-saffron-500 cursor-pointer">
+                  </td>
+                  <td class="px-6 py-4 border-l-4 <%= profile.matrimonialProfile.isApproved ? 'border-l-green-400' : 'border-l-yellow-400' %>">
                     <div class="flex items-center">
-                      <div class="h-8 w-8 rounded-full bg-saffron-100 text-saffron-600 flex items-center justify-center mr-3">
-                        <i class="fas fa-user text-sm"></i>
+                      <div class="h-10 w-10 rounded-full flex items-center justify-center mr-4 
+                          <%= profile.gender === 'Female' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600' %>">
+                        <i class="fas <%= profile.gender === 'Female' ? 'fa-female' : 'fa-male' %> text-lg"></i>
                       </div>
-                      <%= profile.name %>
+                      <div>
+                        <div class="font-bold text-gray-900 leading-tight"><%= profile.name %></div>
+                        <div class="text-[10px] text-gray-400 uppercase tracking-tighter mt-0.5"><%= profile.gender || 'Not Specified' %> • Submitted <%= new Date(profile.createdAt).toLocaleDateString() %></div>
+                      </div>
                     </div>
                   </td>
-                  <td class="px-6 py-4"><%= profile.gotra %><br><span class="text-xs text-gray-500"><%= profile.village %></span></td>
-                  <td class="px-6 py-4"><%= profile.matrimonialProfile.education || 'N/A' %><br><span class="text-xs text-gray-500"><%= profile.occupation || 'N/A' %></span></td>
+                  <td class="px-6 py-4">
+                    <div class="font-medium text-gray-700"><%= profile.gotra || '—' %></div>
+                    <div class="text-xs text-gray-400 font-medium"><i class="fas fa-map-marker-alt mr-1 opacity-50"></i><%= profile.village || '—' %></div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="text-gray-700 font-medium truncate max-w-[150px]"><%= profile.matrimonialProfile.educationLevel || profile.matrimonialProfile.education || '—' %></div>
+                    <div class="text-xs text-gray-400"><%= profile.occupation || '—' %></div>
+                  </td>
                   <td class="px-6 py-4">
                     <% if(profile.matrimonialProfile.isApproved) { %>
-                      <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">Approved & Visible</span>
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-100 text-green-700">
+                        <i class="fas fa-check-circle mr-1"></i> Approved
+                      </span>
                     <% } else { %>
-                      <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-medium">Pending Review</span>
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-yellow-100 text-yellow-700">
+                        <i class="fas fa-info-circle mr-1"></i> Pending
+                      </span>
                     <% } %>
                   </td>
-                  <td class="px-6 py-4 text-right space-x-2">
-                    <button onclick="openViewModal('<%= encodeURIComponent(JSON.stringify(profile)) %>')" class="text-blue-600 hover:text-blue-800 font-medium inline-block mx-1" title="View Details"><i class="fas fa-eye"></i> View</button>
-                    <a href="/admin/matrimonial/<%= profile._id %>/edit" class="text-gray-600 hover:text-saffron-600 font-medium inline-block mx-1" title="Edit Profile"><i class="fas fa-edit"></i> Edit</a>
-                    <% if(!profile.matrimonialProfile.isApproved) { %>
-                      <form action="/admin/matrimonial/<%= profile._id %>/approve" method="POST" class="inline">
-                        <button type="submit" class="text-green-600 hover:text-green-800 font-medium mx-1" title="Approve"><i class="fas fa-check"></i> Approve</button>
+                  <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-1">
+                      <button onclick="openViewModal('<%= encodeURIComponent(JSON.stringify(profile)) %>')" 
+                        class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="View Details">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <a href="/admin/matrimonial/<%= profile._id %>/edit" 
+                        class="p-2 text-gray-400 hover:text-saffron-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit Profile">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                      <% if(!profile.matrimonialProfile.isApproved) { %>
+                        <form action="/admin/matrimonial/<%= profile._id %>/approve" method="POST" class="inline">
+                          <button type="submit" class="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-colors" title="Approve Visibility">
+                            <i class="fas fa-check-circle"></i>
+                          </button>
+                        </form>
+                      <% } else { %>
+                        <form action="/admin/matrimonial/<%= profile._id %>/revoke" method="POST" class="inline">
+                          <button type="submit" class="p-2 text-yellow-500 hover:bg-yellow-50 rounded-lg transition-colors" title="Hide Profile">
+                            <i class="fas fa-eye-slash"></i>
+                          </button>
+                        </form>
+                      <% } %>
+                      <form action="/admin/matrimonial/<%= profile._id %>/reject" method="POST" class="inline" onsubmit="return confirm('Reject and hide this profile forever?');">
+                        <button type="submit" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors" title="Reject Submission">
+                          <i class="fas fa-ban"></i>
+                        </button>
                       </form>
-                    <% } else { %>
-                      <form action="/admin/matrimonial/<%= profile._id %>/revoke" method="POST" class="inline">
-                        <button type="submit" class="text-yellow-600 hover:text-yellow-800 font-medium mx-1" title="Hide (Revoke Approval)"><i class="fas fa-eye-slash"></i> Hide</button>
-                      </form>
-                    <% } %>
-                    <form action="/admin/matrimonial/<%= profile._id %>/reject" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to reject and remove this profile from matrimonial listings?');">
-                      <button type="submit" class="text-red-500 hover:text-red-700 font-medium mx-1" title="Reject / Remove"><i class="fas fa-trash-alt"></i> Reject</button>
-                    </form>
+                    </div>
                   </td>
                 </tr>
               <% }) %>
             <% } else { %>
               <tr>
-                <td colspan="5" class="px-6 py-8 text-center text-gray-500">No matrimonial profiles submitted yet.</td>
+                <td colspan="6" class="px-6 py-16 text-center">
+                  <div class="max-w-xs mx-auto">
+                    <div class="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <i class="fas fa-search text-gray-400 text-2xl"></i>
+                    </div>
+                    <h4 class="text-gray-900 font-bold mb-1">No profiles found</h4>
+                    <p class="text-gray-500 text-sm">Try adjusting your filters or search query to find more candidates.</p>
+                  </div>
+                </td>
               </tr>
             <% } %>
           </tbody>
@@ -105,72 +221,239 @@
 <!-- View Profile Modal -->
 <div id="viewModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
   <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-    <!-- Background overlay -->
-    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeViewModal()"></div>
+    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="closeViewModal()"></div>
     <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-    <!-- Modal panel -->
-    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl w-full">
-      <div class="bg-gradient-to-r from-saffron-600 to-saffron-500 px-6 py-4 flex justify-between items-center">
-        <h3 class="text-xl font-bold text-white" id="modal-title">Matrimonial Profile Details</h3>
-        <button onclick="closeViewModal()" class="text-white hover:text-gray-200 focus:outline-none">
+    <div class="inline-block align-bottom bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full border border-gray-100">
+      <div class="bg-indigo-600 px-8 py-6 flex justify-between items-center relative overflow-hidden">
+        <div class="absolute right-0 top-0 opacity-10 transform scale-150 rotate-12">
+           <i class="fas fa-heart text-white text-9xl"></i>
+        </div>
+        <div class="relative z-10">
+          <h3 class="text-2xl font-black text-white" id="modal-title">Registration Details</h3>
+          <p class="text-indigo-100 text-sm mt-1 uppercase tracking-widest font-bold" id="modal-subtitle">Candidate Review</p>
+        </div>
+        <button onclick="closeViewModal()" class="relative z-10 text-white hover:bg-white/10 p-2 rounded-full transition-colors">
           <i class="fas fa-times text-xl"></i>
         </button>
       </div>
-      <div class="bg-white px-6 py-6" id="modal-content">
-        <!-- Content injected via JS -->
+      <div class="bg-white" id="modal-content">
+        <!-- Content dynamic -->
       </div>
-      <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
-        <button type="button" class="bg-white border text-gray-700 font-medium py-2 px-6 rounded-md shadow-sm hover:bg-gray-50" onclick="closeViewModal()">Close</button>
+      <div class="bg-gray-50 px-8 py-6 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div id="modal-footer-info" class="text-xs text-gray-400 font-medium"></div>
+        <div class="flex gap-3 w-full sm:w-auto">
+          <button type="button" class="flex-grow sm:flex-grow-0 bg-white border border-gray-200 text-gray-700 font-bold py-3 px-8 rounded-xl shadow-sm hover:bg-gray-50 transition-all text-sm" onclick="closeViewModal()">Close</button>
+          <a id="modal-edit-link" href="#" class="flex-grow sm:flex-grow-0 bg-saffron-500 hover:bg-saffron-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all text-sm text-center">Edit Submission</a>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Bulk Actions Form (Hidden) -->
+<form id="bulkActionForm" method="POST" action="">
+  <div id="bulkIdsContainer"></div>
+</form>
+
 <script>
+  // Selection Logic
+  const selectAll = document.getElementById('selectAll');
+  const checkboxes = document.querySelectorAll('.profile-checkbox');
+  const bulkActions = document.getElementById('bulkActions');
+  const selectedCount = document.getElementById('selectedCount');
+
+  function updateBulkVisibility() {
+    const checked = document.querySelectorAll('.profile-checkbox:checked').length;
+    if (checked > 0) {
+      bulkActions.classList.remove('hidden');
+      selectedCount.textContent = checked;
+    } else {
+      bulkActions.classList.add('hidden');
+    }
+  }
+
+  selectAll?.addEventListener('change', () => {
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateBulkVisibility();
+  });
+
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', updateBulkVisibility);
+  });
+
+  function handleBulkAction(action) {
+    const checked = document.querySelectorAll('.profile-checkbox:checked');
+    if (checked.length === 0) return;
+    
+    let confirmMsg = `Are you sure you want to ${action} ${checked.length} selected profiles?`;
+    if (action === 'delete') confirmMsg = `CRITICAL: This will PERMANENTLY DELETE ${checked.length} members. Proceed?`;
+    
+    if (!confirm(confirmMsg)) return;
+
+    const form = document.getElementById('bulkActionForm');
+    const container = document.getElementById('bulkIdsContainer');
+    container.innerHTML = '';
+    
+    checked.forEach(cb => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'profileIds[]';
+      input.value = cb.value;
+      container.appendChild(input);
+    });
+
+    form.action = `/admin/matrimonial/bulk-${action}`;
+    form.submit();
+  }
+
   function calculateAge(dobString) {
     if(!dobString) return 'N/A';
     const dob = new Date(dobString);
     const ageDifMs = Date.now() - dob.getTime();
-    if(isNaN(ageDifMs)) return dobString; // Return string directly if invalid date
+    if(isNaN(ageDifMs)) return dobString;
     const ageDate = new Date(ageDifMs);
     return Math.abs(ageDate.getUTCFullYear() - 1970) + ' years';
   }
 
   function openViewModal(encodedProfile) {
-    const p = JSON.parse(decodeURIComponent(encodedProfile));
-    
-    const content = `
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <h4 class="text-lg font-bold text-gray-800 border-b pb-2 mb-3">Personal Information</h4>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Full Name:</span> <span class="text-gray-900 font-medium">${p.name || 'N/A'}</span></p>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Gotra:</span> <span class="text-gray-900">${p.gotra || 'N/A'}</span></p>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Age / DOB:</span> <span class="text-gray-900">${calculateAge(p.matrimonialProfile.dateOfBirth)} (${p.matrimonialProfile.dateOfBirth ? new Date(p.matrimonialProfile.dateOfBirth).toLocaleDateString() : 'N/A'})</span></p>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Height:</span> <span class="text-gray-900">${p.matrimonialProfile.height || 'N/A'}</span></p>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Village:</span> <span class="text-gray-900">${p.village || 'N/A'}</span></p>
+    try {
+      const p = JSON.parse(decodeURIComponent(encodedProfile));
+      console.log('Opening profile:', p.name);
+      
+      const mp = p.matrimonialProfile || {};
+      
+      document.getElementById('modal-subtitle').textContent = `Status: ${mp.isApproved ? 'Approved' : 'Pending Review'}`;
+      document.getElementById('modal-edit-link').href = `/admin/matrimonial/${p._id}/edit`;
+      document.getElementById('modal-footer-info').textContent = `Record ID: ${p._id} • Submitted ${new Date(p.createdAt).toLocaleDateString()} • Last Modified ${new Date(p.updatedAt || p.createdAt).toLocaleDateString()}`;
+
+      const content = `
+        <div class="px-8 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+          
+          <!-- Sidebar: Identity -->
+          <div class="md:col-span-1 space-y-6">
+            <div class="bg-gray-50 rounded-2xl p-6 text-center">
+              <div class="h-24 w-24 rounded-full mx-auto mb-4 flex items-center justify-center 
+                  ${p.gender === 'Female' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'}">
+                <i class="fas ${p.gender === 'Female' ? 'fa-female' : 'fa-male'} text-5xl"></i>
+              </div>
+              <h4 class="text-xl font-black text-gray-900 leading-tight">${p.name || 'N/A'}</h4>
+              <p class="text-xs font-bold text-gray-400 uppercase mt-1 tracking-widest">${p.gender || 'N/A'} • ${calculateAge(mp.dateOfBirth)}</p>
+            </div>
+            
+            <div class="space-y-4">
+              <h5 class="text-[10px] uppercase font-black tracking-widest text-indigo-400">Contact Information</h5>
+              <div class="space-y-3">
+                 <div>
+                  <label class="block text-[10px] text-gray-400 font-bold uppercase">Phone Number</label>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-bold text-indigo-600">${p.contactNumber || 'N/A'}</span>
+                    <a href="https://wa.me/91${p.contactNumber}" target="_blank" class="text-green-500 hover:text-green-600"><i class="fab fa-whatsapp text-lg"></i></a>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-bold uppercase">Email</label>
+                  <span class="text-sm font-bold text-gray-700">${p.email || 'None provided'}</span>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-bold uppercase">Address</label>
+                  <span class="text-sm text-gray-600 leading-relaxed">${p.address || '—'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Body: Details -->
+          <div class="md:col-span-2 space-y-8">
+            
+            <!-- Career & Education -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-3xl">
+              <div class="sm:col-span-2">
+                 <h5 class="text-[10px] uppercase font-black tracking-widest text-indigo-400 mb-2">Career & Background</h5>
+              </div>
+              <div>
+                <label class="block text-[10px] text-gray-400 font-bold uppercase">Education</label>
+                <span class="text-sm font-bold text-gray-800">${mp.educationLevel || '—'}</span>
+                <p class="text-xs text-gray-500">${mp.education || ''}</p>
+              </div>
+              <div>
+                <label class="block text-[10px] text-gray-400 font-bold uppercase">Occupation</label>
+                <span class="text-sm font-bold text-gray-800">${p.occupation || '—'}</span>
+              </div>
+              <div>
+                <label class="block text-[10px] text-gray-400 font-bold uppercase">Annual Income</label>
+                <span class="text-sm font-bold text-gray-800">${mp.annualIncome || '—'}</span>
+              </div>
+              <div>
+                <label class="block text-[10px] text-gray-400 font-bold uppercase">Height</label>
+                <span class="text-sm font-bold text-indigo-600">${mp.height || '—'}</span>
+              </div>
+            </div>
+
+            <!-- Lineage & Family -->
+            <div class="space-y-4">
+              <h5 class="text-[10px] uppercase font-black tracking-widest text-indigo-400">Lineage & Family</h5>
+              <div class="grid grid-cols-2 gap-4">
+                 <div>
+                  <label class="block text-[10px] text-gray-400 font-bold uppercase">Gotra</label>
+                  <span class="text-sm font-bold text-gray-800">${p.gotra || '—'}</span>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-bold uppercase">Mool Village</label>
+                  <span class="text-sm font-bold text-gray-800">${p.village || '—'}</span>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-bold uppercase">Father's Info</label>
+                  <span class="text-sm font-bold text-gray-800">${p.fatherName || '—'}</span>
+                  <p class="text-xs text-gray-500">${mp.fatherOccupation || ''}</p>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-bold uppercase">Siblings</label>
+                  <span class="text-sm font-bold text-gray-800">${mp.brothers || 0} Bro • ${mp.sisters || 0} Sis</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Expectations & Bio -->
+            <div class="space-y-4">
+               <div>
+                  <h5 class="text-[10px] uppercase font-black tracking-widest text-indigo-400 mb-2">Partner Expectations</h5>
+                  <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-sm italic text-indigo-900">
+                    "${mp.expectations || 'No specific expectations detailed.'}"
+                  </div>
+                </div>
+                <div>
+                  <h5 class="text-[10px] uppercase font-black tracking-widest text-indigo-400 mb-2">Bio / About</h5>
+                  <p class="text-sm text-gray-600 leading-relaxed">${mp.bio || 'No bio provided.'}</p>
+                </div>
+            </div>
+
+          </div>
         </div>
-        <div>
-          <h4 class="text-lg font-bold text-gray-800 border-b pb-2 mb-3">Career & Contact</h4>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Education:</span> <span class="text-gray-900">${p.matrimonialProfile.education || 'N/A'}</span></p>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Occupation:</span> <span class="text-gray-900">${p.occupation || 'N/A'}</span></p>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Phone:</span> <span class="font-bold text-blue-600">${p.contactNumber || 'N/A'}</span></p>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Email:</span> <span class="text-gray-900">${p.email || 'N/A'}</span></p>
-          <p class="mb-2"><span class="text-sm font-semibold text-gray-500 w-24 inline-block">Address:</span> <span class="text-gray-900">${p.address || 'N/A'}</span></p>
-        </div>
-      </div>
-      <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <h4 class="text-sm font-bold text-yellow-800 mb-1">Approval Context</h4>
-        <p class="text-sm text-yellow-700">This profile was submitted on <strong>${new Date(p.createdAt || new Date()).toLocaleString()}</strong>. Ensure all contact details and information look genuine before making it visible to community members.</p>
-      </div>
-    `;
-    
-    document.getElementById('modal-content').innerHTML = content;
-    document.getElementById('viewModal').classList.remove('hidden');
+      `;
+      
+      document.getElementById('modal-content').innerHTML = content;
+      document.getElementById('viewModal').classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    } catch (err) {
+      console.error('Error opening modal:', err);
+      alert('Could not open details. Please try refreshing or check the edit page.');
+    }
   }
 
   function closeViewModal() {
     document.getElementById('viewModal').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
   }
 </script>
+
+<style>
+  @keyframes bounce-subtle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  .animate-bounce-subtle {
+    animation: bounce-subtle 2s infinite ease-in-out;
+  }
+</style>
 
 <%- include('partials/admin-footer') %>

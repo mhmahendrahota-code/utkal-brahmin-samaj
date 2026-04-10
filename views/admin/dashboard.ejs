@@ -66,6 +66,76 @@
       </div>
     </div>
 
+    <!-- Phase 2: Community Insights & Pending Requests -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+      <!-- Pending Matrimonial Requests Badge -->
+      <% if (stats.pendingMatrimonial > 0) { %>
+      <div class="lg:col-span-3 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600">
+            <i class="fas fa-heart text-xl animate-pulse"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-amber-900">Pending Matrimonial Requests</h3>
+            <p class="text-amber-700 text-sm">There are <strong><%= stats.pendingMatrimonial %></strong> new profiles waiting for your review.</p>
+          </div>
+        </div>
+        <a href="/admin/matrimonial" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-md transition-all">
+          Review Now <i class="fas fa-arrow-right ml-1"></i>
+        </a>
+      </div>
+      <% } %>
+
+      <!-- Gender Distribution Widget -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-50 px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Community Gender Ratio</h3>
+          <i class="fas fa-venus-mars text-gray-300"></i>
+        </div>
+        <div class="p-5">
+          <div class="flex items-end gap-1 mb-4 h-24">
+            <% const totalGender = (stats.gender.Male || 0) + (stats.gender.Female || 0) + (stats.gender.Other || 0) || 1; %>
+            <div class="flex-1 bg-blue-100 rounded-t-md relative group" style="height: <%= ((stats.gender.Male || 0) / totalGender) * 100 %>%;">
+              <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"><%= stats.gender.Male || 0 %> Male</div>
+            </div>
+            <div class="flex-1 bg-pink-100 rounded-t-md relative group" style="height: <%= ((stats.gender.Female || 0) / totalGender) * 100 %>%;">
+              <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"><%= stats.gender.Female || 0 %> Female</div>
+            </div>
+            <div class="flex-1 bg-gray-100 rounded-t-md relative group" style="height: <%= ((stats.gender.Other || 0) / totalGender) * 100 %>%;">
+              <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"><%= stats.gender.Other || 0 %> Other</div>
+            </div>
+          </div>
+          <div class="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
+            <span class="text-blue-600">Male: <%= Math.round(((stats.gender.Male || 0) / totalGender) * 100) %>%</span>
+            <span class="text-pink-600">Female: <%= Math.round(((stats.gender.Female || 0) / totalGender) * 100) %>%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Villages Widget -->
+      <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gray-50 px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Village Representation (Top 5)</h3>
+          <i class="fas fa-map-marked-alt text-gray-300"></i>
+        </div>
+        <div class="p-5">
+          <div class="space-y-4">
+            <% stats.villages.forEach((v, i) => { %>
+              <div class="relative">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="text-xs font-bold text-gray-700"><%= v._id || 'Unknown' %></span>
+                  <span class="text-[10px] font-bold text-saffron-600 bg-saffron-50 px-2 py-0.5 rounded-full"><%= v.count %> members</span>
+                </div>
+                <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-saffron-500 h-full rounded-full" style="width: <%= (v.count / stats.members) * 100 %>%"></div>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Management Sections -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
       
@@ -222,6 +292,9 @@
           <div class="space-y-3">
             <a href="/admin/db" class="block w-full text-center bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
               <i class="fas fa-database mr-1"></i> Open DB Explorer
+            </a>
+            <a href="/admin/db/backup" class="block w-full text-center bg-white hover:bg-emerald-50 text-emerald-700 font-medium py-2 rounded border border-emerald-300 transition-colors text-sm flex items-center justify-center gap-2" title="Download complete JSON backup of all collections">
+              <i class="fas fa-download text-emerald-500"></i> Download Full Backup (.json)
             </a>
           </div>
         </div>

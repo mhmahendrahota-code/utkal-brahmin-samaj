@@ -48,12 +48,37 @@ router.get('/', isAdmin, async (req, res) => {
     const donations = await Donation.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]);
     const totalDonations = donations.length > 0 ? donations[0].total : 0;
 
+    // Detailed Analytics for Phase 2
+    const genderStats = await Member.aggregate([
+      { $group: { _id: '$gender', count: { $sum: 1 } } }
+    ]);
+    
+    const villageStats = await Member.aggregate([
+      { $group: { _id: '$village', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    const matrimonialRequests = await Member.countDocuments({ 
+      'matrimonialProfile.isMatrimonialRequest': true,
+      'matrimonialProfile.isApproved': false 
+    });
+
     res.render('admin/dashboard', {
       title: 'Admin Dashboard',
-      stats: { members: memberCount, matrimonial: matrimonialCount, events: eventCount, donations: totalDonations }
+      stats: { 
+        members: memberCount, 
+        matrimonial: matrimonialCount, 
+        events: eventCount, 
+        donations: totalDonations,
+        gender: genderStats.reduce((acc, curr) => ({ ...acc, [curr._id || 'Other']: curr.count }), {}),
+        villages: villageStats,
+        pendingMatrimonial: matrimonialRequests
+      }
     });
   } catch (err) {
-    res.render('admin/dashboard', { title: 'Admin Dashboard', stats: { members: 0, matrimonial: 0, events: 0, donations: 0 } });
+    console.error('Dashboard Error:', err);
+    res.render('admin/dashboard', { title: 'Admin Dashboard', stats: { members: 0, matrimonial: 0, events: 0, donations: 0, gender: {}, villages: [], pendingMatrimonial: 0 } });
   }
 });
 
@@ -555,6 +580,53 @@ router.get('/db', isAdmin, async (req, res) => {
 });
 
 // ── DB Helper: resolve collection name → Mongoose Model ──────────────
+
+// ── 1-Click Full Database Backup ─────────────────────────────────────
+router.get('/db/backup', isAdmin, async (req, res) => {
+  try {
+    const Announcement = require('../models/Announcement');
+    const Committee    = require('../models/Committee');
+    const Document     = require('../models/Document');
+    const Gallery      = require('../models/Gallery');
+    const Message      = require('../models/Message');
+    const Settings     = require('../models/Settings');
+
+    const [members, events, donations, announcements, committee, documents, gallery, settings] = await Promise.all([
+      Member.find({}).lean(),
+      Event.find({}).lean(),
+      Donation.find({}).lean(),
+      Announcement.find({}).lean(),
+      Committee.find({}).lean(),
+      Document.find({}).lean(),
+      Gallery.find({}).lean(),
+      Settings.find({}).lean(),
+    ]);
+
+    // Redact passwords from admin users
+    const adminUsers = await AdminUser.find({}).lean();
+    const safeAdmins = adminUsers.map(u => { const o = {...u}; delete o.password; delete o.passwordHash; return o; });
+
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      exportedBy: req.session.adminName || 'Admin',
+      appVersion: '1.0',
+      collections: {
+        members, events, donations, announcements,
+        committee, documents, gallery,
+        adminUsers: safeAdmins, settings
+      }
+    };
+
+    const date = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="UBS-Backup-${date}.json"`);
+    res.send(JSON.stringify(backup, null, 2));
+  } catch (err) {
+    console.error('DB Backup error:', err);
+    res.status(500).send('Backup failed: ' + err.message);
+  }
+});
+
 const DB_MODEL_MAP = {
   members: 'Member',
   events: 'Event',
@@ -1692,8 +1764,10 @@ router.post('/members/:id/connect', isAdmin, async (req, res) => {
 // Admin Matrimonial Management
 router.get('/matrimonial', isAdmin, async (req, res) => {
   try {
-    const { search, status } = req.query;
-    let query = { 'matrimonialProfile.isEligible': true };
+    const { search, status, gender } = req.query;
+    
+    // Primary Filter: Only show profiles that were specifically submitted for matrimonial
+    let query = { 'matrimonialProfile.isMatrimonialRequest': true };
 
     if (search) {
       query.$or = [
@@ -1709,15 +1783,30 @@ router.get('/matrimonial', isAdmin, async (req, res) => {
       query['matrimonialProfile.isApproved'] = false;
     }
 
+    if (gender) {
+      query.gender = gender;
+    }
+
     const profiles = await Member.find(query).sort({ createdAt: -1 });
+
+    // Calculate quick stats
+    const stats = {
+      total: await Member.countDocuments({ 'matrimonialProfile.isMatrimonialRequest': true }),
+      pending: await Member.countDocuments({ 'matrimonialProfile.isMatrimonialRequest': true, 'matrimonialProfile.isApproved': false }),
+      male: await Member.countDocuments({ 'matrimonialProfile.isMatrimonialRequest': true, gender: 'Male' }),
+      female: await Member.countDocuments({ 'matrimonialProfile.isMatrimonialRequest': true, gender: 'Female' })
+    };
+
     res.render('admin/matrimonial', {
       title: 'Manage Matrimonial',
       profiles,
+      stats,
       searchQuery: search || '',
-      statusQuery: status || ''
+      statusQuery: status || '',
+      genderQuery: gender || ''
     });
   } catch (err) {
-    res.render('admin/matrimonial', { title: 'Manage Matrimonial', profiles: [], searchQuery: '', statusQuery: '' });
+    res.render('admin/matrimonial', { title: 'Manage Matrimonial', profiles: [], stats: {total:0, pending:0, male:0, female:0}, searchQuery: '', statusQuery: '', genderQuery: '' });
   }
 });
 
@@ -1767,7 +1856,52 @@ router.post('/matrimonial/:id/revoke', isAdmin, async (req, res) => {
 router.post('/matrimonial/:id/reject', isAdmin, async (req, res) => {
   try {
     // Mark as not eligible to remove from matrimonial without deleting member data
-    await Member.findByIdAndUpdate(req.params.id, { 'matrimonialProfile.isEligible': false });
+    await Member.findByIdAndUpdate(req.params.id, { 
+      'matrimonialProfile.isEligible': false,
+      'matrimonialProfile.isMatrimonialRequest': false 
+    });
+  } catch (err) { console.error(err); }
+  res.redirect('/admin/matrimonial');
+});
+
+// Bulk Approve Matrimonial Profiles
+router.post('/matrimonial/bulk-approve', isAdmin, async (req, res) => {
+  try {
+    const { profileIds } = req.body;
+    if (profileIds && Array.isArray(profileIds)) {
+      await Member.updateMany(
+        { _id: { $in: profileIds } },
+        { $set: { 'matrimonialProfile.isApproved': true } }
+      );
+    }
+  } catch (err) { console.error(err); }
+  res.redirect('/admin/matrimonial');
+});
+
+// Bulk Reject Matrimonial Profiles
+router.post('/matrimonial/bulk-reject', isAdmin, async (req, res) => {
+  try {
+    const { profileIds } = req.body;
+    if (profileIds && Array.isArray(profileIds)) {
+      await Member.updateMany(
+        { _id: { $in: profileIds } },
+        { $set: { 
+          'matrimonialProfile.isEligible': false,
+          'matrimonialProfile.isMatrimonialRequest': false 
+        } }
+      );
+    }
+  } catch (err) { console.error(err); }
+  res.redirect('/admin/matrimonial');
+});
+
+// Bulk Delete Matrimonial Profiles (Actual Member Deletion)
+router.post('/matrimonial/bulk-delete', isAdmin, async (req, res) => {
+  try {
+    const { profileIds } = req.body;
+    if (profileIds && Array.isArray(profileIds)) {
+      await Member.deleteMany({ _id: { $in: profileIds } });
+    }
   } catch (err) { console.error(err); }
   res.redirect('/admin/matrimonial');
 });
@@ -1793,7 +1927,14 @@ router.post('/matrimonial/:id/edit', isAdmin, async (req, res) => {
       address: req.body.address,
       'matrimonialProfile.dateOfBirth': req.body.dateOfBirth,
       'matrimonialProfile.education': req.body.education,
-      'matrimonialProfile.height': req.body.height
+      'matrimonialProfile.educationLevel': req.body.educationLevel,
+      'matrimonialProfile.height': req.body.height,
+      'matrimonialProfile.annualIncome': req.body.annualIncome,
+      'matrimonialProfile.expectations': req.body.expectations,
+      'matrimonialProfile.fatherOccupation': req.body.fatherOccupation,
+      'matrimonialProfile.brothers': parseInt(req.body.brothers) || 0,
+      'matrimonialProfile.sisters': parseInt(req.body.sisters) || 0,
+      'matrimonialProfile.bio': req.body.bio
     };
     await Member.findByIdAndUpdate(req.params.id, { $set: updateData });
     res.redirect('/admin/matrimonial');

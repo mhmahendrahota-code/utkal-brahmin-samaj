@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Member = require('../models/Member');
 const Surname = require('../models/Surname');
+const { uploadProfile, processProfileImage } = require('../middleware/mediaProcessor');
+const autoFormatRequest = require('../middleware/autoFormatRequest');
 
 // GET all members (Directory)
 router.get('/', async (req, res) => {
@@ -61,69 +63,65 @@ router.post('/matrimonial/login', (req, res) => {
 router.get('/matrimonial', checkCommunityAccess, async (req, res) => {
   try {
     let query = { 'matrimonialProfile.isEligible': true, 'matrimonialProfile.isApproved': true };
-    
-    // Matchmaking filters
     if (req.query.education) query['matrimonialProfile.education'] = new RegExp(req.query.education, 'i');
-    
-    // Excluding Gotra (e.g., if looking for non-Kashyap matches)
     if (req.query.excludeGotra) query.gotra = { $ne: req.query.excludeGotra };
-    
     const profiles = await Member.find(query).sort({ 'matrimonialProfile.dateOfBirth': -1 });
-
-    // Fetch all unique gotras from ALL eligible profiles (for the filter dropdown)
     const allEligible = await Member.find({ 'matrimonialProfile.isEligible': true, 'matrimonialProfile.isApproved': true });
     const availableGotras = [...new Set(allEligible.map(p => p.gotra).filter(Boolean))].sort();
-
     res.render('members/matrimonial', { title: 'Matrimonial Candidates', profiles, searchFilters: req.query, availableGotras });
   } catch (err) {
     res.render('members/matrimonial', { title: 'Matrimonial Candidates', profiles: [], searchFilters: req.query, availableGotras: [] });
   }
 });
 
-// Profile submission (Form) - Publicly accessible to submit
 router.get('/matrimonial/submit', async (req, res) => {
   try {
     const surnames = await Surname.find().sort({ surname: 1 });
-    res.render('members/matrimonial-submit', { title: 'Submit Profile', surnames });
+    res.render('members/matrimonial-submit', { title: 'Submit Matrimonial Profile', surnames });
   } catch (err) {
-    res.render('members/matrimonial-submit', { title: 'Submit Profile', surnames: [] });
+    res.render('members/matrimonial-submit', { title: 'Submit Matrimonial Profile', surnames: [] });
   }
 });
 
-router.post('/matrimonial/submit', async (req, res) => {
+router.post('/matrimonial/submit', uploadProfile, processProfileImage, async (req, res) => {
   try {
+    // Manually run auto-formatting on the newly populated req.body from multer
+    autoFormatRequest(req, res, () => {});
+
     const newMember = new Member({
       name: req.body.name,
+      gender: req.body.gender,
       surname: req.body.surname_select === 'Others' ? req.body.surname_other : req.body.surname_select,
       gotra: req.body.gotra,
       village: req.body.village,
       occupation: req.body.occupation,
       contactNumber: req.body.contactNumber,
-      address: req.body.address,
+      email: req.body.email || '',
+      address: req.body.address || '',
+      bloodGroup: req.body.bloodGroup || '',
+      fatherName: req.body.fatherName || '',
+      profileImage: req.body.profileImage || '/images/default-avatar.png',
       matrimonialProfile: {
         isEligible: true,
-        isApproved: false, // Must be approved by admin
+        isApproved: false,
+        isMatrimonialRequest: true,
         dateOfBirth: req.body.dateOfBirth,
-        education: req.body.education,
-        height: req.body.height
+        educationLevel: req.body.educationLevel,
+        education: req.body.education || '',
+        height: req.body.height || '',
+        annualIncome: req.body.annualIncome || '',
+        expectations: req.body.expectations || '',
+        fatherOccupation: req.body.fatherOccupation || '',
+        brothers: parseInt(req.body.brothers) || 0,
+        sisters: parseInt(req.body.sisters) || 0,
+        bio: req.body.bio || ''
       }
     });
-    // In a setup with no DB, this will fail. Route will catch.
     await newMember.save();
-    res.redirect('/members/matrimonial');
+    res.redirect('/members/matrimonial?submitted=1');
   } catch (err) {
-    console.error('Database connection issue:', err.message);
-    res.redirect('/members/matrimonial');
-  }
-});
-
-// Public Self-Registration
-router.get('/add', async (req, res) => {
-  try {
-    const surnames = await Surname.find().sort({ surname: 1 });
-    res.render('members/register', { title: 'समाज में जुड़ें - Join the Samaj', success: false, error: null, surnames });
-  } catch (err) {
-    res.render('members/register', { title: 'समाज में जुड़ें - Join the Samaj', success: false, error: null, surnames: [] });
+    console.error('Matrimonial submit error:', err.message);
+    res.redirect('/members/matrimonial?error=1');
   }
 });
 

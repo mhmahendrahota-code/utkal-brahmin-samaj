@@ -17,7 +17,7 @@
 </style>
 
 <section class="py-10 bg-gray-50 flex-grow">
-  <div class="container mx-auto px-4 max-w-7xl">
+  <div class="w-full mx-auto px-2 sm:px-6">
     
     <div class="flex justify-between items-center mb-6">
       <div>
@@ -78,6 +78,15 @@
             <span class="text-xs text-gray-400 font-mono hidden md:inline"><%= col.name %> · <%= col.count %> docs</span>
           </div>
           <div class="flex items-center gap-2">
+            <% if (col.name === 'members') { %>
+              <button onclick="filterType('matrimonial')" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5" title="Show only pending matrimonial requests">
+                <i class="fas fa-heart"></i> Review Pending
+              </button>
+            <% } %>
+            <a href="/admin/db/backup" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm" title="Download Full DB Backup (JSON)">
+              <i class="fas fa-database"></i> Full Backup
+            </a>
+            <div class="h-6 w-px bg-gray-200 mx-1"></div>
             <button onclick="exportData('<%= col.name %>', 'csv')" class="px-2 py-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 text-[10px] font-bold uppercase tracking-wider transition-all" title="Export Filtered CSV">
               <i class="fas fa-file-csv"></i> CSV
             </button>
@@ -157,9 +166,9 @@
 </section>
 
 <!-- ── Floating Bulk Action Bar ── -->
-<div id="bulk-bar" class="bulk-bar hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-2xl shadow-2xl px-6 py-3 flex items-center gap-4 min-w-[420px]">
-  <span class="text-sm font-semibold"><span id="bulk-count">0</span> selected</span>
-  <div class="flex-1"></div>
+<div id="bulk-bar" class="bulk-bar hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-2xl shadow-2xl px-4 py-3 flex flex-wrap justify-center items-center gap-2 sm:gap-4 w-[calc(100vw-2rem)] md:w-max">
+  <span class="text-sm font-semibold whitespace-nowrap"><span id="bulk-count">0</span> selected</span>
+  <div class="hidden sm:block flex-1"></div>
   <button onclick="openBulkEdit()" class="px-4 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-sm font-medium transition-colors">
     <i class="fas fa-pen mr-1"></i> Bulk Edit Field
   </button>
@@ -306,6 +315,23 @@
     toast.classList.remove('hidden');
     if (_toastTimer) clearTimeout(_toastTimer);
     _toastTimer = setTimeout(() => toast.classList.add('hidden'), undoCallback ? 8000 : 3000);
+  }
+
+  function filterType(type) {
+    const input = document.querySelector('input[oninput*="filterDocs"]');
+    if (type === 'matrimonial') {
+      // Filter for records with matrimonialProfile.isMatrimonialRequest = true AND isApproved = false
+      const rows = document.querySelectorAll('.doc-row');
+      rows.forEach(row => {
+        try {
+          const data = JSON.parse(row.dataset.json);
+          const isRequest = data.matrimonialProfile?.isMatrimonialRequest === true;
+          const isPending = data.matrimonialProfile?.isApproved === false;
+          row.style.display = (isRequest && isPending) ? '' : 'none';
+        } catch(e) {}
+      });
+      showToast('Filtering: Pending Matrimonial Requests', 'blue');
+    }
   }
 
   /* ── Tab Switching ── */
