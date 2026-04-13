@@ -163,21 +163,6 @@
           </select>
           <i class="fas fa-chevron-down text-saffron-400 text-xs absolute right-3 pointer-events-none"></i>
         </div>
-        <!-- Admin Button -->
-        <div class="hidden md:block">
-          <% if (locals.isAdmin) { %>
-            <a href="/admin/logout"
-              class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-full font-medium transition-colors shadow-md">
-              <i class="fas fa-sign-out-alt mr-2"></i>लॉगआउट (Logout)
-            </a>
-            <% } else { %>
-              <a href="/admin/login"
-                class="bg-saffron-500 hover:bg-saffron-600 text-white px-5 py-2 rounded-full font-medium transition-colors shadow-md">
-                <i class="fas fa-user-lock mr-2"></i>एडमिन (Admin)
-              </a>
-              <% } %>
-        </div>
-
         <!-- Mobile Menu Button -->
         <button class="md:hidden text-saffron-600 text-2xl focus:outline-none pl-2" onclick="toggleMobileMenu()">
           <i class="fas fa-bars"></i>
@@ -199,15 +184,6 @@
       <a href="/gallery" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">गैलरी (Gallery)</a>
       <a href="/documents" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">ई-लाइब्रेरी (Library)</a>
       <a href="/donate" class="block py-2 text-gray-700 hover:text-saffron-500 border-b border-gray-50">सहयोग (Donate)</a>
-      <% if (locals.isAdmin) { %>
-        <a href="/admin" class="block py-2 text-saffron-600 font-medium mt-2"><i
-            class="fas fa-cogs mr-2"></i>Dashboard</a>
-        <a href="/admin/logout" class="block py-2 text-red-600 font-medium mt-2"><i
-            class="fas fa-sign-out-alt mr-2"></i>Logout</a>
-        <% } else { %>
-          <a href="/admin/login" class="block py-2 text-saffron-600 font-medium mt-2"><i
-              class="fas fa-user-lock mr-2"></i>Admin Login</a>
-          <% } %>
     </div>
   </nav>
 

@@ -43,7 +43,7 @@ const requireSuperAdmin = (req, res, next) => {
 router.get('/', isAdmin, async (req, res) => {
   try {
     const memberCount = await Member.countDocuments();
-    const matrimonialCount = await Member.countDocuments({ 'matrimonialProfile.isEligible': true });
+    const matrimonialCount = await Member.countDocuments({ 'matrimonialProfile.isEligible': true, 'matrimonialProfile.isApproved': true });
     const eventCount = await Event.countDocuments({ isActive: true });
     const donations = await Donation.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]);
     const totalDonations = donations.length > 0 ? donations[0].total : 0;
@@ -244,7 +244,7 @@ router.get('/api/member-stats', isAdmin, async (req, res) => {
     const totalMembers = await Member.countDocuments();
     const approvedMembers = await Member.countDocuments({ isApproved: true });
     const pendingMembers = await Member.countDocuments({ isApproved: false });
-    const matrimonialEligible = await Member.countDocuments({ 'matrimonialProfile.isEligible': true });
+    const matrimonialEligible = await Member.countDocuments({ 'matrimonialProfile.isEligible': true, 'matrimonialProfile.isApproved': true });
     const committeeMembers = await Member.countDocuments({ isCommitteeMember: true });
     const deceasedMembers = await Member.countDocuments({ isDeceased: true });
     

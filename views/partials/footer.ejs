@@ -86,12 +86,29 @@
       </p>
     </div>
 
-    <div class="pt-6 border-t border-white/20 text-center text-sm text-gray-400">
-      <p>&copy; <%= new Date().getFullYear() %> Utkal Brahmin Samaj -Pusaur. All rights reserved.</p>
-      <p class="mt-1 text-xs text-gray-400">
-        Designed and Developed by <span class="font-bold text-saffron-500 tracking-wider">MAHENDRA KUMAR HOTA</span>
-        with <i class="fas fa-heart text-saffron-500 mx-1"></i> for the community.
-      </p>
+    <div class="pt-6 border-t border-white/20 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
+      <div class="text-center md:text-left mb-4 md:mb-0">
+        <p>&copy; <%= new Date().getFullYear() %> Utkal Brahmin Samaj -Pusaur. All rights reserved.</p>
+        <p class="mt-1 text-xs text-gray-400">
+          Designed and Developed by <span class="font-bold text-saffron-500 tracking-wider">MAHENDRA KUMAR HOTA</span>
+          with <i class="fas fa-heart text-saffron-500 mx-1"></i> for the community.
+        </p>
+      </div>
+      <div class="flex items-center gap-4">
+        <% if (locals.isAdmin) { %>
+          <a href="/admin" class="hover:text-saffron-500 transition-colors text-xs flex items-center gap-1.5">
+            <i class="fas fa-columns opacity-50"></i> Dashboard
+          </a>
+          <span class="text-white/10 text-xs">|</span>
+          <a href="/admin/logout" class="hover:text-red-400 transition-colors text-xs flex items-center gap-1.5">
+            <i class="fas fa-sign-out-alt opacity-50"></i> Logout
+          </a>
+        <% } else { %>
+          <a href="/admin/login" class="hover:text-saffron-500 transition-colors text-xs flex items-center gap-1.5 opacity-50 hover:opacity-100">
+            <i class="fas fa-user-lock opacity-50"></i> Portal Login
+          </a>
+        <% } %>
+      </div>
     </div>
   </div>
 </footer>
