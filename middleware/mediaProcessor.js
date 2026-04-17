@@ -1,61 +1,41 @@
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
 
-// Configure memory storage for multer as we'll process with sharp before saving
-const storage = multer.memoryStorage();
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Set up Cloudinary storage for profile images
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'ubs_profiles', // Cloudinary folder name
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 600, height: 600, crop: 'fill', gravity: 'center', format: 'webp' }]
+  }
+});
 
 const upload = multer({
   storage: storage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|webp/;
-    const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error('Only images (jpeg, jpg, png, webp) are allowed!'));
   }
 });
 
 /**
- * Middleware to process uploaded profile images
- * Resizes to 600x600 (center crop) and converts to WebP
+ * Middleware to handle Cloudinary image path
+ * Attaches the secure URL to req.body.profileImage
  */
-const processProfileImage = async (req, res, next) => {
-  if (!req.file) return next();
-
-  try {
-    const filename = `profile-${Date.now()}.webp`;
-    const outputPath = path.join(__dirname, '../public/uploads/profiles', filename);
-
-    // Ensure directory exists
-    const dir = path.dirname(outputPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    await sharp(req.file.buffer)
-      .resize(600, 600, {
-        fit: 'cover',
-        position: 'center'
-      })
-      .webp({ quality: 80 })
-      .toFile(outputPath);
-
-    // Attach the new path to req.body for database saving
-    req.body.profileImage = `/uploads/profiles/${filename}`;
-    
-    next();
-  } catch (error) {
-    console.error('Sharp Image Processing Error:', error);
-    next(); // Continue without image or handle error as needed
+const processProfileImage = (req, res, next) => {
+  if (req.file && req.file.path) {
+    // req.file.path contains the secure Cloudinary URL
+    req.body.profileImage = req.file.path;
   }
+  next();
 };
 
 module.exports = {
